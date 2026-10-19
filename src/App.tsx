@@ -22,7 +22,9 @@ import { ClientLayout } from './layouts/ClientLayout';
 import {
   HomePage,
   ServicesPage,
+  ServiceDetailPage,
   PortfolioPage,
+  PortfolioDetailPage,
   AboutPage,
   ContactPage,
   PrivacyPolicyPage,
@@ -219,7 +221,9 @@ export default function App() {
               <Route element={<PublicLayout />}>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/services" element={<ServicesPage />} />
+                <Route path="/services/:slug" element={<ServiceDetailPage />} />
                 <Route path="/portfolio" element={<PortfolioPage />} />
+                <Route path="/portfolio/:slug" element={<PortfolioDetailPage />} />
                 <Route path="/about" element={<AboutPage />} />
                 <Route path="/contact" element={<ContactPage />} />
                 <Route path="/login" element={<LoginPage />} />

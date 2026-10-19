@@ -173,14 +173,14 @@ export const DEFAULT_SITE_CUSTOMIZATION: SiteCustomization = {
   homeContactDesc:
     'Fill out the project inquiry form with your required deliverables, timeline, and budget range. You can also initiate a direct conversation on WhatsApp.',
 
-  servicesPageKicker: 'Services & Starting Rates (INR)',
-  servicesPageTitle: 'Transparent starting prices for creative production',
+  servicesPageKicker: 'Prithvi Editify · Creative Services Marketplace',
+  servicesPageTitle: 'Creative Services',
   servicesPageDescription:
-    'All listed rates are starting prices in Indian Rupees (₹). Final quotes depend on complexity, footage duration, revision rounds, and turnaround urgency.',
-  portfolioPageKicker: 'Studio Archive & Capabilities',
+    'Professional design, video editing and digital creative solutions for your brand.',
+  portfolioPageKicker: 'Prithvi Editify · Curated Project Showcase',
   portfolioPageTitle: 'Creative Portfolio',
   portfolioPageDescription:
-    'Explore graphic design, social media creatives, YouTube thumbnails, and video editing layouts. Sample records are explicitly labeled as demonstration content until replaced in the Admin Console.',
+    'Explore selected design, branding, thumbnail and video editing projects by Prithvi Editify.',
 
   aboutKicker: 'About the Studio',
   aboutHeading: 'Independent creative direction by Shankar Baluragi',
@@ -276,9 +276,28 @@ export function mergeSiteCustomization(
   if (!raw || typeof raw !== 'object') {
     return { ...DEFAULT_SITE_CUSTOMIZATION };
   }
-  return {
+  const merged: SiteCustomization = {
     ...DEFAULT_SITE_CUSTOMIZATION,
     ...raw,
+    servicesPageTitle:
+      !raw.servicesPageTitle ||
+      raw.servicesPageTitle === 'Transparent starting prices for creative production'
+        ? DEFAULT_SITE_CUSTOMIZATION.servicesPageTitle
+        : String(raw.servicesPageTitle),
+    servicesPageDescription:
+      !raw.servicesPageDescription ||
+      String(raw.servicesPageDescription).startsWith(
+        'All listed rates are starting prices in Indian Rupees'
+      )
+        ? DEFAULT_SITE_CUSTOMIZATION.servicesPageDescription
+        : String(raw.servicesPageDescription),
+    portfolioPageDescription:
+      !raw.portfolioPageDescription ||
+      String(raw.portfolioPageDescription).startsWith(
+        'Explore graphic design, social media creatives, YouTube thumbnails'
+      )
+        ? DEFAULT_SITE_CUSTOMIZATION.portfolioPageDescription
+        : String(raw.portfolioPageDescription),
     heroDisciplines:
       Array.isArray(raw.heroDisciplines) && raw.heroDisciplines.length > 0
         ? raw.heroDisciplines.map(String)
@@ -337,6 +356,7 @@ export function mergeSiteCustomization(
           }))
         : DEFAULT_SITE_CUSTOMIZATION.termsSections,
   };
+  return merged;
 }
 
 export const DEFAULT_PUBLIC_SETTINGS: PublicSettings = {

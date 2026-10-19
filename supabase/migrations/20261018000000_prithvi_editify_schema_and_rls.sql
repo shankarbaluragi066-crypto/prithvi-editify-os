@@ -195,14 +195,17 @@ alter table public.services add column if not exists sort_order integer not null
 alter table public.services add column if not exists created_at timestamptz not null default now();
 alter table public.services add column if not exists updated_at timestamptz not null default now();
 
--- Safely relax legacy NOT NULL constraints (e.g. `name`, `price`) on pre-existing tables
+-- Safely relax legacy NOT NULL and CHECK constraints (e.g. `name`, `price`) on pre-existing tables
 do $$
 begin
+  execute 'alter table public.services drop constraint if exists services_name_check';
+  execute 'alter table public.services drop constraint if exists services_price_check';
+
   if exists (
     select 1 from information_schema.columns
     where table_schema = 'public' and table_name = 'services' and column_name = 'name'
   ) then
-    execute 'alter table public.services alter column name set default ''''';
+    execute 'alter table public.services alter column name drop default';
     execute 'alter table public.services alter column name drop not null';
     execute 'update public.services set title = coalesce(nullif(title, ''''), name) where title = '''' and name is not null';
   end if;

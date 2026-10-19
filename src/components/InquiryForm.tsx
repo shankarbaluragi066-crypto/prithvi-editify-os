@@ -12,16 +12,17 @@ import { useToast } from '../contexts/ToastContext';
 import { Link } from 'react-router-dom';
 
 const SERVICE_OPTIONS = [
-  'Social Media Post Design (Starting ₹500/design)',
-  'Promotional Ad Creative (Starting ₹650/design)',
-  'Banner / Digital Flyer (Starting ₹500/design)',
-  'Marketing Graphic (Starting ₹400/design)',
-  'Campaign Creative (Starting ₹450/design)',
-  'Brand-Focused Digital Content (Starting ₹750/design)',
-  'YouTube Thumbnail (₹450–₹700/design)',
-  'YouTube Video Editing (Custom quote)',
-  'Instagram Reels Editing (Custom quote)',
-  'Other Creative Services (Custom quote)',
+  'Graphic Design',
+  'YouTube Thumbnail Design',
+  'Social Media Design',
+  'Logo and Brand Design',
+  'Banner and Flyer Design',
+  'Promotional Ad Creatives',
+  'YouTube Video Editing',
+  'Instagram Reels Editing',
+  'Social Media Content',
+  'Photo Editing',
+  'Custom Creative Project',
 ];
 
 const BUDGET_RANGES = [
@@ -45,22 +46,11 @@ export const InquiryForm: React.FC<{
   const activeBudgetRanges =
     customBudgetRanges && customBudgetRanges.length > 0 ? customBudgetRanges : BUDGET_RANGES;
 
-  useEffect(() => {
-    fetchPublishedServices()
-      .then((list) => {
-        if (list.length > 0) {
-          setServiceOptions(
-            list.map((s) => `${s.title} (${s.isCustomQuote ? 'Custom quote' : `Starting ${s.priceDisplay}`})`)
-          );
-        }
-      })
-      .catch(() => {});
-  }, []);
-
   const {
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<InquiryFormValues>({
     resolver: zodResolver(inquirySchema),
@@ -76,6 +66,44 @@ export const InquiryForm: React.FC<{
       privacyConsent: false,
     },
   });
+
+  useEffect(() => {
+    fetchPublishedServices()
+      .then((list) => {
+        if (list.length > 0) {
+          const mapped = [
+            ...list.map(
+              (s) => `${s.title} (${s.isCustomQuote ? 'Custom quote' : `Starting ${s.priceDisplay}`})`
+            ),
+            'Custom Creative Project',
+          ];
+          setServiceOptions(mapped);
+          if (!defaultService) {
+            setValue('serviceRequired', mapped[0]);
+          }
+        }
+      })
+      .catch(() => {});
+  }, [defaultService, setValue]);
+
+  useEffect(() => {
+    if (!defaultService) return;
+    const cleanTarget = defaultService.trim().toLowerCase();
+    const matched = serviceOptions.find(
+      (opt) =>
+        opt.toLowerCase() === cleanTarget ||
+        opt.toLowerCase().startsWith(cleanTarget) ||
+        opt.toLowerCase().includes(cleanTarget)
+    );
+    if (matched) {
+      setValue('serviceRequired', matched);
+    } else {
+      setServiceOptions((prev) =>
+        prev.includes(defaultService) ? prev : [defaultService, ...prev]
+      );
+      setValue('serviceRequired', defaultService);
+    }
+  }, [defaultService, serviceOptions, setValue]);
 
   const onSubmit = async (values: InquiryFormValues) => {
     const fingerprint = `${values.email.toLowerCase()}_${values.serviceRequired}_${values.description.slice(0, 30)}`;

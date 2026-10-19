@@ -28,6 +28,17 @@ export interface ClientRecord {
   updatedAt?: string;
 }
 
+export interface ServicePackageTier {
+  tier: 'Basic' | 'Standard' | 'Premium';
+  name: string;
+  price: number;
+  priceDisplay: string;
+  deliveryTime: string;
+  revisions: string;
+  description: string;
+  features: string[];
+}
+
 export interface ServiceItem {
   id: string;
   title: string;
@@ -40,9 +51,11 @@ export interface ServiceItem {
   isCustomQuote: boolean;
   deliverablesSummary: string;
   turnaroundTime: string;
+  revisions?: string;
   imageUrl: string;
   videoPreviewUrl?: string;
   mediaUrls?: string[];
+  packages?: ServicePackageTier[];
   published: boolean;
   sortOrder: number;
   createdAt?: string;

@@ -7,6 +7,7 @@ import {
 import {
   ClientRecord,
   ServiceItem,
+  ServicePackageTier,
   PortfolioItem,
   InquiryRecord,
   InquiryStatus,
@@ -125,6 +126,30 @@ function resolveFallbackValueForColumn(
   return String(currentPayload.title || currentPayload.description || 'Default');
 }
 
+function extractCheckConstraintColumn(error: unknown, table: string): string | null {
+  if (!error || typeof error !== 'object') return null;
+  const code = String((error as { code?: unknown }).code || '');
+  const msg = String((error as { message?: unknown }).message || '');
+  if (code !== '23514' && !msg.toLowerCase().includes('violates check constraint')) {
+    return null;
+  }
+  const match = msg.match(/violates check constraint "([^"]+)"/i);
+  if (!match) return null;
+  const constraintName = match[1];
+  const prefix = `${table}_`;
+  const suffix = '_check';
+  if (
+    constraintName.toLowerCase().startsWith(prefix.toLowerCase()) &&
+    constraintName.toLowerCase().endsWith(suffix)
+  ) {
+    return constraintName.slice(prefix.length, constraintName.length - suffix.length);
+  }
+  if (constraintName.toLowerCase().includes('name')) return 'name';
+  if (constraintName.toLowerCase().includes('price')) return 'price';
+  if (constraintName.toLowerCase().includes('category')) return 'category';
+  return null;
+}
+
 async function adaptiveInsertRow(
   table: string,
   initialPayload: Record<string, any>,
@@ -132,9 +157,10 @@ async function adaptiveInsertRow(
   context: string
 ): Promise<string> {
   const workingPayload: Record<string, any> = { ...initialPayload };
+  const triedNullForCheck = new Set<string>();
   let lastError: unknown = null;
 
-  for (let attempt = 0; attempt < 10; attempt++) {
+  for (let attempt = 0; attempt < 12; attempt++) {
     const { data, error } = await supabase
       .from(table)
       .insert(workingPayload)
@@ -157,6 +183,28 @@ async function adaptiveInsertRow(
       continue;
     }
 
+    const checkCol = extractCheckConstraintColumn(error, table);
+    if (checkCol) {
+      const currentVal = workingPayload[checkCol];
+      if (currentVal === undefined || currentVal === '') {
+        workingPayload[checkCol] = resolveFallbackValueForColumn(
+          checkCol,
+          workingPayload,
+          fallbacks
+        );
+        continue;
+      }
+      if (currentVal !== null && !triedNullForCheck.has(checkCol)) {
+        triedNullForCheck.add(checkCol);
+        workingPayload[checkCol] = null;
+        continue;
+      }
+      if (checkCol === 'name' && workingPayload[checkCol] !== workingPayload.category) {
+        workingPayload[checkCol] = String(workingPayload.category || 'Graphic Design');
+        continue;
+      }
+    }
+
     const missingCol = extractMissingColumn(error);
     if (missingCol && missingCol in workingPayload) {
       delete workingPayload[missingCol];
@@ -177,9 +225,10 @@ async function adaptiveUpdateRow(
   context: string
 ): Promise<void> {
   const workingPayload: Record<string, any> = { ...initialPayload };
+  const triedNullForCheck = new Set<string>();
   let lastError: unknown = null;
 
-  for (let attempt = 0; attempt < 10; attempt++) {
+  for (let attempt = 0; attempt < 12; attempt++) {
     const { error } = await supabase.from(table).update(workingPayload).eq('id', id);
 
     if (!error) {
@@ -198,6 +247,28 @@ async function adaptiveUpdateRow(
       continue;
     }
 
+    const checkCol = extractCheckConstraintColumn(error, table);
+    if (checkCol) {
+      const currentVal = workingPayload[checkCol];
+      if (currentVal === undefined || currentVal === '') {
+        workingPayload[checkCol] = resolveFallbackValueForColumn(
+          checkCol,
+          workingPayload,
+          fallbacks
+        );
+        continue;
+      }
+      if (currentVal !== null && !triedNullForCheck.has(checkCol)) {
+        triedNullForCheck.add(checkCol);
+        workingPayload[checkCol] = null;
+        continue;
+      }
+      if (checkCol === 'name' && workingPayload[checkCol] !== workingPayload.category) {
+        workingPayload[checkCol] = String(workingPayload.category || 'Graphic Design');
+        continue;
+      }
+    }
+
     const missingCol = extractMissingColumn(error);
     if (missingCol && missingCol in workingPayload) {
       delete workingPayload[missingCol];
@@ -210,35 +281,174 @@ async function adaptiveUpdateRow(
   handleSupabaseError(lastError, context);
 }
 
+const SERVICE_META_PREFIX = '__pe_service_meta__:';
+const LOCAL_SERVICE_META_KEY = 'pe_service_packages_meta_v1';
+
+interface StoredServiceMeta {
+  revisions?: string;
+  packages?: ServicePackageTier[];
+  mediaUrls?: string[];
+}
+
+function readLocalServiceMetaMap(): Record<string, StoredServiceMeta> {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = window.localStorage.getItem(LOCAL_SERVICE_META_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeLocalServiceMeta(key: string, meta: StoredServiceMeta): void {
+  if (typeof window === 'undefined' || !key) return;
+  try {
+    const map = readLocalServiceMetaMap();
+    map[key] = meta;
+    window.localStorage.setItem(LOCAL_SERVICE_META_KEY, JSON.stringify(map));
+  } catch {
+    // Ignore storage quota errors
+  }
+}
+
+export function buildDefaultServicePackages(
+  startingPrice: number,
+  pricingUnit = 'design',
+  turnaroundTime = '24–48 hours',
+  deliverablesSummary = '',
+  revisions = '2 Revisions'
+): ServicePackageTier[] {
+  const basePrice = Math.max(250, Number(startingPrice) || 500);
+  const stdPrice = Math.round((basePrice * 1.8) / 50) * 50;
+  const premPrice = Math.round((basePrice * 3) / 50) * 50;
+  const unitLabel = pricingUnit || 'design';
+
+  const parsedFeatures = deliverablesSummary
+    .split(/[,;\n•]+/)
+    .map((s) => s.trim().replace(/\.$/, ''))
+    .filter((s) => s.length > 2);
+
+  const basicFeatures =
+    parsedFeatures.length > 0
+      ? parsedFeatures
+      : [
+          `1 custom ${unitLabel} concept`,
+          'High-resolution PNG / JPG / PDF export',
+          revisions || '2 Revisions',
+        ];
+
+  return [
+    {
+      tier: 'Basic',
+      name: 'Basic Package',
+      price: basePrice,
+      priceDisplay: `₹${basePrice.toLocaleString('en-IN')}`,
+      deliveryTime: turnaroundTime || '24–48 hours',
+      revisions: revisions || '2 Revisions',
+      description: `Essential ${unitLabel} production crafted to your brand brief with high-resolution final files.`,
+      features: basicFeatures,
+    },
+    {
+      tier: 'Standard',
+      name: 'Standard Package',
+      price: stdPrice,
+      priceDisplay: `₹${stdPrice.toLocaleString('en-IN')}`,
+      deliveryTime: '2–3 business days',
+      revisions: '3 Revisions',
+      description: `Enhanced ${unitLabel} production with source files, multi-platform sizing, and priority refinements.`,
+      features: [
+        ...basicFeatures.slice(0, 3),
+        'Editable source file included',
+        'Social / platform aspect-ratio resize',
+      ],
+    },
+    {
+      tier: 'Premium',
+      name: 'Premium Package',
+      price: premPrice,
+      priceDisplay: `₹${premPrice.toLocaleString('en-IN')}`,
+      deliveryTime: '3–5 business days',
+      revisions: '5 Revisions',
+      description: `Complete campaign bundle with multiple creative variations, full source files, and dedicated art direction.`,
+      features: [
+        ...basicFeatures.slice(0, 3),
+        'Multiple creative variations / A-B concepts',
+        'Complete editable project & source files',
+        'Priority Client Portal milestone delivery',
+      ],
+    },
+  ];
+}
+
 // ============================================================================
 // ROW MAPPERS (PostgreSQL snake_case -> TypeScript camelCase)
 // ============================================================================
 function mapServiceRow(row: Record<string, any>, idx = 0): ServiceItem {
+  const id = String(row.id);
   const title = String(row.title || row.name || row.service_name || 'Creative Service');
+  const slug = String(row.slug || slugify(title) || `service-${idx + 1}`);
   const category = String(row.category || 'Graphic Design');
   const startingPrice = Number(row.starting_price ?? row.price ?? 0) || 0;
   const isCustomQuote = Boolean(row.is_custom_quote ?? startingPrice === 0);
+  const pricingUnit = String(row.pricing_unit || 'design');
   const priceDisplay = String(
     row.price_display ||
-      (isCustomQuote ? 'Custom quote' : `₹${startingPrice.toLocaleString('en-IN')}/design`)
+      (isCustomQuote ? 'Custom quote' : `₹${startingPrice.toLocaleString('en-IN')}/${pricingUnit}`)
   );
+  const deliverablesSummary = String(
+    row.deliverables_summary || 'High-resolution export and studio revisions included.'
+  );
+  const turnaroundTime = String(row.turnaround_time || '24–48 hours');
+
+  const rawMedia = Array.isArray(row.media_urls) ? row.media_urls.map(String) : [];
+  const cleanMediaUrls: string[] = [];
+  let embeddedMeta: StoredServiceMeta | null = null;
+
+  for (const entry of rawMedia) {
+    if (entry.startsWith(SERVICE_META_PREFIX)) {
+      try {
+        embeddedMeta = JSON.parse(entry.slice(SERVICE_META_PREFIX.length));
+      } catch {
+        // Ignore malformed metadata
+      }
+    } else if (entry.trim()) {
+      cleanMediaUrls.push(entry.trim());
+    }
+  }
+
+  const localMap = readLocalServiceMetaMap();
+  const cachedMeta = embeddedMeta || localMap[id] || localMap[slug] || null;
+  const revisions = cachedMeta?.revisions || '2 Revisions';
+  const resolvedMediaUrls =
+    cleanMediaUrls.length > 0 ? cleanMediaUrls : cachedMeta?.mediaUrls || [];
+  const resolvedPackages =
+    cachedMeta?.packages && cachedMeta.packages.length > 0
+      ? cachedMeta.packages
+      : buildDefaultServicePackages(
+          startingPrice,
+          pricingUnit,
+          turnaroundTime,
+          deliverablesSummary,
+          revisions
+        );
+
   return {
-    id: String(row.id),
+    id,
     title,
-    slug: String(row.slug || slugify(title) || `service-${idx + 1}`),
+    slug,
     category,
     description: String(row.description || ''),
     startingPrice,
     priceDisplay,
-    pricingUnit: String(row.pricing_unit || 'design'),
+    pricingUnit,
     isCustomQuote,
-    deliverablesSummary: String(
-      row.deliverables_summary || 'High-resolution export and studio revisions included.'
-    ),
-    turnaroundTime: String(row.turnaround_time || '24–48 hours'),
+    deliverablesSummary,
+    turnaroundTime,
+    revisions,
     imageUrl: String(row.image_url || createStudioArtworkDataUri(title, category, '#F18A45')),
     videoPreviewUrl: String(row.video_preview_url || ''),
-    mediaUrls: Array.isArray(row.media_urls) ? row.media_urls.map(String) : [],
+    mediaUrls: resolvedMediaUrls,
+    packages: resolvedPackages,
     published: row.published !== undefined ? Boolean(row.published) : Boolean(row.is_active ?? true),
     sortOrder: Number(row.sort_order) || idx + 1,
     createdAt: row.created_at,
@@ -858,6 +1068,12 @@ export async function savePrivateSettings(data: Omit<PrivateSettings, 'updatedAt
 // ============================================================================
 // SERVICES & PRICING
 // ============================================================================
+export function isDemoSeedService(srv: ServiceItem): boolean {
+  if (!srv) return false;
+  if (srv.id.startsWith('seed_srv_')) return true;
+  return false;
+}
+
 export async function fetchPublishedServices(): Promise<ServiceItem[]> {
   if (!isSupabaseConfigured) return [];
   const { data, error } = await supabase
@@ -871,13 +1087,17 @@ export async function fetchPublishedServices(): Promise<ServiceItem[]> {
     if (isMissingSchemaError(error)) {
       const fallback = await supabase.from('services').select('*');
       if (!fallback.error && fallback.data && fallback.data.length > 0) {
-        return fallback.data.map((r, i) => mapServiceRow(r, i)).filter((s) => s.published);
+        return fallback.data
+          .map((r, i) => mapServiceRow(r, i))
+          .filter((s) => s.published && !isDemoSeedService(s));
       }
       return [];
     }
     handleSupabaseError(error, 'fetchPublishedServices');
   }
-  return (data || []).map((r, i) => mapServiceRow(r, i));
+  return (data || [])
+    .map((r, i) => mapServiceRow(r, i))
+    .filter((s) => !isDemoSeedService(s));
 }
 
 export async function fetchAllServicesAdmin(): Promise<ServiceItem[]> {
@@ -891,13 +1111,17 @@ export async function fetchAllServicesAdmin(): Promise<ServiceItem[]> {
     if (isMissingSchemaError(error)) {
       const fallback = await supabase.from('services').select('*');
       if (!fallback.error && fallback.data) {
-        return fallback.data.map((r, i) => mapServiceRow(r, i));
+        return fallback.data
+          .map((r, i) => mapServiceRow(r, i))
+          .filter((s) => !isDemoSeedService(s));
       }
       return [];
     }
     handleSupabaseError(error, 'fetchAllServicesAdmin');
   }
-  return (data || []).map((r, i) => mapServiceRow(r, i));
+  return (data || [])
+    .map((r, i) => mapServiceRow(r, i))
+    .filter((s) => !isDemoSeedService(s));
 }
 
 export async function saveServiceItem(
@@ -905,30 +1129,51 @@ export async function saveServiceItem(
   existingService?: ServiceItem
 ): Promise<string> {
   if (!isSupabaseConfigured) throw new Error('Supabase is not configured.');
-  const cleanTitle = truncate(data.title, 120) || 'Creative Service';
+  const rawTitle = truncate(data.title, 120) || 'Creative Service';
+  const cleanTitle = rawTitle.length < 3 ? `${rawTitle} Service` : rawTitle;
   const cleanPrice = Math.max(0, Number(data.startingPrice) || 0);
   const cleanSlug = truncate(slugify(cleanTitle) || 'service', 120);
 
+  const cleanGallery = Array.isArray(data.mediaUrls)
+    ? data.mediaUrls.filter((u) => u && !u.startsWith(SERVICE_META_PREFIX))
+    : [];
+
+  const metaToStore: StoredServiceMeta = {
+    revisions: data.revisions || '2 Revisions',
+    packages: data.packages,
+    mediaUrls: cleanGallery,
+  };
+  const serializedMeta = `${SERVICE_META_PREFIX}${JSON.stringify(metaToStore)}`;
+
+  const cleanImageUrl =
+    data.imageUrl && !data.imageUrl.startsWith('data:image/svg+xml;utf8,')
+      ? truncate(data.imageUrl, 2000)
+      : '';
+
   const payload: Record<string, any> = {
+    name: cleanTitle,
     title: cleanTitle,
     slug: cleanSlug,
     category: truncate(data.category || 'Graphic Design', 80),
     description: truncate(data.description, 1000),
+    price: cleanPrice,
     starting_price: cleanPrice,
     price_display: truncate(data.priceDisplay, 80) || `₹${cleanPrice}/design`,
     pricing_unit: truncate(data.pricingUnit || 'design', 60),
     is_custom_quote: Boolean(data.isCustomQuote),
     deliverables_summary: truncate(data.deliverablesSummary, 500),
     turnaround_time: truncate(data.turnaroundTime, 100),
-    image_url: truncate(data.imageUrl, 1000),
+    image_url: cleanImageUrl,
     video_preview_url: truncate(data.videoPreviewUrl || '', 1000),
-    media_urls: Array.isArray(data.mediaUrls) ? data.mediaUrls : [],
+    media_urls: [...cleanGallery, serializedMeta],
     published: Boolean(data.published),
+    is_active: Boolean(data.published),
+    currency: 'INR',
     sort_order: Number(data.sortOrder) || 1,
     updated_at: new Date().toISOString(),
   };
 
-  // Legacy column fallbacks if the existing Supabase services table has NOT NULL constraints on `name`, `price`, `base_price`, `service_name`, or `is_active`
+  // Legacy column fallbacks if the existing Supabase services table has constraints on `name`, `price`, `base_price`, `service_name`, or `is_active`
   const legacyFallbacks: Record<string, any> = {
     name: cleanTitle,
     service_name: cleanTitle,
@@ -939,7 +1184,10 @@ export async function saveServiceItem(
     currency: 'INR',
   };
 
+  writeLocalServiceMeta(cleanSlug, metaToStore);
+
   if (existingService?.id) {
+    writeLocalServiceMeta(existingService.id, metaToStore);
     await adaptiveUpdateRow(
       'services',
       existingService.id,
@@ -956,6 +1204,7 @@ export async function saveServiceItem(
       legacyFallbacks,
       'saveServiceItem (insert)'
     );
+    writeLocalServiceMeta(newId, metaToStore);
     await logAdminActivity('Created Service', 'service', newId, cleanTitle);
     return newId;
   }
@@ -980,10 +1229,20 @@ export async function fetchPublishedPortfolio(): Promise<PortfolioItem[]> {
     .order('sort_order', { ascending: true });
 
   if (error) {
-    if (isMissingSchemaError(error)) return [];
-    handleSupabaseError(error, 'fetchPublishedPortfolio');
+    if (isMissingSchemaError(error)) {
+      const fallback = await supabase.from('portfolio').select('*');
+      if (!fallback.error && fallback.data && fallback.data.length > 0) {
+        return fallback.data
+          .map((r, i) => mapPortfolioRow(r, i))
+          .filter((p) => p.published && !p.isSampleContent);
+      }
+      return [];
+    }
+    return [];
   }
-  return (data || []).map((r, i) => mapPortfolioRow(r, i));
+  return (data || [])
+    .map((r, i) => mapPortfolioRow(r, i))
+    .filter((p) => !p.isSampleContent);
 }
 
 export async function fetchAllPortfolioAdmin(): Promise<PortfolioItem[]> {
@@ -1006,12 +1265,16 @@ export async function savePortfolioItem(
 ): Promise<string> {
   if (!isSupabaseConfigured) throw new Error('Supabase is not configured.');
   const cleanTitle = truncate(data.title, 150) || 'Studio Project';
+  const cleanCoverImage =
+    data.coverImage && !data.coverImage.startsWith('data:image/svg+xml;utf8,')
+      ? truncate(data.coverImage, 2000)
+      : '';
   const payload: Record<string, any> = {
     title: cleanTitle,
     slug: truncate(slugify(cleanTitle) || 'portfolio-item', 150),
     category: data.category,
     description: truncate(data.description, 2000),
-    cover_image: truncate(data.coverImage, 1000),
+    cover_image: cleanCoverImage,
     video_url: truncate(data.videoUrl || '', 1000),
     media_type: data.mediaType || (data.videoUrl ? 'video' : 'image'),
     gallery_urls: Array.isArray(data.galleryUrls) ? data.galleryUrls : [],

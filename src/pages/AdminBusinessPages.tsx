@@ -22,6 +22,7 @@ import {
   fetchAllServicesAdmin,
   saveServiceItem,
   deleteServiceItem,
+  buildDefaultServicePackages,
   fetchAllPortfolioAdmin,
   savePortfolioItem,
   deletePortfolioItem,
@@ -51,6 +52,7 @@ import { MediaPreviewModal, PreviewableMediaItem } from '../components/MediaPrev
 import { MediaSearchFilterState } from '../components/MediaSearchFilterBar';
 import {
   ServiceItem,
+  ServicePackageTier,
   PortfolioItem,
   PortfolioCategory,
   ClientRecord,
@@ -78,6 +80,19 @@ import {
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
 
+const ADMIN_SERVICE_CATEGORIES = [
+  'Graphic Design',
+  'YouTube Thumbnail Design',
+  'Social Media Design',
+  'Logo and Brand Design',
+  'Banner and Flyer Design',
+  'Promotional Ad Creatives',
+  'YouTube Video Editing',
+  'Instagram Reels Editing',
+  'Social Media Content',
+  'Photo Editing',
+];
+
 // ============================================================================
 // 1. ADMIN SERVICES & PRICING MANAGEMENT PAGE
 // ============================================================================
@@ -86,10 +101,28 @@ export const AdminServicesPage: React.FC = () => {
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [editing, setEditing] = useState<ServiceItem | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [showMediaPicker, setShowMediaPicker] = useState<'image' | 'video' | null>(null);
+  const [showMediaPicker, setShowMediaPicker] = useState<'image' | 'gallery' | 'video' | null>(null);
   const [previewMedia, setPreviewMedia] = useState<PreviewableMediaItem | null>(null);
+  const [activePackageTab, setActivePackageTab] = useState<'Basic' | 'Standard' | 'Premium'>('Basic');
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<{
+    title: string;
+    category: string;
+    description: string;
+    startingPrice: number;
+    priceDisplay: string;
+    pricingUnit: string;
+    isCustomQuote: boolean;
+    deliverablesSummary: string;
+    turnaroundTime: string;
+    revisions: string;
+    imageUrl: string;
+    videoPreviewUrl: string;
+    mediaUrls: string[];
+    packages: ServicePackageTier[];
+    published: boolean;
+    sortOrder: number;
+  }>({
     title: '',
     category: 'Graphic Design',
     description: '',
@@ -97,10 +130,20 @@ export const AdminServicesPage: React.FC = () => {
     priceDisplay: '₹500/design',
     pricingUnit: 'design',
     isCustomQuote: false,
-    deliverablesSummary: 'High-resolution PNG/PDF export, 2 revision rounds.',
+    deliverablesSummary:
+      'Custom creative concept, High-resolution PNG/JPG/PDF export, 2 revision rounds, Commercial usage rights',
     turnaroundTime: '24–48 hours',
+    revisions: '2 Revisions',
     imageUrl: '',
     videoPreviewUrl: '',
+    mediaUrls: [],
+    packages: buildDefaultServicePackages(
+      500,
+      'design',
+      '24–48 hours',
+      'Custom creative concept, High-resolution PNG/JPG/PDF export, 2 revision rounds, Commercial usage rights',
+      '2 Revisions'
+    ),
     published: true,
     sortOrder: 1,
   });
@@ -112,6 +155,47 @@ export const AdminServicesPage: React.FC = () => {
   useEffect(() => {
     loadServices();
   }, [loadServices]);
+
+  const handleAutoRegeneratePackages = () => {
+    const generated = buildDefaultServicePackages(
+      form.startingPrice,
+      form.pricingUnit,
+      form.turnaroundTime,
+      form.deliverablesSummary,
+      form.revisions
+    );
+    setForm((prev) => ({ ...prev, packages: generated }));
+    showToast('success', 'Packages Synced', 'Basic, Standard & Premium tiers updated from base price.');
+  };
+
+  const updatePackageField = (
+    tier: 'Basic' | 'Standard' | 'Premium',
+    field: keyof ServicePackageTier,
+    value: any
+  ) => {
+    setForm((prev) => {
+      const updated = prev.packages.map((pkg) => {
+        if (pkg.tier !== tier) return pkg;
+        const nextPkg = { ...pkg, [field]: value };
+        if (field === 'price') {
+          const num = Math.max(0, Number(value) || 0);
+          nextPkg.price = num;
+          nextPkg.priceDisplay = `₹${num.toLocaleString('en-IN')}`;
+        }
+        return nextPkg;
+      });
+      const basicPkg = updated.find((p) => p.tier === 'Basic');
+      return {
+        ...prev,
+        packages: updated,
+        startingPrice: basicPkg ? basicPkg.price : prev.startingPrice,
+        priceDisplay:
+          !prev.isCustomQuote && basicPkg
+            ? `₹${basicPkg.price.toLocaleString('en-IN')}/${prev.pricingUnit || 'design'}`
+            : prev.priceDisplay,
+      };
+    });
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -134,6 +218,11 @@ export const AdminServicesPage: React.FC = () => {
     await loadServices();
   };
 
+  const currentPkg =
+    form.packages.find((p) => p.tier === activePackageTab) ||
+    form.packages[0] ||
+    buildDefaultServicePackages(form.startingPrice, form.pricingUnit)[0];
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -142,10 +231,16 @@ export const AdminServicesPage: React.FC = () => {
             Services & INR Pricing Management
           </h1>
           <p className="text-xs text-[#6E7785] mt-1">
-            Add, edit, reorder, or unpublish creative services. Published services appear automatically on the public website.
+            Create and manage creative services, gallery samples, deliverables, and Basic / Standard / Premium packages.
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Link
+            to="/services"
+            className="px-3.5 py-2 text-xs font-semibold text-[#172333] bg-white border border-[#E2E4DF] hover:border-[#172333] rounded-lg transition-colors"
+          >
+            View Public Services Page →
+          </Link>
           {services.length === 0 && (
             <button
               type="button"
@@ -159,6 +254,8 @@ export const AdminServicesPage: React.FC = () => {
             type="button"
             onClick={() => {
               setEditing(null);
+              const defaultDeliv =
+                'Custom creative concept, High-resolution PNG/JPG/PDF export, 2 revision rounds, Commercial usage rights';
               setForm({
                 title: '',
                 category: 'Graphic Design',
@@ -167,10 +264,19 @@ export const AdminServicesPage: React.FC = () => {
                 priceDisplay: '₹500/design',
                 pricingUnit: 'design',
                 isCustomQuote: false,
-                deliverablesSummary: 'High-resolution PNG/PDF export, 2 revision rounds.',
+                deliverablesSummary: defaultDeliv,
                 turnaroundTime: '24–48 hours',
+                revisions: '2 Revisions',
                 imageUrl: '',
                 videoPreviewUrl: '',
+                mediaUrls: [],
+                packages: buildDefaultServicePackages(
+                  500,
+                  'design',
+                  '24–48 hours',
+                  defaultDeliv,
+                  '2 Revisions'
+                ),
                 published: true,
                 sortOrder: services.length + 1,
               });
@@ -184,34 +290,112 @@ export const AdminServicesPage: React.FC = () => {
       </div>
 
       {showForm && (
-        <form onSubmit={handleSave} className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-4">
-          <h2 className="text-base font-semibold text-[#172333]">
-            {editing ? `Edit Service: ${editing.title}` : 'New Studio Service'}
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <form
+          onSubmit={handleSave}
+          className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-6 shadow-xs"
+        >
+          <div className="flex items-center justify-between border-b border-[#E2E4DF] pb-4">
             <div>
-              <label className="block text-xs font-medium mb-1">Service Title *</label>
+              <h2 className="text-base font-semibold text-[#172333]">
+                {editing ? `Edit Service: ${editing.title}` : 'New Creative Service Listing'}
+              </h2>
+              <p className="text-xs text-[#6E7785] mt-0.5">
+                Configure service overview, media gallery, deliverables, and 3-tier packages (Basic, Standard, Premium).
+              </p>
+            </div>
+            <span className="font-mono text-xs text-[#F18A45] font-semibold">INR MARKETPLACE</span>
+          </div>
+
+          {/* Row 1: Title, Category, Pricing Unit */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="sm:col-span-1">
+              <label className="block text-xs font-medium text-[#172333] mb-1">
+                Service Title *
+              </label>
               <input
                 type="text"
                 required
+                placeholder="e.g. High-CTR YouTube Thumbnail Design"
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg focus:outline-none focus:border-[#172333]"
               />
             </div>
+
             <div>
-              <label className="block text-xs font-medium mb-1">Category *</label>
+              <label className="block text-xs font-medium text-[#172333] mb-1">Category *</label>
+              <select
+                value={
+                  ADMIN_SERVICE_CATEGORIES.includes(form.category) ? form.category : '__custom__'
+                }
+                onChange={(e) => {
+                  if (e.target.value !== '__custom__') {
+                    setForm({ ...form, category: e.target.value });
+                  }
+                }}
+                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg focus:outline-none focus:border-[#172333]"
+              >
+                {ADMIN_SERVICE_CATEGORIES.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+                {!ADMIN_SERVICE_CATEGORIES.includes(form.category) && (
+                  <option value="__custom__">{form.category} (Custom)</option>
+                )}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-[#172333] mb-1">
+                Pricing Unit (e.g. design, thumbnail, video, reel)
+              </label>
               <input
                 type="text"
-                required
-                value={form.category}
-                onChange={(e) => setForm({ ...form, category: e.target.value })}
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                value={form.pricingUnit}
+                onChange={(e) => {
+                  const unit = e.target.value;
+                  setForm({
+                    ...form,
+                    pricingUnit: unit,
+                    priceDisplay: form.isCustomQuote
+                      ? 'Custom quote'
+                      : `₹${form.startingPrice.toLocaleString('en-IN')}/${unit || 'design'}`,
+                  });
+                }}
+                placeholder="design"
+                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg focus:outline-none focus:border-[#172333]"
               />
             </div>
+          </div>
+
+          {/* Row 2: Starting Price, Display Price, Turnaround, Revisions, Sort Order */}
+          <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
             <div>
-              <label className="block text-xs font-medium mb-1">
-                Display Price (e.g. ₹500/design or Custom quote) *
+              <label className="block text-xs font-medium text-[#172333] mb-1">
+                Starting Price (INR)
+              </label>
+              <input
+                type="number"
+                min={0}
+                value={form.startingPrice}
+                onChange={(e) => {
+                  const num = Math.max(0, Number(e.target.value) || 0);
+                  setForm({
+                    ...form,
+                    startingPrice: num,
+                    priceDisplay: form.isCustomQuote
+                      ? 'Custom quote'
+                      : `₹${num.toLocaleString('en-IN')}/${form.pricingUnit || 'design'}`,
+                  });
+                }}
+                className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-[#172333] mb-1">
+                Display Price *
               </label>
               <input
                 type="text"
@@ -221,27 +405,35 @@ export const AdminServicesPage: React.FC = () => {
                 className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
               />
             </div>
+
             <div>
-              <label className="block text-xs font-medium mb-1">Numeric Starting Price (INR)</label>
-              <input
-                type="number"
-                min={0}
-                value={form.startingPrice}
-                onChange={(e) => setForm({ ...form, startingPrice: Number(e.target.value) })}
-                className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium mb-1">Turnaround Time</label>
+              <label className="block text-xs font-medium text-[#172333] mb-1">
+                Delivery Time
+              </label>
               <input
                 type="text"
                 value={form.turnaroundTime}
                 onChange={(e) => setForm({ ...form, turnaroundTime: e.target.value })}
+                placeholder="24–48 hours"
                 className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
               />
             </div>
+
             <div>
-              <label className="block text-xs font-medium mb-1">Sort Order</label>
+              <label className="block text-xs font-medium text-[#172333] mb-1">
+                Revisions Included
+              </label>
+              <input
+                type="text"
+                value={form.revisions}
+                onChange={(e) => setForm({ ...form, revisions: e.target.value })}
+                placeholder="2 Revisions"
+                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-[#172333] mb-1">Sort Order</label>
               <input
                 type="number"
                 value={form.sortOrder}
@@ -251,27 +443,181 @@ export const AdminServicesPage: React.FC = () => {
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-medium mb-1">Description *</label>
-            <textarea
-              rows={2}
-              required
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-              className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
-            />
+          {/* Row 3: Full Description & Deliverables Summary */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-[#172333] mb-1">
+                About This Service (Full Description) *
+              </label>
+              <textarea
+                rows={4}
+                required
+                placeholder="Describe what you will design or edit, your creative approach, and why brands choose this service..."
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-[#172333] mb-1">
+                What’s Included / Deliverables (comma-separated) *
+              </label>
+              <textarea
+                rows={4}
+                required
+                placeholder="High-resolution PNG/JPG/PDF export, 2 revision rounds, Custom typography & color grading, Commercial usage rights"
+                value={form.deliverablesSummary}
+                onChange={(e) => setForm({ ...form, deliverablesSummary: e.target.value })}
+                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              />
+            </div>
           </div>
 
+          {/* Row 4: Service Packages Builder (Basic / Standard / Premium) */}
+          <div className="border border-[#E2E4DF] rounded-lg p-5 bg-[#F5F5F1]/60 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold text-[#172333]">
+                  Service Packages (Basic · Standard · Premium)
+                </h3>
+                <p className="text-xs text-[#6E7785]">
+                  Visitors can switch between Basic, Standard, and Premium tabs on the Service Detail page.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleAutoRegeneratePackages}
+                className="px-3 py-1.5 text-xs font-semibold text-[#172333] bg-white border border-[#E2E4DF] hover:border-[#172333] rounded-lg transition-colors"
+              >
+                Auto-Calculate Tiers from ₹{form.startingPrice}
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2 border-b border-[#E2E4DF] pb-3">
+              {(['Basic', 'Standard', 'Premium'] as const).map((tier) => {
+                const pkg = form.packages.find((p) => p.tier === tier);
+                const isAct = activePackageTab === tier;
+                return (
+                  <button
+                    key={tier}
+                    type="button"
+                    onClick={() => setActivePackageTab(tier)}
+                    className={`px-4 py-2 text-xs font-semibold rounded-lg border transition-colors ${
+                      isAct
+                        ? 'bg-[#172333] text-white border-[#172333]'
+                        : 'bg-white text-[#6E7785] border-[#E2E4DF] hover:text-[#172333]'
+                    }`}
+                  >
+                    {tier} ({pkg?.priceDisplay || '₹0'})
+                  </button>
+                );
+              })}
+            </div>
+
+            {currentPkg && (
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 bg-white p-4 rounded-lg border border-[#E2E4DF]">
+                <div>
+                  <label className="block text-[11px] font-semibold text-[#6E7785] mb-1">
+                    {currentPkg.tier} Package Title
+                  </label>
+                  <input
+                    type="text"
+                    value={currentPkg.name}
+                    onChange={(e) => updatePackageField(currentPkg.tier, 'name', e.target.value)}
+                    className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-[#6E7785] mb-1">
+                    {currentPkg.tier} Price (INR)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={currentPkg.price}
+                    onChange={(e) =>
+                      updatePackageField(currentPkg.tier, 'price', Number(e.target.value))
+                    }
+                    className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-[#6E7785] mb-1">
+                    Delivery Time
+                  </label>
+                  <input
+                    type="text"
+                    value={currentPkg.deliveryTime}
+                    onChange={(e) =>
+                      updatePackageField(currentPkg.tier, 'deliveryTime', e.target.value)
+                    }
+                    className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-[#6E7785] mb-1">
+                    Revisions
+                  </label>
+                  <input
+                    type="text"
+                    value={currentPkg.revisions}
+                    onChange={(e) =>
+                      updatePackageField(currentPkg.tier, 'revisions', e.target.value)
+                    }
+                    className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-[11px] font-semibold text-[#6E7785] mb-1">
+                    Short Package Summary
+                  </label>
+                  <input
+                    type="text"
+                    value={currentPkg.description}
+                    onChange={(e) =>
+                      updatePackageField(currentPkg.tier, 'description', e.target.value)
+                    }
+                    className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-[11px] font-semibold text-[#6E7785] mb-1">
+                    Included Deliverables (comma-separated)
+                  </label>
+                  <input
+                    type="text"
+                    value={currentPkg.features.join(', ')}
+                    onChange={(e) =>
+                      updatePackageField(
+                        currentPkg.tier,
+                        'features',
+                        e.target.value
+                          .split(',')
+                          .map((s) => s.trim())
+                          .filter(Boolean)
+                      )
+                    }
+                    className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Row 5: Cover Image, Gallery Images & Video Preview */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-medium">Service Cover Image URL (service-media)</label>
+                <label className="text-xs font-medium text-[#172333]">
+                  Primary Cover Image URL (service-media)
+                </label>
                 <button
                   type="button"
                   onClick={() => setShowMediaPicker('image')}
                   className="text-[11px] font-semibold text-[#F18A45] hover:underline"
                 >
-                  + Upload / Pick from Media Library
+                  + Upload / Pick Cover Image
                 </button>
               </div>
               <input
@@ -285,7 +631,9 @@ export const AdminServicesPage: React.FC = () => {
 
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-medium">Sample Video / Reel Preview URL (Optional)</label>
+                <label className="text-xs font-medium text-[#172333]">
+                  Sample Video / Reel Preview URL (Optional)
+                </label>
                 <button
                   type="button"
                   onClick={() => setShowMediaPicker('video')}
@@ -302,33 +650,77 @@ export const AdminServicesPage: React.FC = () => {
                 className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
               />
             </div>
+
+            <div className="sm:col-span-2">
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-medium text-[#172333]">
+                  Additional Gallery Preview Images (comma-separated URLs)
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowMediaPicker('gallery')}
+                  className="text-[11px] font-semibold text-[#F18A45] hover:underline"
+                >
+                  + Add Image to Gallery
+                </button>
+              </div>
+              <input
+                type="text"
+                value={form.mediaUrls.join(', ')}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    mediaUrls: e.target.value
+                      .split(',')
+                      .map((s) => s.trim())
+                      .filter(Boolean),
+                  })
+                }
+                placeholder="Add 2–4 extra sample images so clients can browse a gallery carousel on the service page"
+                className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              />
+            </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-6 text-xs">
-            <label className="inline-flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={form.isCustomQuote}
-                onChange={(e) => setForm({ ...form, isCustomQuote: e.target.checked })}
-              />
-              <span>Mark as Custom Quote</span>
-            </label>
-            <label className="inline-flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={form.published}
-                onChange={(e) => setForm({ ...form, published: e.target.checked })}
-              />
-              <span>Published on Public Website</span>
-            </label>
-          </div>
+          <div className="flex flex-wrap items-center justify-between gap-6 pt-2 border-t border-[#E2E4DF]">
+            <div className="flex flex-wrap items-center gap-6 text-xs">
+              <label className="inline-flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={form.isCustomQuote}
+                  onChange={(e) => setForm({ ...form, isCustomQuote: e.target.checked })}
+                />
+                <span>Mark as Custom Quote</span>
+              </label>
+              <label className="inline-flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={form.published}
+                  onChange={(e) => setForm({ ...form, published: e.target.checked })}
+                />
+                <span>Published on Public Website</span>
+              </label>
+            </div>
 
-          <button
-            type="submit"
-            className="px-4 py-2 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg"
-          >
-            Save Service
-          </button>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowForm(false);
+                  setEditing(null);
+                }}
+                className="px-4 py-2 text-xs font-medium text-[#6E7785] hover:text-[#172333]"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-5 py-2.5 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg"
+              >
+                {editing ? 'Update Service Listing' : 'Publish Service Listing'}
+              </button>
+            </div>
+          </div>
         </form>
       )}
 
@@ -337,9 +729,10 @@ export const AdminServicesPage: React.FC = () => {
           <thead>
             <tr className="border-b border-[#E2E4DF] text-[11px] font-semibold text-[#6E7785]">
               <th className="py-3 px-4">#</th>
-              <th className="py-3 px-4">Service Name</th>
+              <th className="py-3 px-4">Service Listing</th>
               <th className="py-3 px-4">Category</th>
-              <th className="py-3 px-4">Display Price</th>
+              <th className="py-3 px-4">Starting Price</th>
+              <th className="py-3 px-4">Delivery & Packages</th>
               <th className="py-3 px-4">Visibility</th>
               <th className="py-3 px-4 text-right">Actions</th>
             </tr>
@@ -347,7 +740,7 @@ export const AdminServicesPage: React.FC = () => {
           <tbody className="divide-y divide-[#E2E4DF] text-xs">
             {services.length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-8 text-center text-[#6E7785]">
+                <td colSpan={7} className="py-8 text-center text-[#6E7785]">
                   No services stored in Supabase yet. Click "Seed 10 Starting-Price Services" above.
                 </td>
               </tr>
@@ -355,15 +748,45 @@ export const AdminServicesPage: React.FC = () => {
               services.map((srv) => (
                 <tr key={srv.id} className="hover:bg-[#F5F5F1]/50">
                   <td className="py-3.5 px-4 font-mono">{srv.sortOrder}</td>
-                  <td className="py-3.5 px-4 font-semibold text-[#172333]">{srv.title}</td>
+                  <td className="py-3.5 px-4">
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={
+                          srv.imageUrl ||
+                          createStudioArtworkDataUri(srv.title, srv.category, '#F18A45')
+                        }
+                        alt={srv.title}
+                        referrerPolicy="no-referrer"
+                        className="w-12 h-9 rounded object-cover bg-[#172333] border border-[#E2E4DF] shrink-0"
+                      />
+                      <div>
+                        <p className="font-semibold text-[#172333]">{srv.title}</p>
+                        <p className="text-[11px] text-[#6E7785] line-clamp-1 max-w-xs">
+                          {srv.deliverablesSummary}
+                        </p>
+                      </div>
+                    </div>
+                  </td>
                   <td className="py-3.5 px-4 text-[#6E7785]">{srv.category}</td>
                   <td className="py-3.5 px-4 font-mono font-semibold text-[#172333] tabular-nums">
                     {srv.priceDisplay}
                   </td>
+                  <td className="py-3.5 px-4 text-[#6E7785]">
+                    <span>{srv.turnaroundTime || '24–48 hours'}</span>
+                    <span className="block text-[11px] text-[#26734D]">
+                      3 Packages (Basic · Std · Prem)
+                    </span>
+                  </td>
                   <td className="py-3.5 px-4">
                     {srv.published ? 'Published' : 'Unpublished Draft'}
                   </td>
-                  <td className="py-3.5 px-4 text-right space-x-3">
+                  <td className="py-3.5 px-4 text-right space-x-3 whitespace-nowrap">
+                    <Link
+                      to={`/services/${encodeURIComponent(srv.slug || srv.id)}`}
+                      className="font-semibold text-[#26734D] hover:underline"
+                    >
+                      View Page
+                    </Link>
                     <button
                       type="button"
                       onClick={() =>
@@ -391,12 +814,24 @@ export const AdminServicesPage: React.FC = () => {
                           description: srv.description,
                           startingPrice: srv.startingPrice,
                           priceDisplay: srv.priceDisplay,
-                          pricingUnit: srv.pricingUnit,
+                          pricingUnit: srv.pricingUnit || 'design',
                           isCustomQuote: srv.isCustomQuote,
                           deliverablesSummary: srv.deliverablesSummary,
                           turnaroundTime: srv.turnaroundTime,
+                          revisions: srv.revisions || '2 Revisions',
                           imageUrl: srv.imageUrl,
                           videoPreviewUrl: srv.videoPreviewUrl || '',
+                          mediaUrls: Array.isArray(srv.mediaUrls) ? srv.mediaUrls : [],
+                          packages:
+                            srv.packages && srv.packages.length > 0
+                              ? srv.packages
+                              : buildDefaultServicePackages(
+                                  srv.startingPrice,
+                                  srv.pricingUnit,
+                                  srv.turnaroundTime,
+                                  srv.deliverablesSummary,
+                                  srv.revisions || '2 Revisions'
+                                ),
                           published: srv.published,
                           sortOrder: srv.sortOrder,
                         });
@@ -442,6 +877,13 @@ export const AdminServicesPage: React.FC = () => {
               onSelectAsset={(asset) => {
                 if (showMediaPicker === 'video') {
                   setForm((prev) => ({ ...prev, videoPreviewUrl: asset.publicUrl }));
+                } else if (showMediaPicker === 'gallery') {
+                  setForm((prev) => ({
+                    ...prev,
+                    mediaUrls: prev.mediaUrls.includes(asset.publicUrl)
+                      ? prev.mediaUrls
+                      : [...prev.mediaUrls, asset.publicUrl],
+                  }));
                 } else {
                   setForm((prev) => ({ ...prev, imageUrl: asset.publicUrl }));
                 }
