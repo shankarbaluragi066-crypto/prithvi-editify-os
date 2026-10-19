@@ -11,7 +11,6 @@ import { ToastProvider } from './contexts/ToastContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import {
   isSupabaseConfigured,
-  STUDIO_OWNER_EMAIL,
   getMissingSchemaStatus,
   subscribeMissingSchemaStatus,
 } from './lib/supabaseClient';
@@ -31,7 +30,7 @@ import {
   NotFoundPage,
 } from './pages/PublicPages';
 
-import { LoginPage, ForgotPasswordPage } from './pages/AuthPages';
+import { LoginPage, AdminLoginPage, ForgotPasswordPage } from './pages/AuthPages';
 
 import {
   AdminDashboardPage,
@@ -68,12 +67,15 @@ import {
 } from './pages/ClientPortalPages';
 
 const SupabaseSchemaBanner: React.FC = () => {
+  const { isAdmin } = useAuth();
   const [missingSchema, setMissingSchema] = useState(getMissingSchemaStatus());
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     return subscribeMissingSchemaStatus(setMissingSchema);
   }, []);
+
+  if (!isAdmin) return null;
 
   if (!isSupabaseConfigured) {
     return (
@@ -129,18 +131,17 @@ const RequireAdmin: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     );
   }
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/admin-login" replace />;
   }
   if (!isAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F5F5F1] p-6">
         <div className="bg-white border border-[#E2E4DF] rounded-lg max-w-md w-full p-8 space-y-4">
           <h1 className="font-editorial text-xl font-semibold text-[#172333]">
-            Administrator Access Required
+            Administrator Access Restricted
           </h1>
           <p className="text-xs text-[#6E7785] leading-relaxed">
-            You are signed in as <span className="font-semibold text-[#172333]">{user.email}</span>, which has client permissions. Only verified studio administrator{' '}
-            <span className="font-mono text-[#172333]">{STUDIO_OWNER_EMAIL}</span> can open the Admin Console.
+            Your current session has standard client permissions. Studio Administrator access is strictly restricted to the verified studio owner.
           </p>
           <div className="flex gap-3 pt-2">
             <Link
@@ -208,6 +209,11 @@ export default function App() {
           <BrowserRouter basename={routerBasename}>
             <SupabaseSchemaBanner />
             <Routes>
+              {/* Unlisted Private Studio Owner Login Routes */}
+              <Route path="/admin-login" element={<AdminLoginPage />} />
+              <Route path="/studio-admin" element={<AdminLoginPage />} />
+              <Route path="/admin/login" element={<AdminLoginPage />} />
+
               {/* Public Studio Website Routes */}
               <Route element={<PublicLayout />}>
                 <Route path="/" element={<HomePage />} />

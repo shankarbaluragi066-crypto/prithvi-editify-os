@@ -2007,6 +2007,7 @@ export const AdminReportsPage: React.FC = () => {
 // 7. ADMIN STUDIO SETTINGS, NOTIFICATIONS & PROFILE PAGES
 // ============================================================================
 export const AdminSettingsPage: React.FC = () => {
+  const { user } = useAuth();
   const { showToast } = useToast();
   const [pub, setPub] = useState<PublicSettings>(DEFAULT_PUBLIC_SETTINGS);
   const [priv, setPriv] = useState<PrivateSettings>(DEFAULT_PRIVATE_SETTINGS);
@@ -2015,6 +2016,22 @@ export const AdminSettingsPage: React.FC = () => {
     fetchPublicSettings().then(setPub).catch(() => {});
     fetchPrivateSettings().then(setPriv).catch(() => {});
   }, []);
+
+  const privateAdminLoginUrl =
+    typeof window !== 'undefined'
+      ? `${window.location.origin}${
+          window.location.pathname.startsWith('/prithvi-editify') ? '/prithvi-editify' : ''
+        }/admin-login`
+      : '/admin-login';
+
+  const handleCopyAdminLink = async () => {
+    try {
+      await navigator.clipboard.writeText(privateAdminLoginUrl);
+      showToast('success', 'Private Admin Link Copied', privateAdminLoginUrl);
+    } catch {
+      showToast('success', 'Private Admin Link', privateAdminLoginUrl);
+    }
+  };
 
   const handleSavePublic = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -2043,6 +2060,46 @@ export const AdminSettingsPage: React.FC = () => {
         <p className="text-xs text-[#6E7785] mt-1">
           Public contact settings (/settings/public) are separated from private billing settings (/settings/private).
         </p>
+      </div>
+
+      {/* Private Studio Owner Security & Unlisted Admin Login Link */}
+      <div className="bg-[#172333] text-[#F5F5F1] border border-[#24364A] rounded-lg p-6 space-y-4">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-2">
+            <Lock className="w-4 h-4 text-[#F18A45]" />
+            <h2 className="text-sm font-semibold text-white">
+              Private Role Security & Studio Owner Login Link (Hidden from Public)
+            </h2>
+          </div>
+          <span className="px-2.5 py-0.5 rounded bg-[#26734D] text-[11px] font-mono text-white">
+            RLS ENFORCED · OWNER VERIFIED
+          </span>
+        </div>
+        <div className="text-xs text-[#9BA3B0] space-y-1.5 leading-relaxed">
+          <p>
+            <strong className="text-white">Role Security:</strong> All self-registered accounts on the public portal receive the{' '}
+            <code className="font-mono text-[#F18A45]">client</code> role enforced by Supabase Row Level Security (RLS).
+          </p>
+          <p>
+            Studio Administrator access is strictly restricted to verified studio owner{' '}
+            <code className="font-mono text-white">{user?.email}</code> and is completely hidden from all public pages.
+          </p>
+        </div>
+        <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+          <input
+            type="text"
+            readOnly
+            value={privateAdminLoginUrl}
+            className="flex-1 px-3 py-2 text-xs font-mono bg-[#24364A] text-white border border-[#354B63] rounded-lg select-all"
+          />
+          <button
+            type="button"
+            onClick={handleCopyAdminLink}
+            className="px-4 py-2 text-xs font-semibold text-[#172333] bg-[#F18A45] hover:bg-[#e07934] rounded-lg transition-colors shrink-0"
+          >
+            Copy Private Admin Login Link
+          </button>
+        </div>
       </div>
 
       <form onSubmit={handleSavePublic} className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-4">

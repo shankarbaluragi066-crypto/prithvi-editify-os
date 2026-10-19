@@ -17,7 +17,7 @@ interface AuthContextValue {
   isAdmin: boolean;
   isClient: boolean;
   loading: boolean;
-  loginWithGoogle: () => Promise<UserProfile>;
+  loginWithGoogle: (redirectPath?: string) => Promise<UserProfile>;
   loginWithEmail: (email: string, password: string) => Promise<UserProfile>;
   registerClientWithEmail: (data: {
     displayName: string;
@@ -75,7 +75,7 @@ function mapProfileRow(row: Record<string, any>, fallbackUser: AppAuthUser): Use
     displayName: String(
       row.display_name || fallbackUser.displayName || email.split('@')[0] || 'Client'
     ),
-    role: isOwner || row.role === 'admin' ? 'admin' : 'client',
+    role: isOwner ? 'admin' : 'client',
     status: row.status === 'deactivated' ? 'deactivated' : 'active',
     phone: String(row.phone || ''),
     companyName: String(row.company_name || ''),
@@ -221,7 +221,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  const loginWithGoogle = async (): Promise<UserProfile> => {
+  const loginWithGoogle = async (redirectPath = '/login'): Promise<UserProfile> => {
     if (!isSupabaseConfigured) {
       throw new Error(
         'Supabase is not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY.'
@@ -230,7 +230,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: getAppRedirectUrl('/login'),
+        redirectTo: getAppRedirectUrl(redirectPath),
       },
     });
     if (error) throw error;
@@ -282,6 +282,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       throw new Error(
         'Supabase is not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY.'
       );
+    }
+    if (data.email.trim().toLowerCase() === STUDIO_OWNER_EMAIL.toLowerCase()) {
+      throw new Error('This email address cannot be used for public client self-registration.');
     }
     const { data: signUpData, error } = await supabase.auth.signUp({
       email: data.email.trim(),
@@ -347,9 +350,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const isAdmin = Boolean(
-    user &&
-      (user.email?.toLowerCase() === STUDIO_OWNER_EMAIL.toLowerCase() ||
-        profile?.role === 'admin')
+    user && user.email?.toLowerCase() === STUDIO_OWNER_EMAIL.toLowerCase()
   );
   const isClient = Boolean(user && !isAdmin);
 
