@@ -1,0 +1,6 @@
+{
+  "name": "Prithvi Editify — Creative Studio & Client CRM",
+  "description": "Full-stack freelance creative studio website, client portal, project management, and invoicing CRM for Prithvi Editify by Shankar Baluragi.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

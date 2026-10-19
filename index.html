@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Prithvi Editify — Creative Studio & Client CRM</title>
+    <meta name="description" content="Full-stack freelance creative studio website, client portal, project management, and invoicing CRM for Prithvi Editify by Shankar Baluragi." />
+    <meta property="og:title" content="Prithvi Editify — Creative Studio & Client CRM" />
+    <meta property="og:description" content="Full-stack freelance creative studio website, client portal, project management, and invoicing CRM for Prithvi Editify by Shankar Baluragi." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23172333'/%3E%3Cpath d='M18 16h16c7.732 0 14 6.268 14 14s-6.268 14-14 14H26v6h-8V16zm8 8v12h8c3.314 0 6-2.686 6-6s-2.686-6-6-6h-8z' fill='%23F18A45'/%3E%3C/svg%3E"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <script>
+      // Restore clean URL path when redirected from GitHub Pages 404.html SPA handler
+      (function (l) {
+        if (l.search && l.search[1] === '/') {
+          var decoded = l.search
+            .slice(1)
+            .split('&')
+            .map(function (s) {
+              return s.replace(/~and~/g, '&');
+            })
+            .join('?');
+          window.history.replaceState(
+            null,
+            null,
+            l.pathname.slice(0, -1) + decoded + l.hash
+          );
+        }
+      })(window.location);
+    </script>
+  </head>
+  <body class="bg-[#F5F5F1] text-[#172333] antialiased selection:bg-[#F18A45]/20 selection:text-[#172333]">
+    <div id="root"></div>
+    <script>
+      (function () {
+        // 1. If opened via file:/// in File Explorer, show local server instructions
+        if (window.location.protocol === 'file:') {
+          var rootEl = document.getElementById('root');
+          if (rootEl) {
+            rootEl.innerHTML =
+              '<div style="max-width:680px;margin:48px auto;padding:32px;background:#ffffff;border:1px solid #E2E4DF;border-radius:12px;font-family:\'Plus Jakarta Sans\',system-ui,sans-serif;color:#172333;line-height:1.6;">' +
+              '<div style="display:inline-block;padding:4px 10px;background:#F18A45;color:#172333;font-weight:700;font-size:11px;border-radius:6px;margin-bottom:12px;">VITE + TYPESCRIPT PROJECT</div>' +
+              '<h1 style="font-size:22px;font-weight:700;margin:0 0 12px 0;">Cannot Open Raw Source via <code>file:///</code> Protocol</h1>' +
+              '<p style="font-size:14px;color:#4A5568;margin:0 0 16px 0;">You opened <code>index.html</code> directly from your local disk (<code>file:///</code>). Modern browsers block ES modules over <code>file:///</code> (CORS policy).</p>' +
+              '<div style="background:#172333;color:#F5F5F1;padding:16px 20px;border-radius:8px;font-family:\'JetBrains Mono\',monospace;font-size:13px;">' +
+              '<div style="color:#F18A45;font-weight:600;margin-bottom:8px;">// Run locally in Terminal / PowerShell / VS Code:</div>' +
+              '<div>1. npm install</div>' +
+              '<div>2. npm run dev</div>' +
+              '<div style="margin-top:8px;color:#9BA3B0;">Then open: <a href="http://localhost:3000" style="color:#F18A45;text-decoration:underline;">http://localhost:3000</a></div>' +
+              '</div>' +
+              '</div>';
+          }
+          return;
+        }
+
+        // 2. If served directly from the root of the main branch on GitHub Pages (where Vite Dev Server is not active
+        // and index.html is not inside ./dist), automatically load the prebuilt production bundle from ./bundle/
+        var isViteDevServer = Boolean(document.querySelector('script[src*="@vite/client"]'));
+        var isBuiltDistIndex = Boolean(document.querySelector('script[src*="assets/app.js"]'));
+        if (!isViteDevServer && !isBuiltDistIndex) {
+          var cssLink = document.createElement('link');
+          cssLink.rel = 'stylesheet';
+          cssLink.href = './bundle/app.css';
+          document.head.appendChild(cssLink);
+
+          var appScript = document.createElement('script');
+          appScript.type = 'module';
+          appScript.src = './bundle/app.js';
+          document.body.appendChild(appScript);
+        }
+      })();
+    </script>
+    <script type="module" src="./src/main.tsx"></script>
+  </body>
+</html>
