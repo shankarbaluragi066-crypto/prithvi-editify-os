@@ -28,14 +28,25 @@ const SPA_REDIRECT_404_HTML = `<!doctype html>
 `;
 
 /**
- * Generates `404.html` and `.nojekyll` in both `dist/` and repository root `/`,
- * and mirrors the compiled bundle into `/bundle/app.js` and `/bundle/app.css` so
- * GitHub Pages works directly from the root of the `main` branch without workflow files.
+ * 1. During `vite dev` and `vite build`, transforms `index.html` to use `/src/main.tsx`
+ *    instead of the static GitHub Pages `./bundle/loader.js` fallback.
+ * 2. Generates `dist/404.html` and `dist/.nojekyll` during production builds.
  */
 function githubPagesSpaPlugin(): Plugin {
   let outDir = 'dist';
   return {
     name: 'github-pages-spa-fallback',
+    transformIndexHtml: {
+      order: 'pre',
+      handler(html) {
+        return html
+          .replace(/<link\s+id="gh-pages-css"[^>]*>\s*/g, '')
+          .replace(
+            /<script\s+id="gh-pages-entry"[^>]*><\/script>/g,
+            '<script type="module" src="./src/main.tsx"></script>'
+          );
+      },
+    },
     configResolved(resolvedConfig) {
       outDir = resolvedConfig.build.outDir || 'dist';
     },
@@ -43,25 +54,8 @@ function githubPagesSpaPlugin(): Plugin {
       const resolvedOutDir = path.resolve(__dirname, outDir);
       if (fs.existsSync(resolvedOutDir)) {
         fs.writeFileSync(path.join(resolvedOutDir, '404.html'), SPA_REDIRECT_404_HTML, 'utf-8');
-        fs.writeFileSync(path.join(resolvedOutDir, '.nojekyll'), '');
-
-        // Mirror compiled JS and CSS into /bundle for branch-root GitHub Pages hosting
-        const bundleDir = path.resolve(__dirname, 'bundle');
-        if (!fs.existsSync(bundleDir)) {
-          fs.mkdirSync(bundleDir, { recursive: true });
-        }
-        const builtJs = path.join(resolvedOutDir, 'assets', 'app.js');
-        const builtCss = path.join(resolvedOutDir, 'assets', 'index.css');
-        if (fs.existsSync(builtJs)) {
-          fs.copyFileSync(builtJs, path.join(bundleDir, 'app.js'));
-        }
-        if (fs.existsSync(builtCss)) {
-          fs.copyFileSync(builtCss, path.join(bundleDir, 'app.css'));
-        }
+        fs.writeFileSync(path.join(resolvedOutDir, '.nojekyll'), '\n', 'utf-8');
       }
-      // Also write 404.html and .nojekyll to repository root for branch-root GitHub Pages hosting
-      fs.writeFileSync(path.resolve(__dirname, '404.html'), SPA_REDIRECT_404_HTML, 'utf-8');
-      fs.writeFileSync(path.resolve(__dirname, '.nojekyll'), '');
     },
   };
 }
@@ -69,7 +63,7 @@ function githubPagesSpaPlugin(): Plugin {
 export default defineConfig(() => {
   return {
     base: './',
-    plugins: [react(), tailwindcss(), githubPagesSpaPlugin()],
+    plugins: [githubPagesSpaPlugin(), react(), tailwindcss()],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),

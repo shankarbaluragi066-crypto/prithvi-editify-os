@@ -17,6 +17,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link id="gh-pages-css" rel="stylesheet" href="./bundle/app.css" />
     <script>
       // Restore clean URL path when redirected from GitHub Pages 404.html SPA handler
       (function (l) {
@@ -40,8 +41,8 @@
   <body class="bg-[#F5F5F1] text-[#172333] antialiased selection:bg-[#F18A45]/20 selection:text-[#172333]">
     <div id="root"></div>
     <script>
+      // If opened via file:/// in File Explorer, show local server and live URL instructions
       (function () {
-        // 1. If opened via file:/// in File Explorer, show local server instructions
         if (window.location.protocol === 'file:') {
           var rootEl = document.getElementById('root');
           if (rootEl) {
@@ -58,26 +59,9 @@
               '</div>' +
               '</div>';
           }
-          return;
-        }
-
-        // 2. If served directly from the root of the main branch on GitHub Pages (where Vite Dev Server is not active
-        // and index.html is not inside ./dist), automatically load the prebuilt production bundle from ./bundle/
-        var isViteDevServer = Boolean(document.querySelector('script[src*="@vite/client"]'));
-        var isBuiltDistIndex = Boolean(document.querySelector('script[src*="assets/app.js"]'));
-        if (!isViteDevServer && !isBuiltDistIndex) {
-          var cssLink = document.createElement('link');
-          cssLink.rel = 'stylesheet';
-          cssLink.href = './bundle/app.css';
-          document.head.appendChild(cssLink);
-
-          var appScript = document.createElement('script');
-          appScript.type = 'module';
-          appScript.src = './bundle/app.js';
-          document.body.appendChild(appScript);
         }
       })();
     </script>
-    <script type="module" src="./src/main.tsx"></script>
+    <script id="gh-pages-entry" type="module" src="./bundle/loader.js"></script>
   </body>
 </html>

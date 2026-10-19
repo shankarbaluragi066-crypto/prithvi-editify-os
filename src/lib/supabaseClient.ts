@@ -1,19 +1,29 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL || '').trim();
-const supabasePublishableKey = (
-  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
-  import.meta.env.VITE_SUPABASE_ANON_KEY ||
+const DEFAULT_SUPABASE_URL = 'https://kjsnawvgctdsikexzjfp.supabase.co';
+const DEFAULT_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_QIkiS3KZxMr5ct9Y7CrfDQ_ZAt4j42V';
+
+const envUrl = (import.meta.env?.VITE_SUPABASE_URL || '').trim();
+const envKey = (
+  import.meta.env?.VITE_SUPABASE_PUBLISHABLE_KEY ||
+  import.meta.env?.VITE_SUPABASE_ANON_KEY ||
   ''
 ).trim();
+
+const supabaseUrl =
+  envUrl && !envUrl.includes('YOUR_SUPABASE') && !envUrl.includes('YOUR_PROJECT_REF')
+    ? envUrl
+    : DEFAULT_SUPABASE_URL;
+
+const supabasePublishableKey =
+  envKey && !envKey.includes('YOUR_SUPABASE')
+    ? envKey
+    : DEFAULT_SUPABASE_PUBLISHABLE_KEY;
 
 export const isSupabaseConfigured = Boolean(
   supabaseUrl &&
     supabasePublishableKey &&
-    supabaseUrl.startsWith('http') &&
-    !supabaseUrl.includes('YOUR_SUPABASE') &&
-    !supabaseUrl.includes('YOUR_PROJECT_REF') &&
-    !supabasePublishableKey.includes('YOUR_SUPABASE')
+    supabaseUrl.startsWith('http')
 );
 
 export const supabase = createClient(
