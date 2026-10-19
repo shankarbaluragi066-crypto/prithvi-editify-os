@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Plus,
   Printer,
@@ -2060,6 +2061,27 @@ export const AdminSettingsPage: React.FC = () => {
         <p className="text-xs text-[#6E7785] mt-1">
           Public contact settings (/settings/public) are separated from private billing settings (/settings/private).
         </p>
+      </div>
+
+      {/* Complete A-to-Z Website Customizer Callout */}
+      <div className="bg-white border-2 border-[#F18A45] rounded-xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <span className="inline-block px-2.5 py-0.5 rounded bg-[#F18A45]/15 text-[#B85D1D] text-[10px] font-semibold uppercase tracking-wider">
+            Full Site Builder & Visual Editor
+          </span>
+          <h2 className="font-editorial text-lg font-semibold text-[#172333]">
+            Complete A-to-Z Website Customizer Studio
+          </h2>
+          <p className="text-xs text-[#6E7785] max-w-xl">
+            Customize your logo, brand colors, announcement bar, header navigation, hero artwork, homepage sections, 4-step workflow, founder story, contact form budget ranges, SEO metadata, and legal policies.
+          </p>
+        </div>
+        <Link
+          to="/admin/website-customizer"
+          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-semibold text-[#172333] bg-[#F18A45] hover:bg-[#e07934] rounded-lg transition-colors shrink-0"
+        >
+          <span>Open A–Z Website Customizer</span>
+        </Link>
       </div>
 
       {/* Private Studio Owner Security & Unlisted Admin Login Link */}

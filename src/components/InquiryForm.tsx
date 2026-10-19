@@ -1,9 +1,13 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { CheckCircle2, Send, Paperclip } from 'lucide-react';
 import { inquirySchema, InquiryFormValues } from '../schemas/validation';
-import { submitInquiryRecord, uploadInquiryReferenceFile } from '../services/crmService';
+import {
+  submitInquiryRecord,
+  uploadInquiryReferenceFile,
+  fetchPublishedServices,
+} from '../services/crmService';
 import { useToast } from '../contexts/ToastContext';
 import { Link } from 'react-router-dom';
 
@@ -28,11 +32,30 @@ const BUDGET_RANGES = [
   '₹35,000+ (Monthly Retainer / Campaign)',
 ];
 
-export const InquiryForm: React.FC<{ defaultService?: string }> = ({ defaultService }) => {
+export const InquiryForm: React.FC<{
+  defaultService?: string;
+  customBudgetRanges?: string[];
+}> = ({ defaultService, customBudgetRanges }) => {
   const { showToast } = useToast();
   const [referenceFile, setReferenceFile] = useState<File | null>(null);
   const [submittedId, setSubmittedId] = useState<string | null>(null);
   const [lastFingerprint, setLastFingerprint] = useState<string>('');
+  const [serviceOptions, setServiceOptions] = useState<string[]>(SERVICE_OPTIONS);
+
+  const activeBudgetRanges =
+    customBudgetRanges && customBudgetRanges.length > 0 ? customBudgetRanges : BUDGET_RANGES;
+
+  useEffect(() => {
+    fetchPublishedServices()
+      .then((list) => {
+        if (list.length > 0) {
+          setServiceOptions(
+            list.map((s) => `${s.title} (${s.isCustomQuote ? 'Custom quote' : `Starting ${s.priceDisplay}`})`)
+          );
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const {
     register,
@@ -47,7 +70,7 @@ export const InquiryForm: React.FC<{ defaultService?: string }> = ({ defaultServ
       phone: '',
       companyName: '',
       serviceRequired: defaultService || SERVICE_OPTIONS[0],
-      budgetRange: BUDGET_RANGES[1],
+      budgetRange: activeBudgetRanges[1] || activeBudgetRanges[0],
       preferredDeadline: '',
       description: '',
       privacyConsent: false,
@@ -97,7 +120,7 @@ export const InquiryForm: React.FC<{ defaultService?: string }> = ({ defaultServ
 
   if (submittedId) {
     return (
-      <div className="bg-white border border-[#E2E4DF] rounded-lg p-8">
+      <div className="bg-white border border-[#E2E4DF] rounded-lg p-8 shadow-[0_1px_2px_rgba(23,35,51,0.04)]">
         <div className="flex items-center gap-3 text-[#26734D]">
           <CheckCircle2 className="w-6 h-6 shrink-0" />
           <h3 className="text-xl font-semibold text-[#172333]">Brief Received by Prithvi Editify</h3>
@@ -122,7 +145,7 @@ export const InquiryForm: React.FC<{ defaultService?: string }> = ({ defaultServ
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="bg-white border border-[#E2E4DF] rounded-lg p-6 sm:p-8 space-y-5">
+    <form onSubmit={handleSubmit(onSubmit)} noValidate className="bg-white border border-[#E2E4DF] rounded-lg p-6 sm:p-8 space-y-5 shadow-[0_1px_2px_rgba(23,35,51,0.04)]">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
         <div>
           <label htmlFor="inq-fullName" className="block text-xs font-medium text-[#172333] mb-1.5">
@@ -189,7 +212,7 @@ export const InquiryForm: React.FC<{ defaultService?: string }> = ({ defaultServ
             {...register('serviceRequired')}
             className="w-full px-3.5 py-2.5 text-sm bg-[#F5F5F1]/60 border border-[#E2E4DF] rounded-lg focus:outline-none focus:border-[#172333] focus:bg-white transition-colors"
           >
-            {SERVICE_OPTIONS.map((opt) => (
+            {serviceOptions.map((opt) => (
               <option key={opt} value={opt}>
                 {opt}
               </option>
@@ -207,7 +230,7 @@ export const InquiryForm: React.FC<{ defaultService?: string }> = ({ defaultServ
             {...register('budgetRange')}
             className="w-full px-3.5 py-2.5 text-sm bg-[#F5F5F1]/60 border border-[#E2E4DF] rounded-lg focus:outline-none focus:border-[#172333] focus:bg-white transition-colors"
           >
-            {BUDGET_RANGES.map((range) => (
+            {activeBudgetRanges.map((range) => (
               <option key={range} value={range}>
                 {range}
               </option>

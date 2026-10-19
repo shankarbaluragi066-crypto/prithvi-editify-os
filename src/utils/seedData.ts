@@ -1,4 +1,10 @@
-import { ServiceItem, PortfolioItem, PublicSettings, PrivateSettings } from '../types/crm';
+import {
+  ServiceItem,
+  PortfolioItem,
+  PublicSettings,
+  PrivateSettings,
+  SiteCustomization,
+} from '../types/crm';
 
 /**
  * Generates clean, self-contained SVG data-URI studio artwork so portfolio
@@ -19,33 +25,318 @@ export function createStudioArtworkDataUri(
         <stop offset="0%" stop-color="${bgPrimary}"/>
         <stop offset="100%" stop-color="${bgSecondary}"/>
       </linearGradient>
+      <radialGradient id="glow" cx="78%" cy="32%" r="48%">
+        <stop offset="0%" stop-color="${accentColor}" stop-opacity="0.22"/>
+        <stop offset="100%" stop-color="${accentColor}" stop-opacity="0"/>
+      </radialGradient>
     </defs>
     <rect width="800" height="600" fill="url(#bg)"/>
-    <g stroke="#ffffff" stroke-opacity="0.07" stroke-width="1">
-      <line x1="80" y1="0" x2="80" y2="600"/>
-      <line x1="400" y1="0" x2="400" y2="600"/>
-      <line x1="720" y1="0" x2="720" y2="600"/>
-      <line x1="0" y1="100" x2="800" y2="100"/>
-      <line x1="0" y1="500" x2="800" y2="500"/>
+    <rect width="800" height="600" fill="url(#glow)"/>
+    <g stroke="#ffffff" stroke-opacity="0.06" stroke-width="1">
+      <line x1="72" y1="0" x2="72" y2="600"/>
+      <line x1="400" y1="0" x2="400" y2="600" stroke-dasharray="4 6"/>
+      <line x1="728" y1="0" x2="728" y2="600"/>
+      <line x1="0" y1="88" x2="800" y2="88"/>
+      <line x1="0" y1="512" x2="800" y2="512"/>
     </g>
-    <rect x="80" y="100" width="640" height="400" rx="8" fill="#172333" fill-opacity="0.55" stroke="#ffffff" stroke-opacity="0.14"/>
-    <circle cx="620" cy="220" r="95" fill="${accentColor}" fill-opacity="0.18"/>
-    <circle cx="620" cy="220" r="48" fill="none" stroke="${accentColor}" stroke-width="2" stroke-opacity="0.7"/>
-    <rect x="128" y="152" width="84" height="6" rx="3" fill="${accentColor}"/>
-    <text x="128" y="210" fill="#F5F5F1" font-family="Georgia, serif" font-size="34" font-weight="600">${safeTitle}</text>
-    <text x="128" y="252" fill="#9BA3B0" font-family="sans-serif" font-size="16" letter-spacing="0.5">${safeSub}</text>
-    <g transform="translate(128, 340)">
-      <rect x="0" y="0" width="160" height="84" rx="4" fill="#24364A" stroke="#ffffff" stroke-opacity="0.12"/>
-      <rect x="18" y="22" width="70" height="8" rx="4" fill="${accentColor}"/>
-      <rect x="18" y="40" width="115" height="6" rx="3" fill="#ffffff" fill-opacity="0.35"/>
-      <rect x="18" y="54" width="90" height="6" rx="3" fill="#ffffff" fill-opacity="0.2"/>
-      <rect x="180" y="0" width="220" height="84" rx="4" fill="#24364A" stroke="#ffffff" stroke-opacity="0.12"/>
-      <line x1="200" y1="42" x2="380" y2="42" stroke="${accentColor}" stroke-width="2"/>
-      <circle cx="265" cy="42" r="6" fill="#F5F5F1"/>
-      <text x="200" y="68" fill="#9BA3B0" font-family="monospace" font-size="11">PRITHVI EDITIFY STUDIO</text>
+    <rect x="72" y="88" width="656" height="424" rx="10" fill="#172333" fill-opacity="0.68" stroke="#ffffff" stroke-opacity="0.14"/>
+    <line x1="72" y1="136" x2="728" y2="136" stroke="#ffffff" stroke-opacity="0.09"/>
+    <circle cx="100" cy="112" r="4" fill="${accentColor}" fill-opacity="0.85"/>
+    <circle cx="116" cy="112" r="4" fill="#ffffff" fill-opacity="0.22"/>
+    <circle cx="132" cy="112" r="4" fill="#ffffff" fill-opacity="0.12"/>
+    <text x="696" y="116" text-anchor="end" fill="#9BA3B0" font-family="monospace" font-size="11" letter-spacing="1.2">PRITHVI EDITIFY · STUDIO</text>
+    <circle cx="624" cy="248" r="88" fill="${accentColor}" fill-opacity="0.12"/>
+    <circle cx="624" cy="248" r="52" fill="none" stroke="${accentColor}" stroke-width="1.75" stroke-opacity="0.65"/>
+    <circle cx="624" cy="248" r="4" fill="${accentColor}"/>
+    <rect x="120" y="176" width="64" height="4" rx="2" fill="${accentColor}"/>
+    <text x="120" y="232" fill="#F5F5F1" font-family="Georgia, 'Times New Roman', serif" font-size="33" font-weight="600" letter-spacing="-0.4">${safeTitle}</text>
+    <text x="120" y="270" fill="#D0D5DD" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="15" letter-spacing="0.3">${safeSub}</text>
+    <g transform="translate(120, 344)">
+      <rect x="0" y="0" width="176" height="108" rx="6" fill="#24364A" fill-opacity="0.85" stroke="#ffffff" stroke-opacity="0.12"/>
+      <rect x="20" y="22" width="64" height="7" rx="3.5" fill="${accentColor}"/>
+      <rect x="20" y="42" width="124" height="6" rx="3" fill="#ffffff" fill-opacity="0.38"/>
+      <rect x="20" y="56" width="96" height="6" rx="3" fill="#ffffff" fill-opacity="0.2"/>
+      <text x="20" y="86" fill="#9BA3B0" font-family="monospace" font-size="10" letter-spacing="0.8">LAYOUT &amp; GRID</text>
+      <rect x="196" y="0" width="360" height="108" rx="6" fill="#24364A" fill-opacity="0.85" stroke="#ffffff" stroke-opacity="0.12"/>
+      <line x1="220" y1="38" x2="532" y2="38" stroke="#ffffff" stroke-opacity="0.14" stroke-width="2"/>
+      <line x1="220" y1="38" x2="395" y2="38" stroke="${accentColor}" stroke-width="2.5"/>
+      <circle cx="395" cy="38" r="6" fill="#F5F5F1" stroke="${accentColor}" stroke-width="2"/>
+      <rect x="220" y="56" width="88" height="10" rx="3" fill="#ffffff" fill-opacity="0.18"/>
+      <rect x="316" y="56" width="128" height="10" rx="3" fill="${accentColor}" fill-opacity="0.32"/>
+      <rect x="452" y="56" width="80" height="10" rx="3" fill="#ffffff" fill-opacity="0.12"/>
+      <text x="220" y="88" fill="#9BA3B0" font-family="monospace" font-size="10" letter-spacing="0.8">MASTER TIMELINE · COLOR CALIBRATED</text>
     </g>
   </svg>`;
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+export const DEFAULT_SITE_CUSTOMIZATION: SiteCustomization = {
+  logoUrl: '',
+  primaryColor: '#172333',
+  secondaryColor: '#24364A',
+  accentColor: '#F18A45',
+  backgroundColor: '#F5F5F1',
+  announcementEnabled: false,
+  announcementText:
+    'Now accepting new graphic design, YouTube thumbnail & video editing briefs — fast studio turnaround.',
+  announcementCtaLabel: 'Start a Brief →',
+  announcementCtaLink: '/contact',
+
+  navHomeLabel: 'Home',
+  navServicesLabel: 'Services',
+  navPortfolioLabel: 'Portfolio',
+  navAboutLabel: 'About',
+  navContactLabel: 'Contact',
+  navPortalButtonLabel: 'Client Portal',
+  showServicesNav: true,
+  showPortfolioNav: true,
+  showAboutNav: true,
+  showContactNav: true,
+
+  heroKicker: 'Prithvi Editify · Independent Design & Video Studio',
+  heroHeadline: 'Creative work. Clear process.',
+  heroSubheadline:
+    'Professional design and video editing for brands, creators, and growing businesses.',
+  heroPrimaryCtaLabel: 'Start a Project',
+  heroPrimaryCtaLink: '/contact',
+  heroSecondaryCtaLabel: 'Explore Portfolio',
+  heroSecondaryCtaLink: '/portfolio',
+  heroDisciplines: [
+    'Graphic Design',
+    'YouTube Thumbnails',
+    'Social Media Content',
+    'Video & Reels Editing',
+  ],
+  showcaseTitle: 'Studio Production Architecture',
+  showcaseSubtitle: 'Brief → Scope & INR Quote → Review Portal → Master Delivery',
+  showcaseBadge: 'INR PRICING',
+  heroImageUrl: '',
+  heroArtworkTitle: 'Prithvi Editify',
+  heroArtworkSubtitle: 'Design Grids · Thumbnails · Video Timelines',
+  stat1Label: 'Starting Design Rates',
+  stat1Value: '₹400 – ₹750',
+  stat1Subtext: 'Per graphic / creative',
+  stat2Label: 'Client Workspace',
+  stat2Value: 'Live Portal',
+  stat2Subtext: 'Files, timeline & invoices',
+
+  showServicesSection: true,
+  homeServicesKicker: '01. Capabilities & Starting Rates',
+  homeServicesHeading: 'Services built for clarity and visual impact',
+  homeServicesCtaLabel: 'View Full Rate Card (INR)',
+  homePortfolioKicker: '02. Selected Studio Work',
+  homePortfolioHeading: 'Design systems, packaging, and editorial cuts',
+  homePortfolioCtaLabel: 'Browse Complete Portfolio',
+  showProcessSection: true,
+  processKicker: '03. Studio Workflow',
+  processHeading: 'A structured four-step process from brief to final files',
+  processSteps: [
+    {
+      step: '01. Share your brief',
+      desc: 'Submit your project requirements, target platform, references, and preferred deadline through our inquiry form.',
+    },
+    {
+      step: '02. Confirm scope & quote',
+      desc: 'Receive a clear written scope, timeline, and transparent INR quote before production begins.',
+    },
+    {
+      step: '03. Create and review',
+      desc: 'Track progress inside your private Client Portal, view design previews, and leave structured feedback.',
+    },
+    {
+      step: '04. Approve & receive files',
+      desc: 'Approve final deliverables, settle the invoice balance, and download high-resolution master files.',
+    },
+  ],
+  showTrustSection: true,
+  trustKicker: '04. Why Work With Prithvi Editify',
+  trustHeading: 'Built on clear communication and organised delivery',
+  trustSubtitle:
+    'Every project is managed through a dedicated client workspace so briefs, revision notes, deliverables, and invoices never get lost in scattered chat threads.',
+  trustPillars: [
+    {
+      title: 'Organised Project Tracking',
+      desc: 'Clients log in to see exact project statuses, milestone checklists, and expected delivery dates in real time.',
+    },
+    {
+      title: 'Transparent INR Pricing',
+      desc: 'Published starting rates for standard design assets and itemised INR invoices for custom video editing scopes.',
+    },
+    {
+      title: 'Protected Deliverable Access',
+      desc: 'Reference files, draft previews, and final master exports are privately scoped to your authenticated client account.',
+    },
+  ],
+  showHomeContactSection: true,
+  homeContactKicker: '05. Start a Project',
+  homeContactHeading: 'Share your project brief with Shankar Baluragi',
+  homeContactDesc:
+    'Fill out the project inquiry form with your required deliverables, timeline, and budget range. You can also initiate a direct conversation on WhatsApp.',
+
+  servicesPageKicker: 'Services & Starting Rates (INR)',
+  servicesPageTitle: 'Transparent starting prices for creative production',
+  servicesPageDescription:
+    'All listed rates are starting prices in Indian Rupees (₹). Final quotes depend on complexity, footage duration, revision rounds, and turnaround urgency.',
+  portfolioPageKicker: 'Studio Archive & Capabilities',
+  portfolioPageTitle: 'Creative Portfolio',
+  portfolioPageDescription:
+    'Explore graphic design, social media creatives, YouTube thumbnails, and video editing layouts. Sample records are explicitly labeled as demonstration content until replaced in the Admin Console.',
+
+  aboutKicker: 'About the Studio',
+  aboutHeading: 'Independent creative direction by Shankar Baluragi',
+  aboutParagraph1:
+    'Prithvi Editify helps businesses, creators, brands, and organisations communicate through professional graphic design, social media creatives, YouTube thumbnails, video editing, and promotional content.',
+  aboutParagraph2:
+    'Instead of treating creative production like an unpredictable freelance exchange, Prithvi Editify combines studio-grade design craft with a dedicated client portal. Every client gets clear scope documentation, milestone tracking, structured revision workflows, and itemised INR billing.',
+  aboutPrimaryCtaLabel: 'Start a Project',
+  aboutSecondaryCtaLabel: 'View Services & Pricing',
+  founderImageUrl: '',
+  founderName: 'Shankar Baluragi',
+  founderRole: 'Founder · Graphic Design, Video Editing & Social Media Content Systems',
+  aboutPillars: [
+    {
+      title: '01. Design & Editorial Restraint',
+      desc: 'Every graphic, thumbnail, and video frame is structured around visual hierarchy, readability, and brand recognition rather than generic templates.',
+    },
+    {
+      title: '02. Dedicated Client Portal',
+      desc: 'Review drafts, track project progress percentages, download final files, and access printable INR invoices in one private workspace.',
+    },
+    {
+      title: '03. Direct Studio Accountability',
+      desc: 'Work directly with Shankar Baluragi from initial brief to final file delivery with clear turnaround commitments.',
+    },
+  ],
+
+  contactKicker: 'Project Inquiry & Contact',
+  contactHeading: 'Let’s scope your next creative project',
+  contactDescription:
+    'Complete the project inquiry form to share your deliverables, timeline, and budget range. All inquiries are saved securely to our studio CRM.',
+  whatsappCardTitle: 'WhatsApp Direct Chat',
+  whatsappCardDesc:
+    'Prefer a quick preliminary discussion on WhatsApp? Click below to open WhatsApp with a prefilled project message.',
+  whatsappButtonLabel: 'Discuss on WhatsApp',
+  workingHours: 'Mon – Sat · 10:00 AM – 7:00 PM IST',
+  inquiryBudgetRanges: [
+    'Under ₹2,500',
+    '₹2,500 – ₹5,000',
+    '₹5,000 – ₹15,000',
+    '₹15,000 – ₹35,000',
+    '₹35,000+ (Monthly Retainer / Campaign)',
+  ],
+
+  footerStudioLabel: 'Independent Creative Studio · Led by Shankar Baluragi',
+  copyrightText: 'All rights reserved.',
+  instagramUrl: '',
+  youtubeUrl: '',
+  linkedinUrl: '',
+  behanceUrl: '',
+  twitterUrl: '',
+  legalEffectiveDate: 'October 2026',
+  privacySections: [
+    {
+      heading: '1. Information We Collect',
+      body: 'When you submit a project inquiry or access the Prithvi Editify Client Portal, we collect your name, email address, phone/WhatsApp number, company or brand name, project brief details, and any reference files you upload.',
+    },
+    {
+      heading: '2. How Your Data Is Used',
+      body: 'Your information is used strictly to evaluate project inquiries, prepare scope quotes, deliver creative files, issue invoices, and communicate project updates. We never sell or rent client data to third parties.',
+    },
+    {
+      heading: '3. Data Isolation & Security',
+      body: 'All records are stored in Supabase PostgreSQL and Supabase Storage protected by Row Level Security (RLS) policies. Clients can only access their own projects, deliverables, and invoices.',
+    },
+    {
+      heading: '4. Data Retention & Deletion',
+      body: 'You may request correction or deletion of your inquiry or client profile data at any time by contacting Shankar Baluragi through the studio contact page.',
+    },
+  ],
+  termsSections: [
+    {
+      heading: '1. Scope & Starting Prices',
+      body: 'Prices displayed on the website (in INR) are starting estimates. Every project is confirmed with a written brief and agreed budget before production begins.',
+    },
+    {
+      heading: '2. Revisions & Approvals',
+      body: 'Clients can review drafts and request revisions directly inside the Client Portal. Additional revisions outside the agreed project brief may incur an agreed supplemental fee.',
+    },
+    {
+      heading: '3. Invoicing & Deliverable Usage Rights',
+      body: 'Final master deliverables are released for commercial client use upon settlement of the corresponding invoice balance, unless otherwise specified in the written project agreement.',
+    },
+  ],
+  seoTitle: 'Prithvi Editify — Creative Design & Video Editing Studio',
+  seoDescription:
+    'Professional graphic design, YouTube thumbnails, social media creatives, and video editing studio led by Shankar Baluragi.',
+};
+
+export function mergeSiteCustomization(
+  raw?: Partial<SiteCustomization> | Record<string, any> | null
+): SiteCustomization {
+  if (!raw || typeof raw !== 'object') {
+    return { ...DEFAULT_SITE_CUSTOMIZATION };
+  }
+  return {
+    ...DEFAULT_SITE_CUSTOMIZATION,
+    ...raw,
+    heroDisciplines:
+      Array.isArray(raw.heroDisciplines) && raw.heroDisciplines.length > 0
+        ? raw.heroDisciplines.map(String)
+        : DEFAULT_SITE_CUSTOMIZATION.heroDisciplines,
+    processSteps:
+      Array.isArray(raw.processSteps) && raw.processSteps.length > 0
+        ? raw.processSteps.map((s: any, idx: number) => ({
+            step: String(
+              s?.step ??
+                DEFAULT_SITE_CUSTOMIZATION.processSteps[idx]?.step ??
+                `0${idx + 1}. Step`
+            ),
+            desc: String(s?.desc ?? DEFAULT_SITE_CUSTOMIZATION.processSteps[idx]?.desc ?? ''),
+          }))
+        : DEFAULT_SITE_CUSTOMIZATION.processSteps,
+    trustPillars:
+      Array.isArray(raw.trustPillars) && raw.trustPillars.length > 0
+        ? raw.trustPillars.map((p: any, idx: number) => ({
+            title: String(
+              p?.title ?? DEFAULT_SITE_CUSTOMIZATION.trustPillars[idx]?.title ?? 'Studio Pillar'
+            ),
+            desc: String(p?.desc ?? DEFAULT_SITE_CUSTOMIZATION.trustPillars[idx]?.desc ?? ''),
+          }))
+        : DEFAULT_SITE_CUSTOMIZATION.trustPillars,
+    aboutPillars:
+      Array.isArray(raw.aboutPillars) && raw.aboutPillars.length > 0
+        ? raw.aboutPillars.map((p: any, idx: number) => ({
+            title: String(
+              p?.title ?? DEFAULT_SITE_CUSTOMIZATION.aboutPillars[idx]?.title ?? 'Studio Value'
+            ),
+            desc: String(p?.desc ?? DEFAULT_SITE_CUSTOMIZATION.aboutPillars[idx]?.desc ?? ''),
+          }))
+        : DEFAULT_SITE_CUSTOMIZATION.aboutPillars,
+    inquiryBudgetRanges:
+      Array.isArray(raw.inquiryBudgetRanges) && raw.inquiryBudgetRanges.length > 0
+        ? raw.inquiryBudgetRanges.map(String).filter(Boolean)
+        : DEFAULT_SITE_CUSTOMIZATION.inquiryBudgetRanges,
+    privacySections:
+      Array.isArray(raw.privacySections) && raw.privacySections.length > 0
+        ? raw.privacySections.map((sec: any, idx: number) => ({
+            heading: String(
+              sec?.heading ??
+                DEFAULT_SITE_CUSTOMIZATION.privacySections[idx]?.heading ??
+                'Section'
+            ),
+            body: String(sec?.body ?? DEFAULT_SITE_CUSTOMIZATION.privacySections[idx]?.body ?? ''),
+          }))
+        : DEFAULT_SITE_CUSTOMIZATION.privacySections,
+    termsSections:
+      Array.isArray(raw.termsSections) && raw.termsSections.length > 0
+        ? raw.termsSections.map((sec: any, idx: number) => ({
+            heading: String(
+              sec?.heading ?? DEFAULT_SITE_CUSTOMIZATION.termsSections[idx]?.heading ?? 'Section'
+            ),
+            body: String(sec?.body ?? DEFAULT_SITE_CUSTOMIZATION.termsSections[idx]?.body ?? ''),
+          }))
+        : DEFAULT_SITE_CUSTOMIZATION.termsSections,
+  };
 }
 
 export const DEFAULT_PUBLIC_SETTINGS: PublicSettings = {
@@ -60,6 +351,7 @@ export const DEFAULT_PUBLIC_SETTINGS: PublicSettings = {
   businessAddress: '',
   defaultCurrency: 'INR',
   portfolioVisible: true,
+  siteCustomization: DEFAULT_SITE_CUSTOMIZATION,
 };
 
 export const DEFAULT_PRIVATE_SETTINGS: PrivateSettings = {

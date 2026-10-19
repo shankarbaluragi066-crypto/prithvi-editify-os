@@ -551,8 +551,11 @@ create table if not exists public.public_settings (
   business_address text not null default '',
   default_currency text not null default 'INR',
   portfolio_visible boolean not null default true,
+  site_customization jsonb not null default '{}'::jsonb,
   updated_at timestamptz not null default now()
 );
+
+alter table public.public_settings add column if not exists site_customization jsonb not null default '{}'::jsonb;
 
 create table if not exists public.private_settings (
   id text primary key default 'default' check (id = 'default'),

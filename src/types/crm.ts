@@ -328,6 +328,134 @@ export interface NotificationRecord {
   createdAt?: string;
 }
 
+export interface SiteProcessStep {
+  step: string;
+  desc: string;
+}
+
+export interface SiteTrustPillar {
+  title: string;
+  desc: string;
+}
+
+export interface SiteLegalSection {
+  heading: string;
+  body: string;
+}
+
+export interface SiteCustomization {
+  // 1. Brand, Logo, Theme Colors & Announcement Bar
+  logoUrl: string;
+  primaryColor: string;
+  secondaryColor: string;
+  accentColor: string;
+  backgroundColor: string;
+  announcementEnabled: boolean;
+  announcementText: string;
+  announcementCtaLabel: string;
+  announcementCtaLink: string;
+
+  // 2. Header Navigation
+  navHomeLabel: string;
+  navServicesLabel: string;
+  navPortfolioLabel: string;
+  navAboutLabel: string;
+  navContactLabel: string;
+  navPortalButtonLabel: string;
+  showServicesNav: boolean;
+  showPortfolioNav: boolean;
+  showAboutNav: boolean;
+  showContactNav: boolean;
+
+  // 3. Homepage Hero & Right Showcase Card
+  heroKicker: string;
+  heroHeadline: string;
+  heroSubheadline: string;
+  heroPrimaryCtaLabel: string;
+  heroPrimaryCtaLink: string;
+  heroSecondaryCtaLabel: string;
+  heroSecondaryCtaLink: string;
+  heroDisciplines: string[];
+  showcaseTitle: string;
+  showcaseSubtitle: string;
+  showcaseBadge: string;
+  heroImageUrl: string;
+  heroArtworkTitle: string;
+  heroArtworkSubtitle: string;
+  stat1Label: string;
+  stat1Value: string;
+  stat1Subtext: string;
+  stat2Label: string;
+  stat2Value: string;
+  stat2Subtext: string;
+
+  // 4. Homepage Sections Visibility & Copy
+  showServicesSection: boolean;
+  homeServicesKicker: string;
+  homeServicesHeading: string;
+  homeServicesCtaLabel: string;
+  homePortfolioKicker: string;
+  homePortfolioHeading: string;
+  homePortfolioCtaLabel: string;
+  showProcessSection: boolean;
+  processKicker: string;
+  processHeading: string;
+  processSteps: SiteProcessStep[];
+  showTrustSection: boolean;
+  trustKicker: string;
+  trustHeading: string;
+  trustSubtitle: string;
+  trustPillars: SiteTrustPillar[];
+  showHomeContactSection: boolean;
+  homeContactKicker: string;
+  homeContactHeading: string;
+  homeContactDesc: string;
+
+  // 5. Services & Portfolio Pages Copy
+  servicesPageKicker: string;
+  servicesPageTitle: string;
+  servicesPageDescription: string;
+  portfolioPageKicker: string;
+  portfolioPageTitle: string;
+  portfolioPageDescription: string;
+
+  // 6. About Studio Page Copy & Portrait
+  aboutKicker: string;
+  aboutHeading: string;
+  aboutParagraph1: string;
+  aboutParagraph2: string;
+  aboutPrimaryCtaLabel: string;
+  aboutSecondaryCtaLabel: string;
+  founderImageUrl: string;
+  founderName: string;
+  founderRole: string;
+  aboutPillars: SiteTrustPillar[];
+
+  // 7. Contact Page & Inquiry Form Options
+  contactKicker: string;
+  contactHeading: string;
+  contactDescription: string;
+  whatsappCardTitle: string;
+  whatsappCardDesc: string;
+  whatsappButtonLabel: string;
+  workingHours: string;
+  inquiryBudgetRanges: string[];
+
+  // 8. Footer, Social Media & Legal Pages
+  footerStudioLabel: string;
+  copyrightText: string;
+  instagramUrl: string;
+  youtubeUrl: string;
+  linkedinUrl: string;
+  behanceUrl: string;
+  twitterUrl: string;
+  legalEffectiveDate: string;
+  privacySections: SiteLegalSection[];
+  termsSections: SiteLegalSection[];
+  seoTitle: string;
+  seoDescription: string;
+}
+
 export interface PublicSettings {
   businessName: string;
   ownerName: string;
@@ -339,6 +467,7 @@ export interface PublicSettings {
   businessAddress: string;
   defaultCurrency: 'INR';
   portfolioVisible: boolean;
+  siteCustomization?: SiteCustomization;
   updatedAt?: string;
 }
 

@@ -7,19 +7,46 @@
     --font-mono: 'JetBrains Mono', monospace;
   }
 
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
   body {
     font-family: var(--font-sans);
     background-color: #F5F5F1;
+    color: #172333;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  ::selection {
+    background-color: rgba(241, 138, 69, 0.22);
     color: #172333;
   }
 
   h1, .font-editorial {
     font-family: var(--font-serif);
+    letter-spacing: -0.015em;
+  }
+
+  h2, h3 {
+    letter-spacing: -0.01em;
   }
 
   .font-mono, .tabular-nums {
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
+  }
+
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 2px solid #F18A45;
+    outline-offset: 2px;
   }
 }
 

@@ -54,6 +54,7 @@ import {
   SharedNotificationsPage,
   SharedProfilePage,
 } from './pages/AdminBusinessPages';
+import { AdminSiteCustomizerPage } from './pages/AdminSiteCustomizerPage';
 
 import {
   ClientDashboardPage,
@@ -238,6 +239,7 @@ export default function App() {
                 }
               >
                 <Route index element={<AdminDashboardPage />} />
+                <Route path="website-customizer" element={<AdminSiteCustomizerPage />} />
                 <Route path="inquiries" element={<AdminInquiriesPage />} />
                 <Route path="clients" element={<AdminClientsPage />} />
                 <Route path="clients/:clientId" element={<AdminClientDetailsPage />} />

@@ -272,20 +272,34 @@ export const AdminDashboardPage: React.FC = () => {
           </p>
         </div>
 
-        <button
-          type="button"
-          disabled={seeding}
-          onClick={handleSeedCatalog}
-          className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-[#172333] bg-white border border-[#E2E4DF] hover:border-[#172333] rounded-lg transition-colors whitespace-nowrap shrink-0"
-        >
-          <Database className="w-3.5 h-3.5 text-[#F18A45]" />
-          <span>{seeding ? 'Seeding Catalog...' : 'Sync Default Services & Demo Portfolio'}</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+          <Link
+            to="/admin/website-customizer"
+            className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-[#172333] bg-[#F18A45] hover:bg-[#e07934] rounded-lg transition-colors whitespace-nowrap"
+          >
+            <span>Customize Website (A–Z)</span>
+          </Link>
+          <button
+            type="button"
+            disabled={seeding}
+            onClick={handleSeedCatalog}
+            className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-[#172333] bg-white border border-[#E2E4DF] hover:border-[#172333] rounded-lg transition-colors whitespace-nowrap"
+          >
+            <Database className="w-3.5 h-3.5 text-[#F18A45]" />
+            <span>{seeding ? 'Seeding Catalog...' : 'Sync Default Services & Demo Portfolio'}</span>
+          </button>
+        </div>
       </div>
 
       {/* Quick Actions Bar */}
       <div className="bg-white border border-[#E2E4DF] rounded-lg p-4 flex flex-wrap items-center gap-2.5">
         <span className="text-xs font-semibold text-[#6E7785] mr-2">Quick Actions:</span>
+        <Link
+          to="/admin/website-customizer"
+          className="px-3 py-1.5 text-xs font-semibold text-[#172333] bg-[#F18A45] hover:bg-[#e07934] rounded-md transition-colors whitespace-nowrap"
+        >
+          Customize Website (A–Z)
+        </Link>
         <Link
           to="/admin/clients"
           className="px-3 py-1.5 text-xs font-medium text-white bg-[#172333] hover:bg-[#24364A] rounded-md transition-colors whitespace-nowrap"

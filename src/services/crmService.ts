@@ -31,6 +31,8 @@ import {
   SEED_PORTFOLIO,
   DEFAULT_PUBLIC_SETTINGS,
   DEFAULT_PRIVATE_SETTINGS,
+  DEFAULT_SITE_CUSTOMIZATION,
+  mergeSiteCustomization,
   createStudioArtworkDataUri,
 } from '../utils/seedData';
 import { slugify } from '../utils/formatters';
@@ -617,10 +619,43 @@ export async function updateUserProfileDetails(
 }
 
 // ============================================================================
-// PUBLIC & PRIVATE SETTINGS
+// PUBLIC & PRIVATE SETTINGS (WITH FULL A–Z WEBSITE CUSTOMIZATION)
 // ============================================================================
+const LOCAL_PUBLIC_SETTINGS_KEY = 'pe_public_settings_v2';
+const SITE_CONFIG_FILENAME = '__site_customization_json__';
+
+function readLocalPublicSettings(): PublicSettings | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(LOCAL_PUBLIC_SETTINGS_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    return {
+      ...DEFAULT_PUBLIC_SETTINGS,
+      ...parsed,
+      siteCustomization: mergeSiteCustomization(parsed.siteCustomization),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeLocalPublicSettings(settings: PublicSettings): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(LOCAL_PUBLIC_SETTINGS_KEY, JSON.stringify(settings));
+    window.dispatchEvent(new CustomEvent('pe-public-settings-updated', { detail: settings }));
+  } catch {
+    // Ignore storage quota errors
+  }
+}
+
 export async function fetchPublicSettings(): Promise<PublicSettings> {
-  if (!isSupabaseConfigured) return DEFAULT_PUBLIC_SETTINGS;
+  const localCached = readLocalPublicSettings();
+  if (!isSupabaseConfigured) {
+    return localCached || DEFAULT_PUBLIC_SETTINGS;
+  }
   try {
     const { data, error } = await supabase
       .from('public_settings')
@@ -628,30 +663,80 @@ export async function fetchPublicSettings(): Promise<PublicSettings> {
       .eq('id', 'default')
       .maybeSingle();
 
-    if (error || !data) return DEFAULT_PUBLIC_SETTINGS;
-    return {
+    // Check if site_customization is stored in public_settings or fallback media_assets row
+    let remoteCustomRaw: Record<string, any> | null = null;
+    if (
+      data &&
+      data.site_customization &&
+      typeof data.site_customization === 'object' &&
+      Object.keys(data.site_customization).length > 0
+    ) {
+      remoteCustomRaw = data.site_customization;
+    } else {
+      try {
+        const { data: assetRow } = await supabase
+          .from('media_assets')
+          .select('description')
+          .eq('original_filename', SITE_CONFIG_FILENAME)
+          .eq('is_public', true)
+          .maybeSingle();
+        if (assetRow?.description) {
+          remoteCustomRaw = JSON.parse(assetRow.description);
+        }
+      } catch {
+        // Ignore if media_assets fallback not used
+      }
+    }
+
+    if (error || !data) {
+      return localCached || DEFAULT_PUBLIC_SETTINGS;
+    }
+
+    const mergedSiteCustomization = mergeSiteCustomization(
+      remoteCustomRaw || localCached?.siteCustomization || DEFAULT_SITE_CUSTOMIZATION
+    );
+
+    const resolved: PublicSettings = {
       businessName: String(data.business_name || DEFAULT_PUBLIC_SETTINGS.businessName),
       ownerName: String(data.owner_name || DEFAULT_PUBLIC_SETTINGS.ownerName),
       tagline: String(data.tagline || DEFAULT_PUBLIC_SETTINGS.tagline),
       businessEmail: String(data.business_email || DEFAULT_PUBLIC_SETTINGS.businessEmail),
-      whatsappNumber: String(data.whatsapp_number || ''),
+      whatsappNumber: String(data.whatsapp_number ?? localCached?.whatsappNumber ?? ''),
       whatsappDefaultMessage: String(
         data.whatsapp_default_message || DEFAULT_PUBLIC_SETTINGS.whatsappDefaultMessage
       ),
       websiteUrl: String(data.website_url || ''),
-      businessAddress: String(data.business_address || ''),
+      businessAddress: String(data.business_address ?? localCached?.businessAddress ?? ''),
       defaultCurrency: 'INR',
-      portfolioVisible: Boolean(data.portfolio_visible),
+      portfolioVisible:
+        data.portfolio_visible !== undefined ? Boolean(data.portfolio_visible) : true,
+      siteCustomization: mergedSiteCustomization,
       updatedAt: data.updated_at,
     };
+
+    writeLocalPublicSettings(resolved);
+    return resolved;
   } catch {
-    return DEFAULT_PUBLIC_SETTINGS;
+    return localCached || DEFAULT_PUBLIC_SETTINGS;
   }
 }
 
 export async function savePublicSettings(data: Omit<PublicSettings, 'updatedAt'>): Promise<void> {
-  if (!isSupabaseConfigured) throw new Error('Supabase is not configured.');
-  const { error } = await supabase.from('public_settings').upsert({
+  const mergedCustomization = mergeSiteCustomization(data.siteCustomization);
+  const fullSettings: PublicSettings = {
+    ...data,
+    defaultCurrency: 'INR',
+    portfolioVisible: Boolean(data.portfolioVisible),
+    siteCustomization: mergedCustomization,
+    updatedAt: new Date().toISOString(),
+  };
+
+  // Always cache locally and notify live UI listeners immediately
+  writeLocalPublicSettings(fullSettings);
+
+  if (!isSupabaseConfigured) return;
+
+  const basePayload: Record<string, any> = {
     id: 'default',
     business_name: truncate(data.businessName || 'Prithvi Editify', 120),
     owner_name: truncate(data.ownerName || 'Shankar Baluragi', 120),
@@ -664,10 +749,67 @@ export async function savePublicSettings(data: Omit<PublicSettings, 'updatedAt'>
     default_currency: 'INR',
     portfolio_visible: Boolean(data.portfolioVisible),
     updated_at: new Date().toISOString(),
+  };
+
+  // Attempt 1: Upsert with site_customization JSONB column
+  const { error: firstErr } = await supabase.from('public_settings').upsert({
+    ...basePayload,
+    site_customization: mergedCustomization,
   });
 
-  if (error) handleSupabaseError(error, 'savePublicSettings');
-  await logAdminActivity('Updated Public Studio Settings', 'settings', 'public', data.businessName);
+  if (firstErr) {
+    // Attempt 2: If site_customization column doesn't exist yet on public_settings, upsert base columns
+    const { error: secondErr } = await supabase.from('public_settings').upsert(basePayload);
+    if (secondErr && !isMissingSchemaError(secondErr)) {
+      handleSupabaseError(secondErr, 'savePublicSettings');
+    }
+  }
+
+  // Also persist serialized siteCustomization in media_assets fallback row so any visitor loads it even before running SQL migration
+  try {
+    const serialized = JSON.stringify(mergedCustomization);
+    const { data: existingRow } = await supabase
+      .from('media_assets')
+      .select('id')
+      .eq('original_filename', SITE_CONFIG_FILENAME)
+      .maybeSingle();
+
+    if (existingRow?.id) {
+      await supabase
+        .from('media_assets')
+        .update({
+          description: serialized,
+          is_public: true,
+          storage_bucket: 'public-assets',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existingRow.id);
+    } else {
+      await supabase.from('media_assets').insert({
+        title: 'Studio Website Customization Config',
+        original_filename: SITE_CONFIG_FILENAME,
+        storage_bucket: 'public-assets',
+        storage_path: 'config/site_customization.json',
+        public_url: '',
+        mime_type: 'application/json',
+        file_extension: 'json',
+        media_category: 'document',
+        file_size: serialized.length,
+        description: serialized,
+        tags: ['system-config'],
+        is_public: true,
+      });
+    }
+  } catch {
+    // Non-fatal fallback
+  }
+
+  await logAdminActivity(
+    'Updated Website & Studio Settings',
+    'settings',
+    'public',
+    data.businessName
+  );
 }
 
 export async function fetchPrivateSettings(): Promise<PrivateSettings> {
@@ -1552,7 +1694,10 @@ export async function fetchMediaAssetsAdmin(
 ): Promise<MediaAsset[]> {
   if (!isSupabaseConfigured) return [];
 
-  let query = supabase.from('media_assets').select('*');
+  let query = supabase
+    .from('media_assets')
+    .select('*')
+    .neq('original_filename', SITE_CONFIG_FILENAME);
 
   // 1. Filter by exact MIME type (.eq('mime_type', ...)) or media category
   if (filters?.mimeType && filters.mimeType !== 'all') {
