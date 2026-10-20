@@ -33,6 +33,10 @@ import {
 import { ServiceItem, ServicePackageTier, PortfolioItem, PublicSettings } from '../types/crm';
 import { InquiryForm } from '../components/InquiryForm';
 import { MediaPreviewModal, PreviewableMediaItem } from '../components/MediaPreviewModal';
+import {
+  BeforeAfterComparisonShowcase,
+  InstantPriceCalculatorWidget,
+} from '../components/StudioEnhancements';
 import { buildWhatsAppLink } from '../utils/formatters';
 
 interface OutletCtx {
@@ -1410,6 +1414,12 @@ export const ServicesPage: React.FC = () => {
         </div>
       )}
 
+      {/* Interactive Project Price Calculator & Before/After Studio Showcase */}
+      <div className="mt-16 space-y-12">
+        <InstantPriceCalculatorWidget whatsappNumber={settings.whatsappNumber} />
+        <BeforeAfterComparisonShowcase />
+      </div>
+
       {/* Custom Scope Banner */}
       <div className="mt-16 bg-white border border-[#E2E4DF] rounded-lg p-6 sm:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-[0_1px_2px_rgba(23,35,51,0.04)]">
         <div className="max-w-xl">
@@ -2597,6 +2607,11 @@ export const PortfolioPage: React.FC = () => {
             ))}
           </div>
         )}
+
+      {/* Interactive Before / After Studio Comparison Slider */}
+      <div className="mt-16">
+        <BeforeAfterComparisonShowcase />
+      </div>
 
       {/* Portfolio CTA Banner */}
       <div className="mt-16 bg-white border border-[#E2E4DF] rounded-lg p-6 sm:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-[0_1px_2px_rgba(23,35,51,0.04)]">

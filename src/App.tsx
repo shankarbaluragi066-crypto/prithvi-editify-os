@@ -61,6 +61,7 @@ import {
   AdminAICreativeAssistantPage,
   AdminQuotationsPage,
 } from './pages/AdminAICreativeAssistantPage';
+import { PublicQuotationApprovalPage } from './components/StudioEnhancements';
 
 import {
   ClientDashboardPage,
@@ -232,6 +233,7 @@ export default function App() {
                 <Route path="/contact" element={<ContactPage />} />
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                <Route path="/quote/:quoteId" element={<PublicQuotationApprovalPage />} />
                 <Route path="/privacy" element={<PrivacyPolicyPage />} />
                 <Route path="/terms" element={<TermsPage />} />
                 <Route path="*" element={<NotFoundPage />} />

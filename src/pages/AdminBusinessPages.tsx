@@ -51,6 +51,15 @@ import {
 import { MediaLibraryManager } from '../components/MediaLibraryManager';
 import { MediaPreviewModal, PreviewableMediaItem } from '../components/MediaPreviewModal';
 import { MediaSearchFilterState } from '../components/MediaSearchFilterBar';
+import { UpiQrCodeCard } from '../components/StudioEnhancements';
+import {
+  GstTaxMode,
+  computeGstBreakdown,
+  buildWhatsAppInvoiceShareLink,
+  getClientPaymentProofs,
+  updateClientPaymentProofStatus,
+  ClientPaymentProofSubmission,
+} from '../services/workflowEnhancementsService';
 import {
   ServiceItem,
   ServicePackageTier,
@@ -1759,6 +1768,7 @@ export const AdminInvoicesPage: React.FC = () => {
   const [showBuilder, setShowBuilder] = useState(false);
   const [payModalInvoice, setPayModalInvoice] = useState<InvoiceRecord | null>(null);
   const [printInvoice, setPrintInvoice] = useState<InvoiceRecord | null>(null);
+  const [gstMode, setGstMode] = useState<GstTaxMode>('non_gst');
 
   const today = new Date().toISOString().split('T')[0];
   const [invForm, setInvForm] = useState({
@@ -1801,11 +1811,24 @@ export const AdminInvoicesPage: React.FC = () => {
     loadData();
   }, [loadData]);
 
+  const effectiveTaxRate =
+    gstMode === 'non_gst'
+      ? 0
+      : gstMode === 'cgst_sgst_18' || gstMode === 'igst_18'
+      ? 18
+      : invForm.taxRate;
+
   const totals = calculateInvoiceTotals({
     items: invForm.lineItems,
     discount: invForm.discount,
-    taxRate: invForm.taxRate,
+    taxRate: effectiveTaxRate,
     amountPaid: 0,
+  });
+
+  const gstDetails = computeGstBreakdown({
+    taxableAmount: Math.max(0, totals.subtotal - totals.discount),
+    taxRate: effectiveTaxRate,
+    gstMode,
   });
 
   const handleCreateInvoice = async (e: React.FormEvent) => {
@@ -1834,7 +1857,7 @@ export const AdminInvoicesPage: React.FC = () => {
             .join(' · '),
           subtotal: totals.subtotal,
           discount: totals.discount,
-          taxRate: invForm.taxRate,
+          taxRate: effectiveTaxRate,
           taxAmount: totals.taxAmount,
           total: totals.total,
           amountPaid: 0,
@@ -1842,7 +1865,10 @@ export const AdminInvoicesPage: React.FC = () => {
           currency: 'INR',
           status: invForm.status,
           paymentInstructions: invForm.paymentInstructions,
-          notes: invForm.notes,
+          notes:
+            gstMode !== 'non_gst'
+              ? `${invForm.notes} [${gstDetails.label}]`
+              : invForm.notes,
         },
         invForm.lineItems.map((li, idx) => ({
           description: li.description,
@@ -1885,10 +1911,10 @@ export const AdminInvoicesPage: React.FC = () => {
       <div className="flex items-center justify-between gap-4 no-print">
         <div>
           <h1 className="font-editorial text-2xl font-semibold text-[#172333]">
-            Invoices & INR Billing
+            Invoices, GST & INR Billing
           </h1>
           <p className="text-xs text-[#6E7785] mt-1">
-            Create multi-line-item invoices in INR, export printable PDFs, and record verified payments.
+            Create multi-line-item invoices in INR with optional GST (SAC 9983), dynamic UPI QR codes, and one-click WhatsApp dispatch.
           </p>
         </div>
         <button
@@ -1905,7 +1931,33 @@ export const AdminInvoicesPage: React.FC = () => {
           onSubmit={handleCreateInvoice}
           className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-5 no-print"
         >
-          <h2 className="text-base font-semibold text-[#172333]">New INR Invoice</h2>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E2E4DF] pb-3">
+            <h2 className="text-base font-semibold text-[#172333]">New INR Invoice</h2>
+            <div className="flex flex-wrap items-center gap-1.5 bg-[#F5F5F1] p-1 rounded-lg border border-[#E2E4DF] text-xs">
+              {(
+                [
+                  { id: 'non_gst', label: 'Non-GST (0% Default)' },
+                  { id: 'cgst_sgst_18', label: 'CGST 9% + SGST 9% (SAC 9983)' },
+                  { id: 'igst_18', label: 'IGST 18% (SAC 9983)' },
+                  { id: 'custom', label: 'Custom Tax %' },
+                ] as const
+              ).map((opt) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setGstMode(opt.id)}
+                  className={`px-2.5 py-1 rounded font-medium transition-colors ${
+                    gstMode === opt.id
+                      ? 'bg-[#172333] text-white font-semibold'
+                      : 'text-[#6E7785] hover:text-[#172333]'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
             <div>
               <label className="block text-xs font-medium mb-1">Invoice Number *</label>
@@ -1956,7 +2008,7 @@ export const AdminInvoicesPage: React.FC = () => {
           {/* Line Items */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-[#172333]">Line Items</span>
+              <span className="text-xs font-semibold text-[#172333]">Line Items (HSN/SAC 9983)</span>
               <button
                 type="button"
                 onClick={() =>
@@ -2038,15 +2090,23 @@ export const AdminInvoicesPage: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium mb-1">Tax Rate (%)</label>
-              <input
-                type="number"
-                min={0}
-                max={100}
-                value={invForm.taxRate}
-                onChange={(e) => setInvForm({ ...invForm, taxRate: Number(e.target.value) })}
-                className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
-              />
+              <label className="block text-xs font-medium mb-1">
+                {gstMode === 'custom' ? 'Custom Tax Rate (%)' : 'Active Tax Mode'}
+              </label>
+              {gstMode === 'custom' ? (
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={invForm.taxRate}
+                  onChange={(e) => setInvForm({ ...invForm, taxRate: Number(e.target.value) })}
+                  className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                />
+              ) : (
+                <div className="px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg text-[#172333]">
+                  {gstDetails.label} ({formatINR(totals.taxAmount)})
+                </div>
+              )}
             </div>
             <div className="bg-[#F5F5F1] rounded-lg p-3 text-right">
               <p className="text-xs text-[#6E7785]">Calculated Invoice Total</p>
@@ -2070,6 +2130,9 @@ export const AdminInvoicesPage: React.FC = () => {
         <div className="bg-white border border-[#172333] rounded-lg p-8 space-y-6">
           <div className="flex items-start justify-between border-b border-[#E2E4DF] pb-6">
             <div>
+              <span className="text-[11px] font-semibold text-[#F18A45]">
+                OFFICIAL STUDIO INVOICE · SAC 9983
+              </span>
               <h2 className="font-editorial text-2xl font-semibold text-[#172333]">
                 Prithvi Editify
               </h2>
@@ -2095,7 +2158,7 @@ export const AdminInvoicesPage: React.FC = () => {
               <p className="text-[#6E7785]">{printInvoice.clientEmail}</p>
             </div>
             <div className="text-right">
-              <p className="font-semibold text-[#6E7785]">Project Scope:</p>
+              <p className="font-semibold text-[#6E7785]">Project Scope (SAC 9983):</p>
               <p className="text-[#172333] mt-0.5">{printInvoice.projectTitle}</p>
             </div>
           </div>
@@ -2106,7 +2169,7 @@ export const AdminInvoicesPage: React.FC = () => {
           </div>
 
           <div className="flex justify-end">
-            <div className="w-64 space-y-1.5 text-xs">
+            <div className="w-72 space-y-1.5 text-xs">
               <div className="flex justify-between">
                 <span className="text-[#6E7785]">Subtotal:</span>
                 <span className="font-mono tabular-nums">{formatINR(printInvoice.subtotal)}</span>
@@ -2115,10 +2178,29 @@ export const AdminInvoicesPage: React.FC = () => {
                 <span className="text-[#6E7785]">Discount:</span>
                 <span className="font-mono tabular-nums">-{formatINR(printInvoice.discount)}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-[#6E7785]">Tax ({printInvoice.taxRate}%):</span>
-                <span className="font-mono tabular-nums">{formatINR(printInvoice.taxAmount)}</span>
-              </div>
+              {printInvoice.taxRate === 18 && !printInvoice.notes?.includes('IGST') ? (
+                <>
+                  <div className="flex justify-between">
+                    <span className="text-[#6E7785]">CGST (9% · SAC 9983):</span>
+                    <span className="font-mono tabular-nums">
+                      {formatINR(Math.round(printInvoice.taxAmount / 2))}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#6E7785]">SGST (9% · SAC 9983):</span>
+                    <span className="font-mono tabular-nums">
+                      {formatINR(printInvoice.taxAmount - Math.round(printInvoice.taxAmount / 2))}
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <div className="flex justify-between">
+                  <span className="text-[#6E7785]">
+                    {printInvoice.notes?.includes('IGST') ? 'IGST' : 'Tax'} ({printInvoice.taxRate}% · SAC 9983):
+                  </span>
+                  <span className="font-mono tabular-nums">{formatINR(printInvoice.taxAmount)}</span>
+                </div>
+              )}
               <div className="flex justify-between pt-2 border-t border-[#E2E4DF] font-semibold text-sm">
                 <span>Total (INR):</span>
                 <span className="font-mono tabular-nums">{formatINR(printInvoice.total)}</span>
@@ -2134,12 +2216,19 @@ export const AdminInvoicesPage: React.FC = () => {
             </div>
           </div>
 
+          {/* Scannable UPI QR Code on Printable Invoice */}
+          <UpiQrCodeCard
+            amount={printInvoice.balanceDue}
+            referenceNumber={printInvoice.invoiceNumber}
+          />
+
           <div className="pt-4 border-t border-[#E2E4DF] text-xs text-[#6E7785]">
-            <p className="font-semibold text-[#172333]">Payment Instructions:</p>
+            <p className="font-semibold text-[#172333]">Payment Instructions & Notes:</p>
             <p className="mt-1">{printInvoice.paymentInstructions}</p>
+            {printInvoice.notes && <p className="mt-1">{printInvoice.notes}</p>}
           </div>
 
-          <div className="flex items-center gap-3 no-print">
+          <div className="flex flex-wrap items-center gap-3 no-print">
             <button
               type="button"
               onClick={() => window.print()}
@@ -2148,6 +2237,17 @@ export const AdminInvoicesPage: React.FC = () => {
               <Printer className="w-3.5 h-3.5" />
               <span>Print / Save as PDF</span>
             </button>
+            <a
+              href={buildWhatsAppInvoiceShareLink(
+                printInvoice,
+                clients.find((c) => c.id === printInvoice.clientId)?.phone
+              )}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2 text-xs font-semibold text-[#172333] bg-[#F18A45] hover:bg-[#e07934] rounded-lg"
+            >
+              Send on WhatsApp →
+            </a>
             <button
               type="button"
               onClick={() => setPrintInvoice(null)}
@@ -2181,49 +2281,60 @@ export const AdminInvoicesPage: React.FC = () => {
                 </td>
               </tr>
             ) : (
-              invoices.map((inv) => (
-                <tr key={inv.id} className="hover:bg-[#F5F5F1]/50">
-                  <td className="py-3.5 px-4 font-mono font-semibold text-[#172333]">
-                    {inv.invoiceNumber}
-                  </td>
-                  <td className="py-3.5 px-4 text-[#6E7785]">{inv.clientName}</td>
-                  <td className="py-3.5 px-4 font-mono text-[#6E7785]">{inv.dueDate}</td>
-                  <td className="py-3.5 px-4 font-medium text-[#172333]">{inv.status}</td>
-                  <td className="py-3.5 px-4 text-right font-mono tabular-nums">
-                    {formatINR(inv.total)}
-                  </td>
-                  <td className="py-3.5 px-4 text-right font-mono font-semibold tabular-nums">
-                    {formatINR(inv.balanceDue)}
-                  </td>
-                  <td className="py-3.5 px-4 text-right space-x-3">
-                    <button
-                      type="button"
-                      onClick={() => setPrintInvoice(inv)}
-                      className="font-semibold text-[#172333] hover:text-[#F18A45]"
-                    >
-                      Print/PDF
-                    </button>
-                    {inv.balanceDue > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPayModalInvoice(inv);
-                          setPayForm({
-                            amount: inv.balanceDue,
-                            method: 'UPI',
-                            transactionReference: '',
-                            paymentDate: today,
-                            notes: 'Manual payment verified by Admin',
-                          });
-                        }}
+              invoices.map((inv) => {
+                const clientObj = clients.find((c) => c.id === inv.clientId);
+                return (
+                  <tr key={inv.id} className="hover:bg-[#F5F5F1]/50">
+                    <td className="py-3.5 px-4 font-mono font-semibold text-[#172333]">
+                      {inv.invoiceNumber}
+                    </td>
+                    <td className="py-3.5 px-4 text-[#6E7785]">{inv.clientName}</td>
+                    <td className="py-3.5 px-4 font-mono text-[#6E7785]">{inv.dueDate}</td>
+                    <td className="py-3.5 px-4 font-medium text-[#172333]">{inv.status}</td>
+                    <td className="py-3.5 px-4 text-right font-mono tabular-nums">
+                      {formatINR(inv.total)}
+                    </td>
+                    <td className="py-3.5 px-4 text-right font-mono font-semibold tabular-nums">
+                      {formatINR(inv.balanceDue)}
+                    </td>
+                    <td className="py-3.5 px-4 text-right space-x-3 whitespace-nowrap">
+                      <a
+                        href={buildWhatsAppInvoiceShareLink(inv, clientObj?.phone)}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="font-semibold text-[#26734D] hover:underline"
                       >
-                        Record Payment
+                        WhatsApp
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => setPrintInvoice(inv)}
+                        className="font-semibold text-[#172333] hover:text-[#F18A45]"
+                      >
+                        QR / Print PDF
                       </button>
-                    )}
-                  </td>
-                </tr>
-              ))
+                      {inv.balanceDue > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPayModalInvoice(inv);
+                            setPayForm({
+                              amount: inv.balanceDue,
+                              method: 'UPI',
+                              transactionReference: '',
+                              paymentDate: today,
+                              notes: 'Manual payment verified by Admin',
+                            });
+                          }}
+                          className="font-semibold text-[#26734D] hover:underline"
+                        >
+                          Record Payment
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
@@ -2304,15 +2415,67 @@ export const AdminInvoicesPage: React.FC = () => {
 };
 
 // ============================================================================
-// 4. ADMIN PAYMENTS HISTORY PAGE
+// 4. ADMIN PAYMENTS HISTORY & CLIENT UTR VERIFICATION QUEUE PAGE
 // ============================================================================
 export const AdminPaymentsPage: React.FC = () => {
+  const { showToast } = useToast();
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
+  const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
+  const [proofs, setProofs] = useState<ClientPaymentProofSubmission[]>([]);
 
-  useEffect(() => {
-    fetchAllPaymentsAdmin().then(setPayments).catch(() => {});
+  const loadPaymentsData = useCallback(async () => {
+    const [payList, invList] = await Promise.all([
+      fetchAllPaymentsAdmin().catch(() => []),
+      fetchAllInvoicesAdmin().catch(() => []),
+    ]);
+    setPayments(payList);
+    setInvoices(invList);
+    setProofs(getClientPaymentProofs());
   }, []);
 
+  useEffect(() => {
+    loadPaymentsData();
+  }, [loadPaymentsData]);
+
+  const handleApproveProof = async (proof: ClientPaymentProofSubmission) => {
+    const targetInvoice = invoices.find(
+      (i) => i.id === proof.invoiceId || i.invoiceNumber === proof.invoiceNumber
+    );
+    if (!targetInvoice) {
+      updateClientPaymentProofStatus(proof.id, 'Approved');
+      setProofs(getClientPaymentProofs());
+      showToast('success', 'Payment Proof Approved');
+      return;
+    }
+
+    try {
+      await recordPaymentAdmin({
+        invoice: targetInvoice,
+        amount: proof.amount,
+        method: proof.method,
+        transactionReference: proof.utrNumber,
+        paymentDate: new Date().toISOString().split('T')[0],
+        notes: `Verified from Client Portal UTR Submission (${proof.notes || 'Client Proof'})`,
+      });
+      updateClientPaymentProofStatus(proof.id, 'Approved');
+      await loadPaymentsData();
+      showToast(
+        'success',
+        'UTR Verified & Payment Recorded',
+        `${proof.invoiceNumber} updated and project master deliverables unlocked.`
+      );
+    } catch (err) {
+      showToast('error', 'Failed to approve proof', err instanceof Error ? err.message : '');
+    }
+  };
+
+  const handleRejectProof = (proofId: string) => {
+    updateClientPaymentProofStatus(proofId, 'Rejected');
+    setProofs(getClientPaymentProofs());
+    showToast('info', 'Payment Proof Marked Rejected');
+  };
+
+  const pendingProofs = proofs.filter((p) => p.status === 'Pending Verification');
   const totalReceived = payments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
 
   return (
@@ -2320,10 +2483,10 @@ export const AdminPaymentsPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-editorial text-2xl font-semibold text-[#172333]">
-            Recorded Payments Ledger
+            Recorded Payments & UTR Verification Queue
           </h1>
           <p className="text-xs text-[#6E7785] mt-1">
-            All payments clearly distinguish between Admin Recorded manual transfers and Webhook Verified transactions.
+            Approve client UTR payment proofs in one click and inspect all verified INR settlements.
           </p>
         </div>
         <div className="bg-white border border-[#E2E4DF] rounded-lg px-4 py-2.5 text-right">
@@ -2332,6 +2495,73 @@ export const AdminPaymentsPage: React.FC = () => {
             {formatINR(totalReceived)}
           </p>
         </div>
+      </div>
+
+      {/* Pending Client UTR / Screenshot Verification Queue */}
+      <div className="bg-white border border-[#E2E4DF] rounded-lg overflow-hidden">
+        <div className="px-5 py-3.5 bg-[#F5F5F1] border-b border-[#E2E4DF] flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-[#172333]">
+            Pending Client Payment Verifications ({pendingProofs.length})
+          </h2>
+          <span className="text-[11px] font-mono text-[#6E7785]">
+            Submitted from /portal/invoices
+          </span>
+        </div>
+        {pendingProofs.length === 0 ? (
+          <div className="p-6 text-xs text-[#6E7785]">
+            No client UTR payment proofs waiting for verification right now.
+          </div>
+        ) : (
+          <div className="divide-y divide-[#E2E4DF] text-xs">
+            {pendingProofs.map((proof) => (
+              <div
+                key={proof.id}
+                className="p-4 flex flex-wrap items-center justify-between gap-4 bg-[#F18A45]/5"
+              >
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-bold text-[#172333]">{proof.invoiceNumber}</span>
+                    <span className="font-semibold text-[#172333]">{proof.clientName}</span>
+                    <span className="px-2 py-0.5 rounded bg-[#F18A45]/20 text-[#B85D1D] font-mono text-[10px] font-semibold">
+                      UTR: {proof.utrNumber}
+                    </span>
+                  </div>
+                  <p className="text-[#6E7785]">
+                    Method: {proof.method} · Amount:{' '}
+                    <strong className="font-mono text-[#172333]">{formatINR(proof.amount)}</strong>
+                    {proof.notes ? ` · Note: "${proof.notes}"` : ''}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  {proof.receiptScreenshotDataUrl && (
+                    <a
+                      href={proof.receiptScreenshotDataUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1.5 font-semibold text-[#172333] bg-white border border-[#E2E4DF] rounded-md"
+                    >
+                      View Screenshot
+                    </a>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleApproveProof(proof)}
+                    className="px-3.5 py-1.5 font-semibold text-white bg-[#26734D] hover:bg-[#1e5c3d] rounded-md"
+                  >
+                    Approve & Record Payment
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleRejectProof(proof.id)}
+                    className="px-3 py-1.5 font-semibold text-[#B93832] bg-[#B93832]/10 rounded-md"
+                  >
+                    Reject
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="bg-white border border-[#E2E4DF] rounded-lg overflow-x-auto">

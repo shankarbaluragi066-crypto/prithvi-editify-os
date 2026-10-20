@@ -35,6 +35,14 @@ import {
   fetchClientQuotations,
   clientRespondToQuotation,
 } from '../services/aiAssistantService';
+import {
+  checkProjectMasterUnlockStatus,
+  getProofingPins,
+  submitClientPaymentProof,
+  getClientPaymentProofs,
+  ClientPaymentProofSubmission,
+} from '../services/workflowEnhancementsService';
+import { UpiQrCodeCard } from '../components/StudioEnhancements';
 import { formatINR, formatDate, formatFileSize } from '../utils/formatters';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
@@ -277,6 +285,7 @@ export const ClientProjectDetailsPage: React.FC = () => {
   const [project, setProject] = useState<ProjectRecord | null>(null);
   const [tasks, setTasks] = useState<TaskRecord[]>([]);
   const [files, setFiles] = useState<DeliverableFile[]>([]);
+  const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
   const [messages, setMessages] = useState<ProjectMessage[]>([]);
   const [commentText, setCommentText] = useState('');
   const [revisionNote, setRevisionNote] = useState('');
@@ -284,15 +293,17 @@ export const ClientProjectDetailsPage: React.FC = () => {
 
   const loadAll = useCallback(async () => {
     if (!user || !projectId) return;
-    const [projs, tsks, fls, msgs] = await Promise.all([
+    const [projs, tsks, fls, invs, msgs] = await Promise.all([
       fetchClientProjects(user.uid),
       fetchClientVisibleTasks(user.uid),
       fetchClientFiles(user.uid),
+      fetchClientInvoices(user.uid).catch(() => []),
       fetchProjectMessages(projectId, false, user.uid),
     ]);
     setProject(projs.find((p) => p.id === projectId) || null);
     setTasks(tsks.filter((t) => t.projectId === projectId));
     setFiles(fls.filter((f) => f.projectId === projectId));
+    setInvoices(invs);
     setMessages(msgs);
   }, [user, projectId]);
 
@@ -418,70 +429,112 @@ export const ClientProjectDetailsPage: React.FC = () => {
           )}
         </div>
 
-        <div className="bg-white border border-[#E2E4DF] rounded-lg p-6">
-          <h3 className="text-sm font-semibold text-[#172333] mb-3">
-            Project Deliverables ({files.length})
-          </h3>
-          {files.length === 0 ? (
-            <p className="text-xs text-[#6E7785]">No files uploaded for this project yet.</p>
-          ) : (
-            <div className="divide-y divide-[#E2E4DF] text-xs">
-              {files.map((f) => (
-                <div key={f.id} className="py-2.5 flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <span className="font-semibold text-[#172333] block truncate">
-                      {f.fileName} ({f.versionLabel})
-                    </span>
-                    <span className="text-[11px] text-[#6E7785]">
-                      {f.category} · {formatFileSize(f.fileSize)}
-                    </span>
-                  </div>
-                  {(f.downloadUrl || f.storagePath) && (
-                    <div className="flex items-center gap-2.5 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setPreviewItem({
-                            id: f.id,
-                            title: `${f.fileName} (${f.versionLabel})`,
-                            url: f.downloadUrl,
-                            mimeType: f.fileType,
-                            fileSize: f.fileSize,
-                            storageBucket: f.storageBucket || 'private-project-files',
-                            storagePath: f.storagePath,
-                            description: f.description,
-                            tags: f.tags,
-                            categoryLabel: `${f.category} · ${f.versionLabel}`,
-                            createdAt: f.createdAt,
-                            uploaderName: f.uploaderName,
-                          })
-                        }
-                        className="inline-flex items-center gap-1 font-semibold text-[#172333] hover:text-[#F18A45]"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                        <span>Preview</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          const url = await resolveStoragePreviewUrl({
-                            storageBucket: f.storageBucket || 'private-project-files',
-                            storagePath: f.storagePath,
-                            fallbackUrl: f.downloadUrl,
-                            expiresInSeconds: 3600,
-                          });
-                          if (url) window.open(url, '_blank', 'noopener,noreferrer');
-                        }}
-                        className="font-semibold text-[#172333] hover:text-[#F18A45]"
-                      >
-                        Download →
-                      </button>
-                    </div>
-                  )}
+        <div className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-3">
+          {(() => {
+            const unlockStatus = checkProjectMasterUnlockStatus(project.id, invoices);
+            const projectPins = getProofingPins(project.id);
+            return (
+              <>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="text-sm font-semibold text-[#172333]">
+                    Project Deliverables & Visual Proofing ({files.length})
+                  </h3>
+                  <span
+                    className={`px-2.5 py-0.5 rounded text-[11px] font-semibold ${
+                      unlockStatus.isUnlocked
+                        ? 'bg-[#26734D]/15 text-[#26734D]'
+                        : 'bg-[#F18A45]/20 text-[#B85D1D]'
+                    }`}
+                  >
+                    {unlockStatus.isUnlocked ? 'High-Res Master Unlocked' : 'Watermarked Preview Mode'}
+                  </span>
                 </div>
-              ))}
-            </div>
-          )}
+                <p className="text-[11px] text-[#6E7785] bg-[#F5F5F1] p-2.5 rounded border border-[#E2E4DF]">
+                  {unlockStatus.reason}. Click <strong>Proof & Pin Note</strong> on any image or video to drop coordinate/timestamp revision pins ({projectPins.length} pins recorded).
+                </p>
+                {files.length === 0 ? (
+                  <p className="text-xs text-[#6E7785]">No files uploaded for this project yet.</p>
+                ) : (
+                  <div className="divide-y divide-[#E2E4DF] text-xs">
+                    {files.map((f) => {
+                      const filePins = getProofingPins(project.id, f.id);
+                      const isLockedPreview = !unlockStatus.isUnlocked && f.category !== 'Reference';
+                      return (
+                        <div key={f.id} className="py-2.5 flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <span className="font-semibold text-[#172333] block truncate">
+                              {f.fileName} ({f.versionLabel})
+                            </span>
+                            <span className="text-[11px] text-[#6E7785]">
+                              {f.category} · {formatFileSize(f.fileSize)}
+                              {filePins.length > 0 ? ` · ${filePins.length} Pin Notes` : ''}
+                            </span>
+                          </div>
+                          {(f.downloadUrl || f.storagePath) && (
+                            <div className="flex items-center gap-2.5 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setPreviewItem({
+                                    id: f.id,
+                                    title: `${f.fileName} (${f.versionLabel})`,
+                                    url: f.downloadUrl,
+                                    mimeType: f.fileType,
+                                    fileSize: f.fileSize,
+                                    storageBucket: f.storageBucket || 'private-project-files',
+                                    storagePath: f.storagePath,
+                                    description: f.description,
+                                    tags: f.tags,
+                                    categoryLabel: `${f.category} · ${f.versionLabel}`,
+                                    createdAt: f.createdAt,
+                                    uploaderName: f.uploaderName,
+                                    watermarkText: isLockedPreview
+                                      ? 'PRITHVI EDITIFY — PREVIEW PROOF'
+                                      : undefined,
+                                    masterDownloadLocked: isLockedPreview,
+                                  })
+                                }
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-[#172333] text-white font-semibold hover:bg-[#24364A]"
+                              >
+                                <Eye className="w-3.5 h-3.5 text-[#F18A45]" />
+                                <span>Proof & Pin Note</span>
+                              </button>
+                              {!isLockedPreview ? (
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    const url = await resolveStoragePreviewUrl({
+                                      storageBucket: f.storageBucket || 'private-project-files',
+                                      storagePath: f.storagePath,
+                                      fallbackUrl: f.downloadUrl,
+                                      expiresInSeconds: 3600,
+                                    });
+                                    if (url) window.open(url, '_blank', 'noopener,noreferrer');
+                                  }}
+                                  className="font-semibold text-[#26734D] hover:underline"
+                                >
+                                  Download Master →
+                                </button>
+                              ) : (
+                                <Link
+                                  to="/portal/invoices"
+                                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#A96518] hover:underline"
+                                  title="Settle project invoice balance to ₹0 to unlock high-res master download"
+                                >
+                                  <Lock className="w-3 h-3" />
+                                  <span>Locked</span>
+                                </Link>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </div>
       </div>
 
@@ -515,7 +568,35 @@ export const ClientProjectDetailsPage: React.FC = () => {
         </form>
       </div>
 
-      <MediaPreviewModal item={previewItem} onClose={() => setPreviewItem(null)} />
+      <MediaPreviewModal
+        item={previewItem}
+        onClose={() => setPreviewItem(null)}
+        proofingContext={
+          user
+            ? {
+                projectId: project.id,
+                authorName: profile?.displayName || 'Client',
+                authorRole: 'client',
+                onPinAdded: async (formattedPinComment) => {
+                  try {
+                    await postProjectMessage({
+                      projectId: project.id,
+                      clientUserId: user.uid,
+                      senderName: profile?.displayName || 'Client',
+                      senderRole: 'client',
+                      content: formattedPinComment,
+                      visibility: 'client',
+                    });
+                    await loadAll();
+                    showToast('success', 'Pin Revision Note Saved & Posted');
+                  } catch {
+                    showToast('info', 'Pin Saved Locally');
+                  }
+                },
+              }
+            : undefined
+        }
+      />
     </div>
   );
 };
@@ -663,8 +744,17 @@ export const ClientInvoicesPage: React.FC = () => {
   const { showToast } = useToast();
   const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
   const [quotations, setQuotations] = useState<QuotationRecord[]>([]);
+  const [paymentProofs, setPaymentProofs] = useState<ClientPaymentProofSubmission[]>([]);
   const [selected, setSelected] = useState<InvoiceRecord | null>(null);
   const [selectedQuote, setSelectedQuote] = useState<QuotationRecord | null>(null);
+  const [proofModalInvoice, setProofModalInvoice] = useState<InvoiceRecord | null>(null);
+  const [proofForm, setProofForm] = useState({
+    amount: 0,
+    method: 'UPI' as 'UPI' | 'Bank Transfer (NEFT/IMPS)' | 'Other',
+    utrNumber: '',
+    receiptScreenshotDataUrl: '',
+    notes: '',
+  });
 
   const loadClientBilling = useCallback(async () => {
     if (!user) return;
@@ -674,6 +764,7 @@ export const ClientInvoicesPage: React.FC = () => {
     ]);
     setInvoices(invList);
     setQuotations(quoteList);
+    setPaymentProofs(getClientPaymentProofs(user.uid));
   }, [user, profile?.email]);
 
   useEffect(() => {
@@ -705,6 +796,35 @@ export const ClientInvoicesPage: React.FC = () => {
     }
   };
 
+  const handleSubmitPaymentProof = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!proofModalInvoice || !user) return;
+    if (!proofForm.utrNumber.trim()) {
+      showToast('error', 'UTR / Reference Required', 'Please enter your 12-digit UPI UTR or bank reference ID.');
+      return;
+    }
+    submitClientPaymentProof({
+      invoiceId: proofModalInvoice.id,
+      invoiceNumber: proofModalInvoice.invoiceNumber,
+      clientId: proofModalInvoice.clientId,
+      clientUserId: user.uid,
+      clientName: profile?.displayName || proofModalInvoice.clientName,
+      clientEmail: profile?.email || user.email || proofModalInvoice.clientEmail,
+      amount: Number(proofForm.amount) || proofModalInvoice.balanceDue,
+      method: proofForm.method,
+      utrNumber: proofForm.utrNumber.trim(),
+      receiptScreenshotDataUrl: proofForm.receiptScreenshotDataUrl || undefined,
+      notes: proofForm.notes.trim(),
+    });
+    setPaymentProofs(getClientPaymentProofs(user.uid));
+    setProofModalInvoice(null);
+    showToast(
+      'success',
+      'Payment Proof Submitted for Verification',
+      'Shankar Baluragi will verify your UTR in the Admin Payments queue.'
+    );
+  };
+
   return (
     <div className="space-y-8">
       <div>
@@ -712,7 +832,7 @@ export const ClientInvoicesPage: React.FC = () => {
           My Quotations & Invoices (INR)
         </h1>
         <p className="text-xs text-[#6E7785] mt-1 no-print">
-          Review and approve project estimates, inspect itemized INR invoices, and print official PDF receipts.
+          Review and approve project estimates, scan dynamic UPI QR codes, submit UTR payment proofs, and print official PDF receipts.
         </p>
       </div>
 
@@ -721,7 +841,7 @@ export const ClientInvoicesPage: React.FC = () => {
         <div className="bg-white border border-[#172333] rounded-lg p-8 space-y-5">
           <div className="flex justify-between border-b border-[#E2E4DF] pb-4">
             <div>
-              <p className="text-[11px] font-semibold text-[#F18A45]">PROJECT QUOTATION</p>
+              <p className="text-[11px] font-semibold text-[#F18A45]">PROJECT QUOTATION · SAC 9983</p>
               <h2 className="font-editorial text-xl font-semibold text-[#172333]">
                 {selectedQuote.projectTitle}
               </h2>
@@ -762,6 +882,13 @@ export const ClientInvoicesPage: React.FC = () => {
             <span>Total Quoted (INR):</span>
             <span>{formatINR(selectedQuote.total)}</span>
           </div>
+
+          <UpiQrCodeCard
+            amount={Math.round(selectedQuote.total * 0.5)}
+            referenceNumber={selectedQuote.quotationNumber}
+            label={`50% Kickoff Advance (${formatINR(Math.round(selectedQuote.total * 0.5))}) — Scan via GPay / PhonePe`}
+            compact
+          />
 
           <p className="text-xs text-[#6E7785]">{selectedQuote.termsAndConditions}</p>
 
@@ -858,21 +985,54 @@ export const ClientInvoicesPage: React.FC = () => {
         <div className="bg-white border border-[#172333] rounded-lg p-8 space-y-5">
           <div className="flex justify-between border-b border-[#E2E4DF] pb-4">
             <div>
+              <p className="text-[11px] font-semibold text-[#F18A45]">OFFICIAL TAX / STUDIO INVOICE · SAC 9983</p>
               <h2 className="font-editorial text-xl font-semibold">Prithvi Editify Invoice</h2>
               <p className="text-xs text-[#6E7785]">{selected.projectTitle}</p>
             </div>
             <div className="text-right font-mono text-xs">
               <p className="text-base font-semibold">{selected.invoiceNumber}</p>
               <p>Due: {selected.dueDate}</p>
+              <p className="font-sans font-semibold mt-0.5">Status: {selected.status}</p>
             </div>
           </div>
           <p className="text-xs text-[#172333]">{selected.itemsSummary}</p>
-          <div className="flex justify-between text-sm font-mono font-semibold pt-3 border-t border-[#E2E4DF]">
+          <div className="flex flex-wrap justify-between gap-4 text-sm font-mono font-semibold pt-3 border-t border-[#E2E4DF]">
+            <span>Subtotal: {formatINR(selected.subtotal)}</span>
+            {selected.taxRate > 0 && (
+              <span>GST/Tax ({selected.taxRate}%): {formatINR(selected.taxAmount)}</span>
+            )}
             <span>Total: {formatINR(selected.total)}</span>
-            <span className="text-[#B93832]">Balance Due: {formatINR(selected.balanceDue)}</span>
+            <span className={selected.balanceDue > 0 ? 'text-[#B93832]' : 'text-[#26734D]'}>
+              Balance Due: {formatINR(selected.balanceDue)}
+            </span>
           </div>
+
+          {/* Dynamic Scannable UPI QR Code with Exact Balance Due */}
+          <UpiQrCodeCard
+            amount={selected.balanceDue}
+            referenceNumber={selected.invoiceNumber}
+          />
+
           <p className="text-xs text-[#6E7785]">{selected.paymentInstructions}</p>
-          <div className="flex gap-3 no-print">
+          <div className="flex flex-wrap gap-3 no-print">
+            {selected.balanceDue > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setProofModalInvoice(selected);
+                  setProofForm({
+                    amount: selected.balanceDue,
+                    method: 'UPI',
+                    utrNumber: '',
+                    receiptScreenshotDataUrl: '',
+                    notes: '',
+                  });
+                }}
+                className="px-4 py-2 text-xs font-semibold text-white bg-[#26734D] hover:bg-[#1e5c3d] rounded-lg"
+              >
+                Submit UTR / Payment Proof
+              </button>
+            )}
             <button
               type="button"
               onClick={() => window.print()}
@@ -904,7 +1064,7 @@ export const ClientInvoicesPage: React.FC = () => {
               <th className="py-3 px-4">Status</th>
               <th className="py-3 px-4 text-right">Total</th>
               <th className="py-3 px-4 text-right">Balance Due</th>
-              <th className="py-3 px-4 text-right">View</th>
+              <th className="py-3 px-4 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#E2E4DF] text-xs">
@@ -915,33 +1075,185 @@ export const ClientInvoicesPage: React.FC = () => {
                 </td>
               </tr>
             ) : (
-              invoices.map((inv) => (
-                <tr key={inv.id}>
-                  <td className="py-3.5 px-4 font-mono font-semibold">{inv.invoiceNumber}</td>
-                  <td className="py-3.5 px-4">{inv.projectTitle}</td>
-                  <td className="py-3.5 px-4 font-mono text-[#6E7785]">{inv.dueDate}</td>
-                  <td className="py-3.5 px-4 font-medium">{inv.status}</td>
-                  <td className="py-3.5 px-4 text-right font-mono tabular-nums">
-                    {formatINR(inv.total)}
-                  </td>
-                  <td className="py-3.5 px-4 text-right font-mono font-semibold tabular-nums">
-                    {formatINR(inv.balanceDue)}
-                  </td>
-                  <td className="py-3.5 px-4 text-right">
-                    <button
-                      type="button"
-                      onClick={() => setSelected(inv)}
-                      className="font-semibold text-[#172333] hover:text-[#F18A45]"
-                    >
-                      Inspect / Print →
-                    </button>
-                  </td>
-                </tr>
-              ))
+              invoices.map((inv) => {
+                const pendingProof = paymentProofs.find(
+                  (p) => p.invoiceId === inv.id && p.status === 'Pending Verification'
+                );
+                return (
+                  <tr key={inv.id}>
+                    <td className="py-3.5 px-4 font-mono font-semibold">{inv.invoiceNumber}</td>
+                    <td className="py-3.5 px-4">{inv.projectTitle}</td>
+                    <td className="py-3.5 px-4 font-mono text-[#6E7785]">{inv.dueDate}</td>
+                    <td className="py-3.5 px-4 font-medium">
+                      <span>{inv.status}</span>
+                      {pendingProof && (
+                        <span className="block text-[10px] text-[#A96518] font-semibold">
+                          UTR Submitted (Pending Admin Verification)
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3.5 px-4 text-right font-mono tabular-nums">
+                      {formatINR(inv.total)}
+                    </td>
+                    <td className="py-3.5 px-4 text-right font-mono font-semibold tabular-nums">
+                      {formatINR(inv.balanceDue)}
+                    </td>
+                    <td className="py-3.5 px-4 text-right space-x-3 whitespace-nowrap">
+                      {inv.balanceDue > 0 && !pendingProof && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setProofModalInvoice(inv);
+                            setProofForm({
+                              amount: inv.balanceDue,
+                              method: 'UPI',
+                              utrNumber: '',
+                              receiptScreenshotDataUrl: '',
+                              notes: '',
+                            });
+                          }}
+                          className="font-semibold text-[#26734D] hover:underline"
+                        >
+                          Submit UTR Proof
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setSelected(inv)}
+                        className="font-semibold text-[#172333] hover:text-[#F18A45]"
+                      >
+                        UPI QR / Print →
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
       </div>
+
+      {/* Client Payment Proof Upload Modal */}
+      {proofModalInvoice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#172333]/65 p-4 no-print">
+          <form
+            onSubmit={handleSubmitPaymentProof}
+            className="bg-white border border-[#E2E4DF] rounded-lg max-w-md w-full p-6 space-y-4 shadow-xl"
+          >
+            <div>
+              <span className="text-[11px] font-mono font-semibold text-[#F18A45]">
+                PAYMENT VERIFICATION QUEUE
+              </span>
+              <h3 className="text-base font-semibold text-[#172333]">
+                Submit Payment Proof ({proofModalInvoice.invoiceNumber})
+              </h3>
+              <p className="text-xs text-[#6E7785] mt-0.5">
+                Share your UPI UTR / Bank Reference ID or screenshot. Once verified by Shankar Baluragi, your invoice balance updates to ₹0 and master deliverables unlock automatically.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium mb-1">Amount Paid (INR) *</label>
+                <input
+                  type="number"
+                  required
+                  min={1}
+                  max={proofModalInvoice.balanceDue}
+                  value={proofForm.amount}
+                  onChange={(e) => setProofForm({ ...proofForm, amount: Number(e.target.value) })}
+                  className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1">Transfer Method</label>
+                <select
+                  value={proofForm.method}
+                  onChange={(e) =>
+                    setProofForm({
+                      ...proofForm,
+                      method: e.target.value as 'UPI' | 'Bank Transfer (NEFT/IMPS)' | 'Other',
+                    })
+                  }
+                  className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                >
+                  <option value="UPI">UPI (GPay / PhonePe / Paytm)</option>
+                  <option value="Bank Transfer (NEFT/IMPS)">Bank Transfer (NEFT/IMPS)</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-[#172333] mb-1">
+                12-Digit UPI UTR / Transaction Reference ID *
+              </label>
+              <input
+                type="text"
+                required
+                value={proofForm.utrNumber}
+                onChange={(e) => setProofForm({ ...proofForm, utrNumber: e.target.value })}
+                placeholder="e.g. 429118394812"
+                className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-[#172333] mb-1">
+                Optional Payment Screenshot (PNG/JPG)
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = () => {
+                    if (typeof reader.result === 'string') {
+                      setProofForm((prev) => ({
+                        ...prev,
+                        receiptScreenshotDataUrl: reader.result as string,
+                      }));
+                    }
+                  };
+                  reader.readAsDataURL(file);
+                }}
+                className="w-full text-xs text-[#6E7785]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-[#172333] mb-1">
+                Note (Optional)
+              </label>
+              <input
+                type="text"
+                value={proofForm.notes}
+                onChange={(e) => setProofForm({ ...proofForm, notes: e.target.value })}
+                placeholder="Paid via Google Pay..."
+                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setProofModalInvoice(null)}
+                className="px-4 py-2 text-xs font-medium bg-[#F5F5F1] rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 text-xs font-semibold text-white bg-[#26734D] hover:bg-[#1e5c3d] rounded-lg"
+              >
+                Submit for Admin Verification
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 };

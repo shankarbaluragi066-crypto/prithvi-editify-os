@@ -16,6 +16,10 @@ import {
   Clock,
   FileText,
   FolderKanban,
+  Sparkles,
+  LayoutGrid,
+  List,
+  MapPin,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -46,7 +50,15 @@ import {
   fetchProjectMessages,
   postProjectMessage,
   seedInitialStudioCatalog,
+  fetchAllServicesAdmin,
 } from '../services/crmService';
+import {
+  PROJECT_MILESTONE_TEMPLATES,
+  buildTasksFromMilestoneTemplate,
+  generateAIDraftedQuotationFromInquiry,
+  getProofingPins,
+  checkProjectMasterUnlockStatus,
+} from '../services/workflowEnhancementsService';
 import {
   ClientRecord,
   InquiryRecord,
@@ -776,6 +788,7 @@ export const AdminInquiriesPage: React.FC = () => {
   const [notesDraft, setNotesDraft] = useState('');
   const [sourceDraft, setSourceDraft] = useState('');
   const [loading, setLoading] = useState(true);
+  const [aiDraftingId, setAiDraftingId] = useState<string | null>(null);
 
   const loadInquiries = useCallback(async () => {
     setLoading(true);
@@ -1070,9 +1083,45 @@ export const AdminInquiriesPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => handleSaveDetails()}
-                  className="px-4 py-2 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg"
+                  className="px-3.5 py-2 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg"
                 >
                   Save Notes
+                </button>
+                <button
+                  type="button"
+                  disabled={aiDraftingId === selected.id}
+                  onClick={async () => {
+                    setAiDraftingId(selected.id);
+                    try {
+                      const servicesList = await fetchAllServicesAdmin().catch(() => []);
+                      const aiDraftedQuote = await generateAIDraftedQuotationFromInquiry(
+                        selected,
+                        servicesList
+                      );
+                      showToast(
+                        'success',
+                        'AI Quotation Drafted',
+                        `Drafted ${aiDraftedQuote.lineItems.length} line items for ${selected.fullName}.`
+                      );
+                      navigate('/admin/quotations', {
+                        state: { fromInquiry: selected, aiDraftedQuote },
+                      });
+                    } catch (err) {
+                      showToast(
+                        'error',
+                        'AI Quote Draft Failed',
+                        err instanceof Error ? err.message : ''
+                      );
+                    } finally {
+                      setAiDraftingId(null);
+                    }
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-[#F18A45] hover:bg-[#e07934] rounded-lg disabled:opacity-50"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>
+                    {aiDraftingId === selected.id ? 'Drafting with AI...' : 'Draft Quote with AI'}
+                  </span>
                 </button>
                 <button
                   type="button"
@@ -1081,14 +1130,14 @@ export const AdminInquiriesPage: React.FC = () => {
                       state: { fromInquiry: selected },
                     })
                   }
-                  className="px-4 py-2 text-xs font-semibold text-[#172333] bg-[#F5F5F1] hover:bg-[#E2E4DF] border border-[#E2E4DF] rounded-lg"
+                  className="px-3.5 py-2 text-xs font-semibold text-[#172333] bg-[#F5F5F1] hover:bg-[#E2E4DF] border border-[#E2E4DF] rounded-lg"
                 >
-                  Prepare Quotation →
+                  Prepare Blank Quote →
                 </button>
                 <button
                   type="button"
                   onClick={() => handleConvertInquiry(selected)}
-                  className="px-4 py-2 text-xs font-semibold text-[#172333] bg-[#F18A45] hover:bg-[#e07934] rounded-lg"
+                  className="px-3.5 py-2 text-xs font-semibold text-[#172333] border border-[#172333] hover:bg-[#172333] hover:text-white rounded-lg transition-colors"
                 >
                   Convert to Client & Project →
                 </button>
@@ -1527,6 +1576,8 @@ export const AdminProjectsPage: React.FC = () => {
   const [clients, setClients] = useState<ClientRecord[]>([]);
   const [showCreate, setShowCreate] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>('All');
+  const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
+  const [milestoneTemplateId, setMilestoneTemplateId] = useState<string>('tpl-yt-video');
 
   const today = new Date().toISOString().split('T')[0];
   const [form, setForm] = useState({
@@ -1566,7 +1617,7 @@ export const AdminProjectsPage: React.FC = () => {
       return;
     }
     try {
-      await saveProjectAdmin(
+      const projectId = await saveProjectAdmin(
         {
           clientId: targetClient.id,
           clientUserId: targetClient.userId || '',
@@ -1586,7 +1637,26 @@ export const AdminProjectsPage: React.FC = () => {
         },
         form.internalNotes
       );
-      showToast('success', 'Project Created');
+
+      if (milestoneTemplateId && milestoneTemplateId !== 'none') {
+        const templateTasks = buildTasksFromMilestoneTemplate(
+          milestoneTemplateId,
+          projectId,
+          targetClient.userId || '',
+          form.startDate
+        );
+        for (const t of templateTasks) {
+          await saveTaskAdmin(t);
+        }
+        showToast(
+          'success',
+          'Project & Milestone Tasks Created',
+          `Initialized ${form.title} with ${templateTasks.length} standard production milestones.`
+        );
+      } else {
+        showToast('success', 'Project Created');
+      }
+
       setShowCreate(false);
       await loadData();
     } catch (err) {
@@ -1594,31 +1664,133 @@ export const AdminProjectsPage: React.FC = () => {
     }
   };
 
+  const handleQuickProjectStatusChange = async (
+    project: ProjectRecord,
+    nextStatus: ProjectStatus
+  ) => {
+    const progressByStatus: Partial<Record<ProjectStatus, number>> = {
+      Planned: 15,
+      'In Progress': 50,
+      'In Review': 80,
+      'Revision Requested': 70,
+      Completed: 100,
+    };
+    try {
+      const notes = await fetchProjectInternalNoteAdmin(project.id).catch(() => '');
+      await saveProjectAdmin(
+        {
+          ...project,
+          status: nextStatus,
+          progress: progressByStatus[nextStatus] ?? project.progress,
+          latestUpdate: `Moved to ${nextStatus} stage on studio Kanban board.`,
+        },
+        notes,
+        project
+      );
+      showToast('success', 'Stage Updated', `${project.title} → ${nextStatus}`);
+      await loadData();
+    } catch (err) {
+      showToast('error', 'Failed to update stage', err instanceof Error ? err.message : '');
+    }
+  };
+
   const filtered =
     statusFilter === 'All' ? projects : projects.filter((p) => p.status === statusFilter);
 
+  const KANBAN_COLUMNS: Array<{ label: string; status: ProjectStatus; match: ProjectStatus[] }> = [
+    { label: 'Planned', status: 'Planned', match: ['Inquiry', 'Planned', 'On Hold'] },
+    { label: 'In Progress', status: 'In Progress', match: ['In Progress', 'Waiting for Client'] },
+    { label: 'Review', status: 'In Review', match: ['In Review'] },
+    { label: 'Revision', status: 'Revision Requested', match: ['Revision Requested'] },
+    { label: 'Completed', status: 'Completed', match: ['Completed'] },
+  ];
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="font-editorial text-2xl font-semibold text-[#172333]">Projects</h1>
           <p className="text-xs text-[#6E7785] mt-1">
-            Track project briefs, progress percentages, deadlines, and client-visible updates.
+            Track project briefs, apply production milestone templates, or toggle between Table & Kanban Board views.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setShowCreate(!showCreate)}
-          className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg"
-        >
-          <FolderPlus className="w-4 h-4" />
-          <span>{showCreate ? 'Close Form' : 'Create Project'}</span>
-        </button>
+        <div className="flex items-center gap-2.5">
+          <div className="inline-flex items-center p-1 bg-[#E2E4DF]/60 rounded-lg">
+            <button
+              type="button"
+              onClick={() => setViewMode('table')}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                viewMode === 'table'
+                  ? 'bg-white text-[#172333] shadow-xs font-semibold'
+                  : 'text-[#6E7785] hover:text-[#172333]'
+              }`}
+            >
+              <List className="w-3.5 h-3.5" />
+              <span>Table</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('kanban')}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                viewMode === 'kanban'
+                  ? 'bg-white text-[#172333] shadow-xs font-semibold'
+                  : 'text-[#6E7785] hover:text-[#172333]'
+              }`}
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span>Kanban Board</span>
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowCreate(!showCreate)}
+            className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg"
+          >
+            <FolderPlus className="w-4 h-4" />
+            <span>{showCreate ? 'Close Form' : 'Create Project'}</span>
+          </button>
+        </div>
       </div>
 
       {showCreate && (
         <form onSubmit={handleCreate} className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-4">
-          <h2 className="text-base font-semibold text-[#172333]">Create New Project</h2>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#E2E4DF] pb-3">
+            <h2 className="text-base font-semibold text-[#172333]">Create New Project</h2>
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-semibold text-[#172333]">
+                Project Milestone Template:
+              </label>
+              <select
+                value={milestoneTemplateId}
+                onChange={(e) => setMilestoneTemplateId(e.target.value)}
+                className="px-3 py-1.5 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg font-medium text-[#172333]"
+              >
+                <option value="none">— No Milestone Template (Blank) —</option>
+                {PROJECT_MILESTONE_TEMPLATES.map((tpl) => (
+                  <option key={tpl.id} value={tpl.id}>
+                    {tpl.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {milestoneTemplateId !== 'none' && (
+            <div className="p-3 bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg text-xs">
+              <p className="font-semibold text-[#172333]">
+                Auto-Populated Production Milestones:{' '}
+                <span className="text-[#F18A45]">
+                  {PROJECT_MILESTONE_TEMPLATES.find((t) => t.id === milestoneTemplateId)?.name}
+                </span>
+              </p>
+              <p className="text-[#6E7785] mt-1">
+                {PROJECT_MILESTONE_TEMPLATES.find((t) => t.id === milestoneTemplateId)
+                  ?.tasks.map((t) => t.title)
+                  .join(' → ')}
+              </p>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-medium mb-1">Client *</label>
@@ -1721,68 +1893,157 @@ export const AdminProjectsPage: React.FC = () => {
         </form>
       )}
 
-      <div className="flex flex-wrap items-center gap-1 p-1 bg-[#E2E4DF]/60 rounded-lg w-fit">
-        {['All', ...PROJECT_STATUSES].map((st) => (
-          <button
-            key={st}
-            type="button"
-            onClick={() => setStatusFilter(st)}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap ${
-              statusFilter === st
-                ? 'bg-white text-[#172333] shadow-sm font-semibold'
-                : 'text-[#6E7785] hover:text-[#172333]'
-            }`}
-          >
-            {st}
-          </button>
-        ))}
-      </div>
+      {viewMode === 'table' ? (
+        <>
+          <div className="flex flex-wrap items-center gap-1 p-1 bg-[#E2E4DF]/60 rounded-lg w-fit">
+            {['All', ...PROJECT_STATUSES].map((st) => (
+              <button
+                key={st}
+                type="button"
+                onClick={() => setStatusFilter(st)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap ${
+                  statusFilter === st
+                    ? 'bg-white text-[#172333] shadow-sm font-semibold'
+                    : 'text-[#6E7785] hover:text-[#172333]'
+                }`}
+              >
+                {st}
+              </button>
+            ))}
+          </div>
 
-      <div className="bg-white border border-[#E2E4DF] rounded-lg overflow-x-auto">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="border-b border-[#E2E4DF] text-[11px] font-semibold text-[#6E7785]">
-              <th className="py-3 px-4">Project Title</th>
-              <th className="py-3 px-4">Client</th>
-              <th className="py-3 px-4">Status</th>
-              <th className="py-3 px-4">Progress</th>
-              <th className="py-3 px-4">Deadline</th>
-              <th className="py-3 px-4 text-right">Budget (INR)</th>
-              <th className="py-3 px-4 text-right">Action</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[#E2E4DF] text-xs">
-            {filtered.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="py-8 text-center text-[#6E7785]">
-                  No projects found.
-                </td>
-              </tr>
-            ) : (
-              filtered.map((p) => (
-                <tr key={p.id} className="hover:bg-[#F5F5F1]/50">
-                  <td className="py-3.5 px-4 font-semibold text-[#172333]">{p.title}</td>
-                  <td className="py-3.5 px-4 text-[#6E7785]">{p.clientName}</td>
-                  <td className="py-3.5 px-4 font-medium text-[#172333]">{p.status}</td>
-                  <td className="py-3.5 px-4 font-mono tabular-nums">{p.progress}%</td>
-                  <td className="py-3.5 px-4 font-mono text-[#6E7785]">{p.deadline}</td>
-                  <td className="py-3.5 px-4 text-right font-mono tabular-nums">
-                    {formatINR(p.budget)}
-                  </td>
-                  <td className="py-3.5 px-4 text-right">
-                    <Link
-                      to={`/admin/projects/${p.id}`}
-                      className="font-semibold text-[#172333] hover:text-[#F18A45]"
-                    >
-                      Open →
-                    </Link>
-                  </td>
+          <div className="bg-white border border-[#E2E4DF] rounded-lg overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-[#E2E4DF] text-[11px] font-semibold text-[#6E7785]">
+                  <th className="py-3 px-4">Project Title</th>
+                  <th className="py-3 px-4">Client</th>
+                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4">Progress</th>
+                  <th className="py-3 px-4">Deadline</th>
+                  <th className="py-3 px-4 text-right">Budget (INR)</th>
+                  <th className="py-3 px-4 text-right">Action</th>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              </thead>
+              <tbody className="divide-y divide-[#E2E4DF] text-xs">
+                {filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-8 text-center text-[#6E7785]">
+                      No projects found.
+                    </td>
+                  </tr>
+                ) : (
+                  filtered.map((p) => (
+                    <tr key={p.id} className="hover:bg-[#F5F5F1]/50">
+                      <td className="py-3.5 px-4 font-semibold text-[#172333]">{p.title}</td>
+                      <td className="py-3.5 px-4 text-[#6E7785]">{p.clientName}</td>
+                      <td className="py-3.5 px-4 font-medium text-[#172333]">{p.status}</td>
+                      <td className="py-3.5 px-4 font-mono tabular-nums">{p.progress}%</td>
+                      <td className="py-3.5 px-4 font-mono text-[#6E7785]">{p.deadline}</td>
+                      <td className="py-3.5 px-4 text-right font-mono tabular-nums">
+                        {formatINR(p.budget)}
+                      </td>
+                      <td className="py-3.5 px-4 text-right">
+                        <Link
+                          to={`/admin/projects/${p.id}`}
+                          className="font-semibold text-[#172333] hover:text-[#F18A45]"
+                        >
+                          Open →
+                        </Link>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          {KANBAN_COLUMNS.map((col, colIdx) => {
+            const colProjects = projects.filter((p) => col.match.includes(p.status));
+            const prevCol = colIdx > 0 ? KANBAN_COLUMNS[colIdx - 1] : null;
+            const nextCol = colIdx < KANBAN_COLUMNS.length - 1 ? KANBAN_COLUMNS[colIdx + 1] : null;
+
+            return (
+              <div
+                key={col.label}
+                className="bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg p-3 flex flex-col min-h-[420px]"
+              >
+                <div className="flex items-center justify-between pb-2.5 mb-3 border-b border-[#E2E4DF]">
+                  <span className="text-xs font-semibold text-[#172333]">{col.label}</span>
+                  <span className="text-[11px] font-mono font-semibold text-[#6E7785]">
+                    {colProjects.length}
+                  </span>
+                </div>
+                <div className="space-y-3 flex-1">
+                  {colProjects.length === 0 ? (
+                    <p className="text-[11px] text-[#6E7785] text-center py-8">
+                      No projects in {col.label}
+                    </p>
+                  ) : (
+                    colProjects.map((p) => (
+                      <div
+                        key={p.id}
+                        className="bg-white border border-[#E2E4DF] rounded-lg p-3.5 space-y-2.5 shadow-2xs"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <Link
+                            to={`/admin/projects/${p.id}`}
+                            className="text-xs font-semibold text-[#172333] hover:text-[#F18A45] leading-snug"
+                          >
+                            {p.title}
+                          </Link>
+                          <span className="font-mono text-[10px] text-[#6E7785]">
+                            {p.progress}%
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-[#6E7785]">
+                          {p.clientName} · {p.serviceType}
+                        </p>
+                        <div className="w-full h-1 bg-[#F5F5F1] rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-[#F18A45]"
+                            style={{ width: `${Math.min(100, Math.max(0, p.progress))}%` }}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between text-[11px] pt-1">
+                          <span className="font-mono font-semibold text-[#172333]">
+                            {formatINR(p.budget)}
+                          </span>
+                          <span className="font-mono text-[#6E7785]">Due {p.deadline || '—'}</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-1 pt-2 border-t border-[#E2E4DF]">
+                          {prevCol ? (
+                            <button
+                              type="button"
+                              onClick={() => handleQuickProjectStatusChange(p, prevCol.status)}
+                              className="text-[10px] font-semibold text-[#6E7785] hover:text-[#172333]"
+                            >
+                              ← {prevCol.label}
+                            </button>
+                          ) : (
+                            <span />
+                          )}
+                          {nextCol && (
+                            <button
+                              type="button"
+                              onClick={() => handleQuickProjectStatusChange(p, nextCol.status)}
+                              className="text-[10px] font-semibold text-[#F18A45] hover:underline"
+                            >
+                              {nextCol.label} →
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };
@@ -1794,14 +2055,22 @@ export const AdminProjectDetailsPage: React.FC = () => {
   const [project, setProject] = useState<ProjectRecord | null>(null);
   const [internalNotes, setInternalNotes] = useState('');
   const [messages, setMessages] = useState<ProjectMessage[]>([]);
+  const [tasks, setTasks] = useState<TaskRecord[]>([]);
+  const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [msgVisibility, setMsgVisibility] = useState<'client' | 'internal'>('client');
 
   const loadProject = useCallback(async () => {
     if (!projectId) return;
-    const all = await fetchAllProjectsAdmin();
+    const [all, allTasks, allInvoices] = await Promise.all([
+      fetchAllProjectsAdmin(),
+      fetchAllTasksAdmin().catch(() => []),
+      fetchAllInvoicesAdmin().catch(() => []),
+    ]);
     const found = all.find((p) => p.id === projectId) || null;
     setProject(found);
+    setTasks(allTasks.filter((t) => t.projectId === projectId));
+    setInvoices(allInvoices.filter((inv) => inv.projectId === projectId));
     if (found) {
       const notes = await fetchProjectInternalNoteAdmin(found.id);
       setInternalNotes(notes);
@@ -1848,16 +2117,35 @@ export const AdminProjectDetailsPage: React.FC = () => {
     }
   };
 
+  const unlockInfo = checkProjectMasterUnlockStatus(project.id, invoices);
+  const proofingPins = getProofingPins(project.id);
+
   return (
     <div className="space-y-6">
-      <div>
-        <Link to="/admin/projects" className="text-xs text-[#6E7785] hover:text-[#172333]">
-          ← Back to Projects
-        </Link>
-        <h1 className="font-editorial text-2xl font-semibold text-[#172333] mt-1">{project.title}</h1>
-        <p className="text-xs text-[#6E7785]">
-          Client: {project.clientName} ({project.clientEmail}) · Service: {project.serviceType}
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <Link to="/admin/projects" className="text-xs text-[#6E7785] hover:text-[#172333]">
+            ← Back to Projects
+          </Link>
+          <h1 className="font-editorial text-2xl font-semibold text-[#172333] mt-1">
+            {project.title}
+          </h1>
+          <p className="text-xs text-[#6E7785]">
+            Client: {project.clientName} ({project.clientEmail}) · Service: {project.serviceType}
+          </p>
+        </div>
+        <div className="text-right text-xs">
+          <span
+            className={`font-semibold ${
+              unlockInfo.isUnlocked ? 'text-[#26734D]' : 'text-[#A96518]'
+            }`}
+          >
+            {unlockInfo.isUnlocked
+              ? 'Master Files Unlocked (Invoice Settled)'
+              : 'Watermarked Preview Mode Active'}
+          </span>
+          <p className="text-[11px] text-[#6E7785]">{unlockInfo.reason}</p>
+        </div>
       </div>
 
       <form onSubmit={handleSaveProject} className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-4">
@@ -1952,6 +2240,127 @@ export const AdminProjectDetailsPage: React.FC = () => {
         </button>
       </form>
 
+      {/* Project Milestones & Proofing Pins */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-base font-semibold text-[#172333]">
+              Production Milestones ({tasks.length})
+            </h2>
+            <select
+              defaultValue=""
+              onChange={async (e) => {
+                const tplId = e.target.value;
+                if (!tplId) return;
+                e.target.value = '';
+                const generated = buildTasksFromMilestoneTemplate(
+                  tplId,
+                  project.id,
+                  project.clientUserId || '',
+                  project.startDate
+                );
+                for (const item of generated) {
+                  await saveTaskAdmin(item);
+                }
+                showToast(
+                  'success',
+                  'Milestone Template Applied',
+                  `Added ${generated.length} production tasks to ${project.title}.`
+                );
+                await loadProject();
+              }}
+              className="px-2.5 py-1.5 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg font-medium text-[#172333]"
+            >
+              <option value="">+ Load Milestone Template...</option>
+              {PROJECT_MILESTONE_TEMPLATES.map((tpl) => (
+                <option key={tpl.id} value={tpl.id}>
+                  {tpl.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          {tasks.length === 0 ? (
+            <p className="text-xs text-[#6E7785]">
+              No milestone tasks yet. Select a template above to populate standard studio tasks in one click.
+            </p>
+          ) : (
+            <div className="divide-y divide-[#E2E4DF] text-xs">
+              {tasks.map((t) => (
+                <div key={t.id} className="py-2.5 flex items-center justify-between gap-3">
+                  <div>
+                    <p
+                      className={
+                        t.status === 'Done'
+                          ? 'line-through text-[#6E7785]'
+                          : 'font-semibold text-[#172333]'
+                      }
+                    >
+                      {t.title}
+                    </p>
+                    {t.description && (
+                      <p className="text-[11px] text-[#6E7785]">{t.description}</p>
+                    )}
+                  </div>
+                  <select
+                    value={t.status}
+                    onChange={async (e) => {
+                      await saveTaskAdmin(
+                        { ...t, status: e.target.value as TaskStatus },
+                        t
+                      );
+                      await loadProject();
+                    }}
+                    className="px-2 py-1 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded"
+                  >
+                    <option value="To Do">To Do</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Blocked">Blocked</option>
+                    <option value="Done">Done</option>
+                  </select>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-semibold text-[#172333] inline-flex items-center gap-1.5">
+              <MapPin className="w-4 h-4 text-[#F18A45]" />
+              <span>Client Visual Proofing Pins ({proofingPins.length})</span>
+            </h2>
+          </div>
+          {proofingPins.length === 0 ? (
+            <p className="text-xs text-[#6E7785]">
+              When clients click on design proofs or video timestamps in the Client Portal, their coordinate pins and revision notes appear here.
+            </p>
+          ) : (
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {proofingPins.map((pin, idx) => (
+                <div
+                  key={pin.id}
+                  className="p-3 bg-[#F5F5F1] rounded-lg text-xs flex items-start justify-between gap-3"
+                >
+                  <div>
+                    <span className="font-mono font-semibold text-[#F18A45]">#{idx + 1}</span>{' '}
+                    <span className="font-semibold text-[#172333]">{pin.authorName}:</span>{' '}
+                    <span className={pin.resolved ? 'line-through text-[#6E7785]' : 'text-[#172333]'}>
+                      {pin.comment}
+                    </span>
+                    <p className="text-[10px] font-mono text-[#6E7785] mt-0.5">
+                      {pin.deliverableTitle} · Coord ({pin.xPercent.toFixed(0)}%, {pin.yPercent.toFixed(0)}%)
+                    </p>
+                  </div>
+                  <span className="text-[10px] font-mono font-semibold text-[#6E7785]">
+                    {pin.resolved ? 'Resolved' : 'Open'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Project Messages / Comments */}
       <div className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-4">
         <h2 className="text-base font-semibold text-[#172333]">Project Comments & Feedback Thread</h2>
@@ -2011,6 +2420,7 @@ export const AdminTasksPage: React.FC = () => {
   const { showToast } = useToast();
   const [tasks, setTasks] = useState<TaskRecord[]>([]);
   const [projects, setProjects] = useState<ProjectRecord[]>([]);
+  const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
   const [form, setForm] = useState({
     projectId: '',
     title: '',
@@ -2066,13 +2476,45 @@ export const AdminTasksPage: React.FC = () => {
     }
   };
 
+  const TASK_COLUMNS: TaskStatus[] = ['To Do', 'In Progress', 'Blocked', 'Done'];
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-editorial text-2xl font-semibold text-[#172333]">Tasks & Milestones</h1>
-        <p className="text-xs text-[#6E7785] mt-1">
-          Assign tasks to projects and control whether each milestone is visible to the client or internal-only.
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="font-editorial text-2xl font-semibold text-[#172333]">
+            Tasks & Milestones
+          </h1>
+          <p className="text-xs text-[#6E7785] mt-1">
+            Assign tasks to projects and switch between List & Kanban Board views.
+          </p>
+        </div>
+        <div className="inline-flex items-center p-1 bg-[#E2E4DF]/60 rounded-lg">
+          <button
+            type="button"
+            onClick={() => setViewMode('table')}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+              viewMode === 'table'
+                ? 'bg-white text-[#172333] shadow-xs font-semibold'
+                : 'text-[#6E7785] hover:text-[#172333]'
+            }`}
+          >
+            <List className="w-3.5 h-3.5" />
+            <span>List View</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('kanban')}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+              viewMode === 'kanban'
+                ? 'bg-white text-[#172333] shadow-xs font-semibold'
+                : 'text-[#6E7785] hover:text-[#172333]'
+            }`}
+          >
+            <LayoutGrid className="w-3.5 h-3.5" />
+            <span>Kanban Board</span>
+          </button>
+        </div>
       </div>
 
       <form onSubmit={handleCreateTask} className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-4">
@@ -2134,48 +2576,124 @@ export const AdminTasksPage: React.FC = () => {
         </button>
       </form>
 
-      <div className="bg-white border border-[#E2E4DF] rounded-lg divide-y divide-[#E2E4DF]">
-        {tasks.length === 0 ? (
-          <div className="p-8 text-center text-xs text-[#6E7785]">No tasks created yet.</div>
-        ) : (
-          tasks.map((t) => {
-            const proj = projects.find((p) => p.id === t.projectId);
-            return (
-              <div key={t.id} className="p-4 flex items-center justify-between gap-4 text-xs">
-                <div>
-                  <p className="font-semibold text-[#172333]">{t.title}</p>
-                  <p className="text-[#6E7785] mt-0.5">
-                    {proj?.title || t.projectId} · Due {t.dueDate} ·{' '}
-                    {t.visibility === 'client' ? 'Client Visible' : 'Internal Only'}
-                  </p>
+      {viewMode === 'table' ? (
+        <div className="bg-white border border-[#E2E4DF] rounded-lg divide-y divide-[#E2E4DF]">
+          {tasks.length === 0 ? (
+            <div className="p-8 text-center text-xs text-[#6E7785]">No tasks created yet.</div>
+          ) : (
+            tasks.map((t) => {
+              const proj = projects.find((p) => p.id === t.projectId);
+              return (
+                <div key={t.id} className="p-4 flex items-center justify-between gap-4 text-xs">
+                  <div>
+                    <p className="font-semibold text-[#172333]">{t.title}</p>
+                    <p className="text-[#6E7785] mt-0.5">
+                      {proj?.title || t.projectId} · Due {t.dueDate} ·{' '}
+                      {t.visibility === 'client' ? 'Client Visible' : 'Internal Only'}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <select
+                      value={t.status}
+                      onChange={(e) => handleToggleStatus(t, e.target.value as TaskStatus)}
+                      className="px-2.5 py-1.5 bg-[#F5F5F1] border border-[#E2E4DF] rounded-md"
+                    >
+                      <option value="To Do">To Do</option>
+                      <option value="In Progress">In Progress</option>
+                      <option value="Blocked">Blocked</option>
+                      <option value="Done">Done</option>
+                    </select>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await deleteTaskAdmin(t.id);
+                        await loadData();
+                      }}
+                      className="text-[#B93832] hover:underline"
+                    >
+                      Remove
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <select
-                    value={t.status}
-                    onChange={(e) => handleToggleStatus(t, e.target.value as TaskStatus)}
-                    className="px-2.5 py-1.5 bg-[#F5F5F1] border border-[#E2E4DF] rounded-md"
-                  >
-                    <option value="To Do">To Do</option>
-                    <option value="In Progress">In Progress</option>
-                    <option value="Blocked">Blocked</option>
-                    <option value="Done">Done</option>
-                  </select>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      await deleteTaskAdmin(t.id);
-                      await loadData();
-                    }}
-                    className="text-[#B93832] hover:underline"
-                  >
-                    Remove
-                  </button>
+              );
+            })
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {TASK_COLUMNS.map((colStatus, colIdx) => {
+            const colTasks = tasks.filter((t) => t.status === colStatus);
+            const prevStatus = colIdx > 0 ? TASK_COLUMNS[colIdx - 1] : null;
+            const nextStatus = colIdx < TASK_COLUMNS.length - 1 ? TASK_COLUMNS[colIdx + 1] : null;
+
+            return (
+              <div
+                key={colStatus}
+                className="bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg p-3 flex flex-col min-h-[380px]"
+              >
+                <div className="flex items-center justify-between pb-2.5 mb-3 border-b border-[#E2E4DF]">
+                  <span className="text-xs font-semibold text-[#172333]">{colStatus}</span>
+                  <span className="text-[11px] font-mono font-semibold text-[#6E7785]">
+                    {colTasks.length}
+                  </span>
+                </div>
+                <div className="space-y-2.5 flex-1">
+                  {colTasks.length === 0 ? (
+                    <p className="text-[11px] text-[#6E7785] text-center py-8">
+                      No tasks in {colStatus}
+                    </p>
+                  ) : (
+                    colTasks.map((t) => {
+                      const proj = projects.find((p) => p.id === t.projectId);
+                      return (
+                        <div
+                          key={t.id}
+                          className="bg-white border border-[#E2E4DF] rounded-lg p-3 space-y-2 shadow-2xs"
+                        >
+                          <p
+                            className={`text-xs font-semibold leading-snug ${
+                              t.status === 'Done' ? 'line-through text-[#6E7785]' : 'text-[#172333]'
+                            }`}
+                          >
+                            {t.title}
+                          </p>
+                          <p className="text-[11px] text-[#6E7785]">{proj?.title || 'Project Task'}</p>
+                          <div className="flex items-center justify-between text-[10px] font-mono text-[#6E7785]">
+                            <span>Due {t.dueDate}</span>
+                            <span>{t.priority}</span>
+                          </div>
+                          <div className="flex items-center justify-between pt-2 border-t border-[#E2E4DF]">
+                            {prevStatus ? (
+                              <button
+                                type="button"
+                                onClick={() => handleToggleStatus(t, prevStatus)}
+                                className="text-[10px] font-semibold text-[#6E7785] hover:text-[#172333]"
+                              >
+                                ← {prevStatus}
+                              </button>
+                            ) : (
+                              <span />
+                            )}
+                            {nextStatus && (
+                              <button
+                                type="button"
+                                onClick={() => handleToggleStatus(t, nextStatus)}
+                                className="text-[10px] font-semibold text-[#F18A45] hover:underline"
+                              >
+                                {nextStatus} →
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
               </div>
             );
-          })
-        )}
-      </div>
+          })}
+        </div>
+      )}
     </div>
   );
 };

@@ -22,6 +22,9 @@ import {
   FileText,
   Printer,
   Plus,
+  Share2,
+  MessageSquare,
+  ExternalLink,
 } from 'lucide-react';
 import {
   fetchAIProviderStatus,
@@ -52,6 +55,16 @@ import {
   saveInvoiceWithLineItemsAdmin,
   updateInquiryAdmin,
 } from '../services/crmService';
+import {
+  GstTaxMode,
+  calculateGstBreakdown,
+  getInvoiceGstMeta,
+  saveInvoiceGstMeta,
+  buildPublicQuotationShareUrl,
+  buildWhatsAppQuotationShareUrl,
+  generateAIDraftedQuotationFromInquiry,
+} from '../services/workflowEnhancementsService';
+import { UpiQrCodeCard } from '../components/StudioEnhancements';
 import {
   AIBrandProfile,
   AIUsageHistoryEntry,
@@ -2354,6 +2367,10 @@ export const AdminQuotationsPage: React.FC = () => {
       '50% advance milestone to initiate production. Remaining balance upon preview approval prior to final master file release. Quotation valid until the expiry date listed.',
     lineItems: [{ description: 'Creative Design & Production Package', quantity: 1, unitPrice: 1500 }],
   });
+  const [gstMode, setGstMode] = useState<GstTaxMode>('NON_GST');
+  const [clientGstin, setClientGstin] = useState('');
+  const [sacCode, setSacCode] = useState('9983');
+  const [aiDraftingQuote, setAiDraftingQuote] = useState(false);
 
   const loadAll = useCallback(async () => {
     const [qList, cList, iList, pList, sList] = await Promise.all([
@@ -2374,9 +2391,13 @@ export const AdminQuotationsPage: React.FC = () => {
     loadAll();
   }, [loadAll]);
 
-  // Pre-fill quotation builder if navigated from an Inquiry
+  // Pre-fill quotation builder if navigated from an Inquiry (with optional AI Draft)
   useEffect(() => {
-    const fromInq = (location.state as any)?.fromInquiry as InquiryRecord | undefined;
+    const stateObj = (location.state as any) || {};
+    const fromInq = stateObj.fromInquiry as InquiryRecord | undefined;
+    const aiDraft = stateObj.aiDraftedQuote as
+      | Awaited<ReturnType<typeof generateAIDraftedQuotationFromInquiry>>
+      | undefined;
     if (!fromInq) return;
     const matchedClient = clients.find(
       (c) => c.email.toLowerCase() === fromInq.email.toLowerCase()
@@ -2390,26 +2411,76 @@ export const AdminQuotationsPage: React.FC = () => {
       clientName: fromInq.fullName,
       clientEmail: fromInq.email,
       clientUserId: matchedClient?.userId || '',
-      projectTitle: `${fromInq.serviceRequired} — ${fromInq.companyName || fromInq.fullName}`,
-      serviceCategory: fromInq.serviceRequired,
-      scopeSummary: fromInq.description,
-      lineItems: [
-        {
-          description: `${fromInq.serviceRequired} Deliverable Package`,
-          quantity: 1,
-          unitPrice: 1500,
-        },
-      ],
+      projectTitle:
+        aiDraft?.projectTitle ||
+        `${fromInq.serviceRequired} — ${fromInq.companyName || fromInq.fullName}`,
+      serviceCategory: aiDraft?.serviceCategory || fromInq.serviceRequired,
+      scopeSummary: aiDraft?.scopeSummary || fromInq.description,
+      deliverables: aiDraft?.deliverables || prev.deliverables,
+      estimatedTimeline: aiDraft?.estimatedTimeline || prev.estimatedTimeline,
+      lineItems:
+        aiDraft?.lineItems && aiDraft.lineItems.length > 0
+          ? aiDraft.lineItems.map((li) => ({
+              description: li.description,
+              quantity: li.quantity,
+              unitPrice: li.unitPrice,
+            }))
+          : [
+              {
+                description: `${fromInq.serviceRequired} Deliverable Package`,
+                quantity: 1,
+                unitPrice: 1500,
+              },
+            ],
     }));
     setShowBuilder(true);
   }, [location.state, clients]);
 
+  const handleAIDraftFromSelectedInquiry = async () => {
+    const inq = inquiries.find((i) => i.id === form.inquiryId);
+    if (!inq) {
+      showToast('warning', 'Select an Inquiry', 'Choose an inquiry first or draft from Inquiries page.');
+      return;
+    }
+    setAiDraftingQuote(true);
+    try {
+      const drafted = await generateAIDraftedQuotationFromInquiry(inq, services);
+      setForm((prev) => ({
+        ...prev,
+        projectTitle: drafted.projectTitle,
+        serviceCategory: drafted.serviceCategory,
+        scopeSummary: drafted.scopeSummary,
+        deliverables: drafted.deliverables,
+        estimatedTimeline: drafted.estimatedTimeline,
+        lineItems: drafted.lineItems.map((li) => ({
+          description: li.description,
+          quantity: li.quantity,
+          unitPrice: li.unitPrice,
+        })),
+      }));
+      showToast('success', 'AI Scope & Line Items Drafted', 'Review the itemized INR pricing below.');
+    } catch (err) {
+      showToast('error', 'AI Draft Failed', err instanceof Error ? err.message : '');
+    } finally {
+      setAiDraftingQuote(false);
+    }
+  };
+
+  const effectiveTaxRate =
+    gstMode === 'NON_GST'
+      ? 0
+      : gstMode === 'CGST_SGST_18' || gstMode === 'IGST_18'
+      ? 18
+      : form.taxRate;
+
   const totals = calculateInvoiceTotals({
     items: form.lineItems,
     discount: form.discount,
-    taxRate: form.taxRate,
+    taxRate: effectiveTaxRate,
     amountPaid: 0,
   });
+
+  const gstBreakdown = calculateGstBreakdown(totals.subtotal, totals.discount, gstMode, effectiveTaxRate);
 
   const handleSelectClient = (clientId: string) => {
     const found = clients.find((c) => c.id === clientId);
@@ -2475,7 +2546,7 @@ export const AdminQuotationsPage: React.FC = () => {
           })),
           subtotal: totals.subtotal,
           discount: totals.discount,
-          taxRate: form.taxRate,
+          taxRate: effectiveTaxRate,
           taxAmount: totals.taxAmount,
           total: totals.total,
           currency: 'INR',
@@ -2484,6 +2555,12 @@ export const AdminQuotationsPage: React.FC = () => {
         },
         editingId || undefined
       );
+
+      saveInvoiceGstMeta(saved.id, {
+        gstMode,
+        sacCode: sacCode || '9983',
+        clientGstin: clientGstin.trim() || undefined,
+      });
 
       // If linked to an inquiry, mark inquiry as Proposal Sent
       if (form.inquiryId) {
@@ -2677,9 +2754,22 @@ export const AdminQuotationsPage: React.FC = () => {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-[#172333] mb-1">
-                Pre-fill from Inquiry (Optional)
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-medium text-[#172333]">
+                  Pre-fill from Inquiry (Optional)
+                </label>
+                {form.inquiryId && (
+                  <button
+                    type="button"
+                    disabled={aiDraftingQuote}
+                    onClick={handleAIDraftFromSelectedInquiry}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#F18A45] hover:underline disabled:opacity-50"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    <span>{aiDraftingQuote ? 'Drafting...' : 'AI Draft Scope & Pricing'}</span>
+                  </button>
+                )}
+              </div>
               <select
                 value={form.inquiryId}
                 onChange={(e) => handleSelectInquiry(e.target.value)}
@@ -2915,7 +3005,7 @@ export const AdminQuotationsPage: React.FC = () => {
             ))}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-[#E2E4DF]">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 pt-3 border-t border-[#E2E4DF]">
             <div>
               <label className="block text-xs font-medium mb-1">Discount (INR)</label>
               <input
@@ -2927,21 +3017,73 @@ export const AdminQuotationsPage: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium mb-1">Tax Rate (%)</label>
-              <input
-                type="number"
-                min={0}
-                max={100}
-                value={form.taxRate}
-                onChange={(e) => setForm({ ...form, taxRate: Number(e.target.value) })}
-                className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
-              />
+              <label className="block text-xs font-medium mb-1">
+                GST / Tax Mode (SAC 9983)
+              </label>
+              <select
+                value={gstMode}
+                onChange={(e) => {
+                  const nextMode = e.target.value as GstTaxMode;
+                  setGstMode(nextMode);
+                  if (nextMode === 'NON_GST') setForm({ ...form, taxRate: 0 });
+                  else if (nextMode === 'CGST_SGST_18' || nextMode === 'IGST_18')
+                    setForm({ ...form, taxRate: 18 });
+                }}
+                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              >
+                <option value="NON_GST">Non-GST Billing (0% Default)</option>
+                <option value="CGST_SGST_18">CGST 9% + SGST 9% (Intra-State 18%)</option>
+                <option value="IGST_18">IGST 18% (Inter-State SAC 9983)</option>
+                <option value="CUSTOM">Custom Tax Rate (%)</option>
+              </select>
+            </div>
+            <div>
+              {gstMode === 'CUSTOM' ? (
+                <>
+                  <label className="block text-xs font-medium mb-1">Custom Tax Rate (%)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={form.taxRate}
+                    onChange={(e) => setForm({ ...form, taxRate: Number(e.target.value) })}
+                    className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                  />
+                </>
+              ) : (
+                <>
+                  <label className="block text-xs font-medium mb-1">
+                    Client GSTIN / SAC Code (Optional)
+                  </label>
+                  <div className="flex gap-1.5">
+                    <input
+                      type="text"
+                      value={clientGstin}
+                      onChange={(e) => setClientGstin(e.target.value.toUpperCase())}
+                      placeholder="Client GSTIN"
+                      className="w-2/3 px-2.5 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                    />
+                    <input
+                      type="text"
+                      value={sacCode}
+                      onChange={(e) => setSacCode(e.target.value)}
+                      placeholder="SAC 9983"
+                      className="w-1/3 px-2 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                    />
+                  </div>
+                </>
+              )}
             </div>
             <div className="bg-[#F5F5F1] rounded-lg p-3 text-right">
               <p className="text-xs text-[#6E7785]">Estimated Total (INR)</p>
               <p className="text-xl font-mono font-semibold text-[#172333] tabular-nums">
                 {formatINR(totals.total)}
               </p>
+              {gstBreakdown.mode !== 'NON_GST' && (
+                <p className="text-[11px] font-mono text-[#6E7785] mt-0.5">
+                  Incl. {formatINR(gstBreakdown.totalTax)} Tax ({gstBreakdown.label})
+                </p>
+              )}
             </div>
           </div>
 
@@ -3043,33 +3185,118 @@ export const AdminQuotationsPage: React.FC = () => {
             </tbody>
           </table>
 
-          <div className="flex justify-end">
-            <div className="w-64 space-y-1.5 text-xs">
-              <div className="flex justify-between">
-                <span className="text-[#6E7785]">Subtotal:</span>
-                <span className="font-mono tabular-nums">{formatINR(printQuotation.subtotal)}</span>
+          {(() => {
+            const qMeta = getInvoiceGstMeta(printQuotation.id);
+            const activeMode: GstTaxMode =
+              qMeta.gstMode !== 'NON_GST'
+                ? qMeta.gstMode
+                : printQuotation.taxRate === 18
+                ? 'CGST_SGST_18'
+                : printQuotation.taxRate > 0
+                ? 'CUSTOM'
+                : 'NON_GST';
+            const printGst = calculateGstBreakdown(
+              printQuotation.subtotal,
+              printQuotation.discount,
+              activeMode,
+              printQuotation.taxRate,
+              qMeta.sacCode
+            );
+            const shareUrl = buildPublicQuotationShareUrl(printQuotation);
+            return (
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start pt-4 border-t border-[#E2E4DF]">
+                <div className="md:col-span-7 space-y-4">
+                  <UpiQrCodeCard
+                    amount={Math.round(printQuotation.total * 0.5)}
+                    referenceNumber={`${printQuotation.quotationNumber}-ADV`}
+                    clientName={printQuotation.clientName}
+                    compact
+                  />
+                  <div className="text-xs text-[#6E7785]">
+                    <p className="font-semibold text-[#172333]">Terms & Conditions:</p>
+                    <p className="mt-1">{printQuotation.termsAndConditions}</p>
+                    <p className="mt-1 text-[11px]">
+                      Public One-Tap Approval Link:{' '}
+                      <a
+                        href={shareUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-mono text-[#F18A45] underline"
+                      >
+                        {shareUrl}
+                      </a>
+                    </p>
+                  </div>
+                </div>
+                <div className="md:col-span-5 flex justify-end">
+                  <div className="w-72 space-y-1.5 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-[#6E7785]">Subtotal:</span>
+                      <span className="font-mono tabular-nums">
+                        {formatINR(printQuotation.subtotal)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[#6E7785]">Discount:</span>
+                      <span className="font-mono tabular-nums">
+                        -{formatINR(printQuotation.discount)}
+                      </span>
+                    </div>
+                    {printGst.mode === 'CGST_SGST_18' ? (
+                      <>
+                        <div className="flex justify-between">
+                          <span className="text-[#6E7785]">
+                            CGST (9% · SAC {printGst.sacCode}):
+                          </span>
+                          <span className="font-mono tabular-nums">
+                            {formatINR(printGst.cgstAmount)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-[#6E7785]">
+                            SGST (9% · SAC {printGst.sacCode}):
+                          </span>
+                          <span className="font-mono tabular-nums">
+                            {formatINR(printGst.sgstAmount)}
+                          </span>
+                        </div>
+                      </>
+                    ) : printGst.mode === 'IGST_18' ? (
+                      <div className="flex justify-between">
+                        <span className="text-[#6E7785]">
+                          IGST (18% · SAC {printGst.sacCode}):
+                        </span>
+                        <span className="font-mono tabular-nums">
+                          {formatINR(printGst.igstAmount)}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex justify-between">
+                        <span className="text-[#6E7785]">Tax ({printQuotation.taxRate}%):</span>
+                        <span className="font-mono tabular-nums">
+                          {formatINR(printQuotation.taxAmount)}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex justify-between pt-2 border-t border-[#E2E4DF] font-semibold text-sm text-[#172333]">
+                      <span>Total Quoted (INR):</span>
+                      <span className="font-mono tabular-nums">
+                        {formatINR(printQuotation.total)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-[11px] text-[#F18A45] font-semibold">
+                      <span>50% Advance to Start:</span>
+                      <span className="font-mono tabular-nums">
+                        {formatINR(Math.round(printQuotation.total * 0.5))}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span className="text-[#6E7785]">Discount:</span>
-                <span className="font-mono tabular-nums">-{formatINR(printQuotation.discount)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#6E7785]">Tax ({printQuotation.taxRate}%):</span>
-                <span className="font-mono tabular-nums">{formatINR(printQuotation.taxAmount)}</span>
-              </div>
-              <div className="flex justify-between pt-2 border-t border-[#E2E4DF] font-semibold text-sm text-[#172333]">
-                <span>Total Quoted (INR):</span>
-                <span className="font-mono tabular-nums">{formatINR(printQuotation.total)}</span>
-              </div>
-            </div>
-          </div>
+            );
+          })()}
 
-          <div className="pt-4 border-t border-[#E2E4DF] text-xs text-[#6E7785]">
-            <p className="font-semibold text-[#172333]">Terms & Conditions:</p>
-            <p className="mt-1">{printQuotation.termsAndConditions}</p>
-          </div>
-
-          <div className="flex items-center gap-3 no-print">
+          <div className="flex flex-wrap items-center gap-3 no-print">
             <button
               type="button"
               onClick={() => window.print()}
@@ -3080,8 +3307,37 @@ export const AdminQuotationsPage: React.FC = () => {
             </button>
             <button
               type="button"
+              onClick={() => {
+                const url = buildPublicQuotationShareUrl(printQuotation);
+                navigator.clipboard?.writeText(url);
+                showToast('success', 'Approval Link Copied', 'Public quotation approval link copied to clipboard.');
+              }}
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-[#172333] bg-[#F5F5F1] hover:bg-[#E2E4DF] rounded-lg"
+            >
+              <Share2 className="w-3.5 h-3.5 text-[#F18A45]" />
+              <span>Copy Public Approval Link</span>
+            </button>
+            <a
+              href={buildWhatsAppQuotationShareUrl(printQuotation)}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-[#26734D] hover:bg-[#1e5c3d] rounded-lg"
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              <span>Send on WhatsApp</span>
+            </a>
+            <Link
+              to={`/quote/${printQuotation.id}`}
+              target="_blank"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-[#172333] border border-[#E2E4DF] rounded-lg hover:bg-[#F5F5F1]"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span>Open Public Link</span>
+            </Link>
+            <button
+              type="button"
               onClick={() => setPrintQuotation(null)}
-              className="px-4 py-2 text-xs font-semibold text-[#172333] bg-[#F5F5F1] rounded-lg"
+              className="px-4 py-2 text-xs font-semibold text-[#6E7785] hover:text-[#172333]"
             >
               Close Preview
             </button>
@@ -3169,25 +3425,61 @@ export const AdminQuotationsPage: React.FC = () => {
                   <td className="py-3.5 px-4 text-right font-mono font-semibold text-[#172333] tabular-nums">
                     {formatINR(q.total)}
                   </td>
-                  <td className="py-3.5 px-4 text-right space-x-3 whitespace-nowrap">
+                  <td className="py-3.5 px-4 text-right space-x-2.5 whitespace-nowrap">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const url = buildPublicQuotationShareUrl(q);
+                        navigator.clipboard?.writeText(url);
+                        showToast(
+                          'success',
+                          'Share Link Copied',
+                          `Public approval link for ${q.quotationNumber} copied.`
+                        );
+                      }}
+                      title="Copy Public One-Tap Approval Link (/quote/:quoteId)"
+                      className="font-semibold text-[#F18A45] hover:underline"
+                    >
+                      Share Link
+                    </button>
+                    <a
+                      href={buildWhatsAppQuotationShareUrl(q)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="font-semibold text-[#26734D] hover:underline"
+                    >
+                      WhatsApp
+                    </a>
                     <button
                       type="button"
                       onClick={() => setPrintQuotation(q)}
                       className="font-semibold text-[#172333] hover:text-[#F18A45]"
                     >
-                      Print/PDF
+                      Print/QR
                     </button>
                     <button
                       type="button"
                       onClick={() => handleConvertQuotationToProjectAndInvoice(q)}
                       className="font-semibold text-[#26734D] hover:underline"
                     >
-                      {q.convertedProjectId ? 'View Project' : 'Convert to Project & Invoice'}
+                      {q.convertedProjectId ? 'View Project' : 'Convert'}
                     </button>
                     <button
                       type="button"
                       onClick={() => {
                         setEditingId(q.id);
+                        const meta = getInvoiceGstMeta(q.id);
+                        setGstMode(
+                          meta.gstMode !== 'NON_GST'
+                            ? meta.gstMode
+                            : q.taxRate === 18
+                            ? 'CGST_SGST_18'
+                            : q.taxRate > 0
+                            ? 'CUSTOM'
+                            : 'NON_GST'
+                        );
+                        setClientGstin(meta.clientGstin || '');
+                        setSacCode(meta.sacCode || '9983');
                         setForm({
                           quotationNumber: q.quotationNumber,
                           inquiryId: q.inquiryId || '',

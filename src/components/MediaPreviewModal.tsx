@@ -23,6 +23,15 @@ import { detectMediaCategory, getFileExtension } from '../utils/mediaValidation'
 import { formatFileSize, formatDate } from '../utils/formatters';
 import { resolveStoragePreviewUrl } from '../services/crmService';
 
+import {
+  ProofingPinAnnotation,
+  getProofingPins,
+  addProofingPin,
+  toggleProofingPinResolved,
+  deleteProofingPin,
+  formatVideoTimestamp,
+} from '../services/workflowEnhancementsService';
+
 export interface PreviewableMediaItem {
   id: string;
   title: string;
@@ -41,6 +50,8 @@ export interface PreviewableMediaItem {
   isPublic?: boolean;
   createdAt?: string;
   uploaderName?: string;
+  watermarkText?: string;
+  masterDownloadLocked?: boolean;
   actionButton?: {
     label: string;
     href?: string;
@@ -48,11 +59,19 @@ export interface PreviewableMediaItem {
   };
 }
 
+export interface ProofingContextConfig {
+  projectId: string;
+  authorName: string;
+  authorRole: 'admin' | 'client';
+  onPinAdded?: (formattedMessage: string) => void;
+}
+
 interface MediaPreviewModalProps {
   item: PreviewableMediaItem | null;
   items?: PreviewableMediaItem[];
   onClose: () => void;
   onSelectItem?: (item: PreviewableMediaItem) => void;
+  proofingContext?: ProofingContextConfig;
 }
 
 export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
@@ -60,6 +79,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
   items = [],
   onClose,
   onSelectItem,
+  proofingContext,
 }) => {
   const [resolvedUrl, setResolvedUrl] = useState<string>('');
   const [resolving, setResolving] = useState<boolean>(false);
@@ -67,7 +87,16 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
   const [rotation, setRotation] = useState<number>(0);
   const [playbackRate, setPlaybackRate] = useState<number>(1);
   const [copiedUrl, setCopiedUrl] = useState<boolean>(false);
+  const [pins, setPins] = useState<ProofingPinAnnotation[]>([]);
+  const [pinModeActive, setPinModeActive] = useState<boolean>(Boolean(proofingContext));
+  const [draftPinCoords, setDraftPinCoords] = useState<{
+    xPercent: number;
+    yPercent: number;
+    timestampSeconds?: number | null;
+  } | null>(null);
+  const [draftPinComment, setDraftPinComment] = useState<string>('');
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const imageStageRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!item) return;
@@ -75,6 +104,15 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
     setRotation(0);
     setPlaybackRate(1);
     setCopiedUrl(false);
+    setDraftPinCoords(null);
+    setDraftPinComment('');
+    if (proofingContext) {
+      setPins(getProofingPins(proofingContext.projectId, item.id));
+      setPinModeActive(true);
+    } else {
+      setPins([]);
+      setPinModeActive(false);
+    }
 
     let active = true;
     const primaryUrl = item.videoUrl || item.url;
@@ -266,7 +304,24 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
               </div>
             )}
 
-            {activeUrl && !activeUrl.startsWith('data:') && (
+            {proofingContext && (mediaCategory === 'image' || mediaCategory === 'video') && (
+              <button
+                type="button"
+                onClick={() => {
+                  setPinModeActive((v) => !v);
+                  setDraftPinCoords(null);
+                }}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-md transition-colors ${
+                  pinModeActive
+                    ? 'bg-[#F18A45] text-[#172333]'
+                    : 'bg-[#24364A] text-[#D0D5DD] hover:text-white'
+                }`}
+              >
+                <span>{pinModeActive ? `Proofing Pins (${pins.length})` : 'Enable Pin Proofing'}</span>
+              </button>
+            )}
+
+            {activeUrl && !activeUrl.startsWith('data:') && !item.masterDownloadLocked && (
               <button
                 type="button"
                 onClick={handleCopyLink}
@@ -277,7 +332,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
               </button>
             )}
 
-            {activeUrl && (
+            {activeUrl && !item.masterDownloadLocked ? (
               <a
                 href={activeUrl}
                 target="_blank"
@@ -286,9 +341,17 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#172333] bg-[#F18A45] hover:bg-[#e07934] rounded-md"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span>Download</span>
+                <span>Download Master</span>
               </a>
-            )}
+            ) : item.masterDownloadLocked ? (
+              <span
+                title="High-resolution unwatermarked master unlocks automatically when invoice balance is ₹0"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-[#F18A45] bg-[#24364A] border border-[#F18A45]/40 rounded-md"
+              >
+                <Lock className="w-3.5 h-3.5" />
+                <span>Watermarked Proof (Settle Invoice to Unlock)</span>
+              </span>
+            ) : null}
 
             <button
               type="button"
@@ -309,29 +372,136 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
             </div>
           ) : mediaCategory === 'image' ? (
             <div className="overflow-auto max-w-full max-h-full flex items-center justify-center">
-              <img
-                src={activeUrl}
-                alt={item.title}
-                referrerPolicy="no-referrer"
-                style={{
-                  transform: `scale(${zoom}) rotate(${rotation}deg)`,
-                  transition: 'transform 160ms ease-out',
+              <div
+                ref={imageStageRef}
+                onClick={(e) => {
+                  if (!proofingContext || !pinModeActive || !imageStageRef.current) return;
+                  const rect = imageStageRef.current.getBoundingClientRect();
+                  const xPercent = Math.round(((e.clientX - rect.left) / rect.width) * 100);
+                  const yPercent = Math.round(((e.clientY - rect.top) / rect.height) * 100);
+                  setDraftPinCoords({
+                    xPercent: Math.max(2, Math.min(98, xPercent)),
+                    yPercent: Math.max(2, Math.min(98, yPercent)),
+                  });
                 }}
-                className="max-h-[60vh] max-w-full object-contain rounded select-none"
-              />
+                className={`relative inline-block ${
+                  proofingContext && pinModeActive ? 'cursor-crosshair' : ''
+                }`}
+              >
+                <img
+                  src={activeUrl}
+                  alt={item.title}
+                  referrerPolicy="no-referrer"
+                  style={{
+                    transform: `scale(${zoom}) rotate(${rotation}deg)`,
+                    transition: 'transform 160ms ease-out',
+                  }}
+                  className="max-h-[56vh] max-w-full object-contain rounded select-none block"
+                />
+
+                {/* Automatic Preview Proof Watermark Overlay */}
+                {item.watermarkText && (
+                  <div
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-0 overflow-hidden flex flex-col items-center justify-center gap-10 select-none opacity-35"
+                  >
+                    {[-1, 0, 1].map((row) => (
+                      <div
+                        key={row}
+                        className="-rotate-24 whitespace-nowrap font-mono text-xs sm:text-sm font-bold tracking-[0.22em] text-white bg-[#172333]/60 px-4 py-1 rounded border border-white/20 shadow"
+                      >
+                        {item.watermarkText}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Existing Proofing Pins */}
+                {proofingContext &&
+                  pinModeActive &&
+                  pins.map((pin, idx) => (
+                    <div
+                      key={pin.id}
+                      style={{ left: `${pin.xPercent}%`, top: `${pin.yPercent}%` }}
+                      title={`${pin.authorName}: ${pin.comment}`}
+                      onClick={(ev) => {
+                        ev.stopPropagation();
+                      }}
+                      className={`absolute -translate-x-1/2 -translate-y-1/2 z-20 w-6 h-6 rounded-full text-[11px] font-mono font-bold flex items-center justify-center shadow-lg border-2 border-white ${
+                        pin.resolved
+                          ? 'bg-[#26734D] text-white'
+                          : 'bg-[#F18A45] text-[#172333]'
+                      }`}
+                    >
+                      {idx + 1}
+                    </div>
+                  ))}
+
+                {/* Draft Pin Marker */}
+                {draftPinCoords && (
+                  <div
+                    style={{
+                      left: `${draftPinCoords.xPercent}%`,
+                      top: `${draftPinCoords.yPercent}%`,
+                    }}
+                    className="absolute -translate-x-1/2 -translate-y-1/2 z-30 w-7 h-7 rounded-full bg-[#B93832] text-white text-xs font-bold flex items-center justify-center border-2 border-white animate-pulse"
+                  >
+                    +
+                  </div>
+                )}
+              </div>
             </div>
           ) : mediaCategory === 'video' ? (
-            <video
-              ref={videoRef}
-              src={activeUrl}
-              poster={item.videoUrl && item.url ? item.url : undefined}
-              controls
-              playsInline
-              preload="metadata"
-              className="max-h-[60vh] max-w-full rounded bg-black shadow-lg"
-            >
-              Your browser does not support HTML5 video playback.
-            </video>
+            <div className="relative flex flex-col items-center justify-center max-w-full">
+              <div className="relative">
+                <video
+                  ref={videoRef}
+                  src={activeUrl}
+                  poster={item.videoUrl && item.url ? item.url : undefined}
+                  controls
+                  controlsList={item.masterDownloadLocked ? 'nodownload' : undefined}
+                  playsInline
+                  preload="metadata"
+                  className="max-h-[54vh] max-w-full rounded bg-black shadow-lg"
+                >
+                  Your browser does not support HTML5 video playback.
+                </video>
+
+                {/* Automatic Preview Proof Watermark Overlay on Video */}
+                {item.watermarkText && (
+                  <div
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-x-0 top-6 flex justify-center select-none opacity-45"
+                  >
+                    <div className="whitespace-nowrap font-mono text-xs font-bold tracking-[0.2em] text-white bg-[#172333]/75 px-3.5 py-1 rounded border border-white/20">
+                      {item.watermarkText}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {proofingContext && pinModeActive && (
+                <div className="mt-2.5 flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (videoRef.current) {
+                        videoRef.current.pause();
+                      }
+                      const currentSec = videoRef.current ? videoRef.current.currentTime : 0;
+                      setDraftPinCoords({
+                        xPercent: 50,
+                        yPercent: 50,
+                        timestampSeconds: currentSec,
+                      });
+                    }}
+                    className="px-3 py-1.5 text-xs font-semibold text-[#172333] bg-[#F18A45] hover:bg-[#e07934] rounded-md"
+                  >
+                    + Pin Revision Note at Current Timestamp
+                  </button>
+                </div>
+              )}
+            </div>
           ) : mediaCategory === 'pdf' ? (
             <div className="w-full h-[58vh] flex flex-col bg-white rounded overflow-hidden">
               <iframe
@@ -357,7 +527,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
               <p className="text-xs text-[#D0D5DD] leading-relaxed">
                 This project file format ({extension}) is stored in Supabase Storage and can be downloaded directly for inspection in its native application.
               </p>
-              {activeUrl && (
+              {activeUrl && !item.masterDownloadLocked && (
                 <div className="pt-2 flex justify-center gap-3">
                   <a
                     href={activeUrl}
@@ -396,6 +566,153 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
             </button>
           )}
         </div>
+
+        {/* Interactive Proofing Pin Composer & Pin List Drawer */}
+        {proofingContext && pinModeActive && (
+          <div className="px-6 py-3.5 bg-[#F5F5F1] border-t border-[#E2E4DF] space-y-3 max-h-48 overflow-y-auto">
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+              <span className="font-semibold text-[#172333]">
+                Visual Proofing Annotations ({pins.length}) —{' '}
+                <span className="font-normal text-[#6E7785]">
+                  {mediaCategory === 'image'
+                    ? 'Click anywhere on the image above to drop a coordinate pin.'
+                    : 'Use the button under the video player to pin the exact timestamp.'}
+                </span>
+              </span>
+            </div>
+
+            {draftPinCoords && (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!draftPinComment.trim()) return;
+                  const created = addProofingPin({
+                    projectId: proofingContext.projectId,
+                    deliverableId: item.id,
+                    deliverableTitle: item.title,
+                    mediaType: mediaCategory === 'video' ? 'video' : 'image',
+                    xPercent: draftPinCoords.xPercent,
+                    yPercent: draftPinCoords.yPercent,
+                    timestampSeconds: draftPinCoords.timestampSeconds,
+                    comment: draftPinComment.trim(),
+                    authorName: proofingContext.authorName,
+                    authorRole: proofingContext.authorRole,
+                  });
+                  const updatedPins = getProofingPins(proofingContext.projectId, item.id);
+                  setPins(updatedPins);
+                  const locLabel =
+                    created.mediaType === 'video'
+                      ? `@ ${formatVideoTimestamp(created.timestampSeconds)}`
+                      : `at (${created.xPercent}%, ${created.yPercent}%)`;
+                  proofingContext.onPinAdded?.(
+                    `[Visual Proof Pin #${updatedPins.length} ${locLabel} on ${item.title}]: ${created.comment}`
+                  );
+                  setDraftPinCoords(null);
+                  setDraftPinComment('');
+                }}
+                className="flex flex-wrap items-center gap-2 bg-white p-2.5 rounded-lg border border-[#172333]"
+              >
+                <span className="px-2 py-1 text-[11px] font-mono font-semibold bg-[#F18A45]/20 text-[#B85D1D] rounded">
+                  {mediaCategory === 'video'
+                    ? `Timestamp ${formatVideoTimestamp(draftPinCoords.timestampSeconds)}`
+                    : `Pin (${draftPinCoords.xPercent}%, ${draftPinCoords.yPercent}%)`}
+                </span>
+                <input
+                  type="text"
+                  required
+                  autoFocus
+                  value={draftPinComment}
+                  onChange={(e) => setDraftPinComment(e.target.value)}
+                  placeholder="Describe the exact revision needed here..."
+                  className="flex-1 min-w-[200px] px-3 py-1.5 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-md"
+                />
+                <button
+                  type="submit"
+                  className="px-3 py-1.5 text-xs font-semibold text-white bg-[#172333] rounded-md"
+                >
+                  Save Pin Note
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDraftPinCoords(null)}
+                  className="px-2.5 py-1.5 text-xs text-[#6E7785] hover:text-[#172333]"
+                >
+                  Cancel
+                </button>
+              </form>
+            )}
+
+            {pins.length > 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {pins.map((pin, idx) => (
+                  <div
+                    key={pin.id}
+                    className={`p-2.5 rounded-lg border text-xs flex items-start justify-between gap-2 ${
+                      pin.resolved
+                        ? 'bg-white/60 border-[#E2E4DF] text-[#6E7785]'
+                        : 'bg-white border-[#E2E4DF] text-[#172333]'
+                    }`}
+                  >
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className={`px-1.5 py-0.2 rounded font-mono text-[10px] font-bold ${
+                            pin.resolved
+                              ? 'bg-[#26734D] text-white'
+                              : 'bg-[#F18A45] text-[#172333]'
+                          }`}
+                        >
+                          #{idx + 1}
+                        </span>
+                        {pin.mediaType === 'video' ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (videoRef.current && pin.timestampSeconds !== undefined && pin.timestampSeconds !== null) {
+                                videoRef.current.currentTime = pin.timestampSeconds;
+                              }
+                            }}
+                            className="font-mono text-[11px] font-semibold text-[#F18A45] hover:underline"
+                          >
+                            Jump to {formatVideoTimestamp(pin.timestampSeconds)}
+                          </button>
+                        ) : (
+                          <span className="font-mono text-[10px] text-[#6E7785]">
+                            ({pin.xPercent}%, {pin.yPercent}%)
+                          </span>
+                        )}
+                        <span className="font-semibold">{pin.authorName}</span>
+                      </div>
+                      <p className={pin.resolved ? 'line-through' : ''}>{pin.comment}</p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          toggleProofingPinResolved(pin.id);
+                          setPins(getProofingPins(proofingContext.projectId, item.id));
+                        }}
+                        className="text-[11px] font-semibold text-[#26734D] hover:underline"
+                      >
+                        {pin.resolved ? 'Reopen' : 'Resolve'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          deleteProofingPin(pin.id);
+                          setPins(getProofingPins(proofingContext.projectId, item.id));
+                        }}
+                        className="text-[11px] text-[#B93832] hover:underline"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Bottom Metadata & Context Bar */}
         <div className="px-6 py-4 bg-white border-t border-[#E2E4DF] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
