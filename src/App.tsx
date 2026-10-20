@@ -57,6 +57,10 @@ import {
   SharedProfilePage,
 } from './pages/AdminBusinessPages';
 import { AdminSiteCustomizerPage } from './pages/AdminSiteCustomizerPage';
+import {
+  AdminAICreativeAssistantPage,
+  AdminQuotationsPage,
+} from './pages/AdminAICreativeAssistantPage';
 
 import {
   ClientDashboardPage,
@@ -243,8 +247,10 @@ export default function App() {
                 }
               >
                 <Route index element={<AdminDashboardPage />} />
+                <Route path="ai-assistant" element={<AdminAICreativeAssistantPage />} />
                 <Route path="website-customizer" element={<AdminSiteCustomizerPage />} />
                 <Route path="inquiries" element={<AdminInquiriesPage />} />
+                <Route path="quotations" element={<AdminQuotationsPage />} />
                 <Route path="clients" element={<AdminClientsPage />} />
                 <Route path="clients/:clientId" element={<AdminClientDetailsPage />} />
                 <Route path="projects" element={<AdminProjectsPage />} />

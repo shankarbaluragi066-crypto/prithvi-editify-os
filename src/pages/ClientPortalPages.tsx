@@ -29,7 +29,12 @@ import {
   DeliverableFile,
   InvoiceRecord,
   ProjectMessage,
+  QuotationRecord,
 } from '../types/crm';
+import {
+  fetchClientQuotations,
+  clientRespondToQuotation,
+} from '../services/aiAssistantService';
 import { formatINR, formatDate, formatFileSize } from '../utils/formatters';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
@@ -654,20 +659,200 @@ export const ClientFilesPage: React.FC = () => {
 };
 
 export const ClientInvoicesPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const { showToast } = useToast();
   const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
+  const [quotations, setQuotations] = useState<QuotationRecord[]>([]);
   const [selected, setSelected] = useState<InvoiceRecord | null>(null);
+  const [selectedQuote, setSelectedQuote] = useState<QuotationRecord | null>(null);
+
+  const loadClientBilling = useCallback(async () => {
+    if (!user) return;
+    const [invList, quoteList] = await Promise.all([
+      fetchClientInvoices(user.uid).catch(() => []),
+      fetchClientQuotations(user.uid, profile?.email || user.email || undefined).catch(() => []),
+    ]);
+    setInvoices(invList);
+    setQuotations(quoteList);
+  }, [user, profile?.email]);
 
   useEffect(() => {
-    if (!user) return;
-    fetchClientInvoices(user.uid).then(setInvoices).catch(() => {});
-  }, [user]);
+    loadClientBilling();
+  }, [loadClientBilling]);
+
+  const handleDecisionOnQuote = async (
+    q: QuotationRecord,
+    decision: 'Accepted' | 'Rejected'
+  ) => {
+    try {
+      await clientRespondToQuotation({
+        quotationId: q.id,
+        decision,
+        clientEmail: profile?.email || user?.email || q.clientEmail,
+        clientUserId: user?.uid || q.clientUserId || '',
+      });
+      showToast(
+        'success',
+        decision === 'Accepted' ? 'Quotation Approved' : 'Quotation Declined',
+        `${q.quotationNumber} marked as ${decision}.`
+      );
+      await loadClientBilling();
+      if (selectedQuote?.id === q.id) {
+        setSelectedQuote({ ...q, status: decision });
+      }
+    } catch (err) {
+      showToast('error', 'Failed to update quotation', err instanceof Error ? err.message : '');
+    }
+  };
 
   return (
-    <div className="space-y-6">
-      <h1 className="font-editorial text-2xl font-semibold text-[#172333] no-print">
-        My Invoices (INR)
-      </h1>
+    <div className="space-y-8">
+      <div>
+        <h1 className="font-editorial text-2xl font-semibold text-[#172333] no-print">
+          My Quotations & Invoices (INR)
+        </h1>
+        <p className="text-xs text-[#6E7785] mt-1 no-print">
+          Review and approve project estimates, inspect itemized INR invoices, and print official PDF receipts.
+        </p>
+      </div>
+
+      {/* Selected Quotation Printable Preview */}
+      {selectedQuote && (
+        <div className="bg-white border border-[#172333] rounded-lg p-8 space-y-5">
+          <div className="flex justify-between border-b border-[#E2E4DF] pb-4">
+            <div>
+              <p className="text-[11px] font-semibold text-[#F18A45]">PROJECT QUOTATION</p>
+              <h2 className="font-editorial text-xl font-semibold text-[#172333]">
+                {selectedQuote.projectTitle}
+              </h2>
+              <p className="text-xs text-[#6E7785]">
+                Prepared for {selectedQuote.clientName} · Timeline: {selectedQuote.estimatedTimeline}
+              </p>
+            </div>
+            <div className="text-right font-mono text-xs">
+              <p className="text-base font-semibold">{selectedQuote.quotationNumber}</p>
+              <p>Valid Until: {selectedQuote.expiryDate}</p>
+              <p className="font-sans font-semibold mt-0.5">Status: {selectedQuote.status}</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-[#F5F5F1] rounded-lg text-xs">
+            <div>
+              <p className="font-semibold text-[#172333]">Scope Summary</p>
+              <p className="text-[#6E7785] mt-1">{selectedQuote.scopeSummary || '—'}</p>
+            </div>
+            <div>
+              <p className="font-semibold text-[#172333]">Deliverables</p>
+              <p className="text-[#6E7785] mt-1">{selectedQuote.deliverables || '—'}</p>
+            </div>
+          </div>
+
+          <div className="space-y-2 text-xs">
+            {selectedQuote.lineItems.map((li, i) => (
+              <div key={i} className="flex justify-between py-1.5 border-b border-[#E2E4DF]">
+                <span>
+                  {li.description} ({li.quantity} × {formatINR(li.unitPrice)})
+                </span>
+                <span className="font-mono font-semibold">{formatINR(li.amount)}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex justify-between text-sm font-mono font-semibold pt-2">
+            <span>Total Quoted (INR):</span>
+            <span>{formatINR(selectedQuote.total)}</span>
+          </div>
+
+          <p className="text-xs text-[#6E7785]">{selectedQuote.termsAndConditions}</p>
+
+          <div className="flex flex-wrap gap-3 no-print">
+            {selectedQuote.status === 'Sent' && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => handleDecisionOnQuote(selectedQuote, 'Accepted')}
+                  className="px-4 py-2 text-xs font-semibold text-white bg-[#26734D] hover:bg-[#1e5c3d] rounded-lg"
+                >
+                  Approve & Accept Quotation
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDecisionOnQuote(selectedQuote, 'Rejected')}
+                  className="px-4 py-2 text-xs font-semibold text-[#B93832] bg-[#B93832]/10 rounded-lg"
+                >
+                  Decline Quotation
+                </button>
+              </>
+            )}
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="px-4 py-2 text-xs font-semibold text-white bg-[#172333] rounded-lg"
+            >
+              Print / Save PDF
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedQuote(null)}
+              className="px-4 py-2 text-xs font-semibold bg-[#F5F5F1] rounded-lg"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Client Quotations Table (when any exist) */}
+      {quotations.length > 0 && (
+        <div className="bg-white border border-[#E2E4DF] rounded-lg overflow-x-auto no-print">
+          <div className="px-4 py-3 border-b border-[#E2E4DF]">
+            <h2 className="text-sm font-semibold text-[#172333]">Project Quotations & Estimates</h2>
+          </div>
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-[#E2E4DF] text-[11px] font-semibold text-[#6E7785]">
+                <th className="py-3 px-4">Quote #</th>
+                <th className="py-3 px-4">Project</th>
+                <th className="py-3 px-4">Valid Until</th>
+                <th className="py-3 px-4">Status</th>
+                <th className="py-3 px-4 text-right">Quoted Total</th>
+                <th className="py-3 px-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#E2E4DF] text-xs">
+              {quotations.map((q) => (
+                <tr key={q.id}>
+                  <td className="py-3.5 px-4 font-mono font-semibold">{q.quotationNumber}</td>
+                  <td className="py-3.5 px-4">{q.projectTitle}</td>
+                  <td className="py-3.5 px-4 font-mono text-[#6E7785]">{q.expiryDate}</td>
+                  <td className="py-3.5 px-4 font-semibold">{q.status}</td>
+                  <td className="py-3.5 px-4 text-right font-mono font-semibold tabular-nums">
+                    {formatINR(q.total)}
+                  </td>
+                  <td className="py-3.5 px-4 text-right space-x-3">
+                    {q.status === 'Sent' && (
+                      <button
+                        type="button"
+                        onClick={() => handleDecisionOnQuote(q, 'Accepted')}
+                        className="font-semibold text-[#26734D] hover:underline"
+                      >
+                        Approve Quote
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setSelectedQuote(q)}
+                      className="font-semibold text-[#172333] hover:text-[#F18A45]"
+                    >
+                      Inspect / Print →
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {selected && (
         <div className="bg-white border border-[#172333] rounded-lg p-8 space-y-5">
@@ -707,6 +892,9 @@ export const ClientInvoicesPage: React.FC = () => {
       )}
 
       <div className="bg-white border border-[#E2E4DF] rounded-lg overflow-x-auto no-print">
+        <div className="px-4 py-3 border-b border-[#E2E4DF]">
+          <h2 className="text-sm font-semibold text-[#172333]">Official Invoices</h2>
+        </div>
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-[#E2E4DF] text-[11px] font-semibold text-[#6E7785]">

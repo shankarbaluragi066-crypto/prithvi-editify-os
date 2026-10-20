@@ -593,6 +593,8 @@ export const HomePage: React.FC = () => {
   const custom = mergeSiteCustomization(settings.siteCustomization || DEFAULT_SITE_CUSTOMIZATION);
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
+  const [portfolioCategory, setPortfolioCategory] = useState<string>('All');
+  const [previewMedia, setPreviewMedia] = useState<PreviewableMediaItem | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -807,6 +809,7 @@ export const HomePage: React.FC = () => {
                   primaryBg={primaryBg}
                   secondaryBg={secondaryBg}
                   accentColor={accentColor}
+                  onQuickPreview={(item) => setPreviewMedia(item)}
                 />
               ))}
             </div>
@@ -818,7 +821,7 @@ export const HomePage: React.FC = () => {
       {settings.portfolioVisible !== false && portfolio.length > 0 && (
         <section className="bg-white border-y border-[#E2E4DF] py-20">
           <div className="max-w-[1200px] mx-auto px-6">
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-[#E2E4DF]">
               <div>
                 <p className="text-xs font-semibold text-[#6E7785] tracking-wide">
                   {custom.homePortfolioKicker}
@@ -836,27 +839,98 @@ export const HomePage: React.FC = () => {
               </Link>
             </div>
 
+            {/* Horizontal Category Filter Bar for Home Portfolio Section */}
+            <div
+              role="tablist"
+              aria-label="Filter featured portfolio projects by category"
+              className="flex items-center gap-2 overflow-x-auto py-4 border-b border-[#E2E4DF] [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+            >
+              {PORTFOLIO_SHOWCASE_CATEGORIES.map((cat) => {
+                const active = portfolioCategory === cat;
+                const matchCount =
+                  cat === 'All'
+                    ? portfolio.length
+                    : portfolio.filter((item) => matchesPortfolioCategoryFilter(item, cat)).length;
+                if (cat !== 'All' && matchCount === 0) return null;
+
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() =>
+                      setPortfolioCategory((prev) => (prev === cat && cat !== 'All' ? 'All' : cat))
+                    }
+                    className={`inline-flex items-center gap-1.5 px-3.5 py-2 text-xs rounded-lg border transition-all duration-150 whitespace-nowrap shrink-0 ${
+                      active
+                        ? 'bg-[#172333] text-white border-[#172333] font-semibold shadow-2xs'
+                        : 'bg-[#F5F5F1]/70 text-[#6E7785] border-[#E2E4DF] hover:bg-white hover:text-[#172333] hover:border-[#172333]/40 font-medium'
+                    }`}
+                  >
+                    <span>{cat}</span>
+                    {matchCount > 0 && (
+                      <span
+                        className={`font-mono text-[10px] px-1.5 py-0.2 rounded tabular-nums ${
+                          active
+                            ? 'bg-white/15 text-white'
+                            : 'bg-[#E2E4DF]/70 text-[#172333]'
+                        }`}
+                      >
+                        {matchCount}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
             {loading ? (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
                 {[1, 2, 3].map((n) => (
                   <div
                     key={n}
-                    className="h-80 bg-[#F5F5F1] rounded-lg animate-pulse border border-[#E2E4DF]"
+                    className="h-96 bg-[#F5F5F1] rounded-lg animate-pulse border border-[#E2E4DF]"
                   />
                 ))}
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {portfolio.slice(0, 3).map((item) => (
-                  <MarketplacePortfolioCard
-                    key={item.id}
-                    item={item}
-                    settings={settings}
-                    primaryBg={primaryBg}
-                    secondaryBg={secondaryBg}
-                    accentColor={accentColor}
-                  />
-                ))}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+                {portfolio
+                  .filter((item) => matchesPortfolioCategoryFilter(item, portfolioCategory))
+                  .slice(0, 6)
+                  .map((item) => (
+                    <MarketplacePortfolioCard
+                      key={item.id}
+                      item={item}
+                      settings={settings}
+                      primaryBg={primaryBg}
+                      secondaryBg={secondaryBg}
+                      accentColor={accentColor}
+                      onQuickPreview={(selected) =>
+                        setPreviewMedia({
+                          id: selected.id,
+                          title: selected.title,
+                          url:
+                            selected.coverImage ||
+                            createStudioArtworkDataUri(
+                              selected.title,
+                              selected.category,
+                              accentColor,
+                              primaryBg,
+                              secondaryBg
+                            ),
+                          videoUrl: selected.videoUrl || undefined,
+                          description: selected.description,
+                          tags: selected.tags,
+                          categoryLabel: `${formatPortfolioCategoryLabel(selected.category)} · ${
+                            selected.metricsSummary || 'Studio Deliverable'
+                          }`,
+                          storageBucket: 'portfolio-media',
+                        })
+                      }
+                    />
+                  ))}
               </div>
             )}
           </div>
@@ -983,6 +1057,8 @@ export const HomePage: React.FC = () => {
           </div>
         </section>
       )}
+
+      <MediaPreviewModal item={previewMedia} onClose={() => setPreviewMedia(null)} />
     </div>
   );
 };
@@ -2996,6 +3072,28 @@ export const PortfolioDetailPage: React.FC = () => {
                 primaryBg={primaryBg}
                 secondaryBg={secondaryBg}
                 accentColor={accentColor}
+                onQuickPreview={(selected) =>
+                  setPreviewMedia({
+                    id: selected.id,
+                    title: selected.title,
+                    url:
+                      selected.coverImage ||
+                      createStudioArtworkDataUri(
+                        selected.title,
+                        selected.category,
+                        accentColor,
+                        primaryBg,
+                        secondaryBg
+                      ),
+                    videoUrl: selected.videoUrl || undefined,
+                    description: selected.description,
+                    tags: selected.tags,
+                    categoryLabel: `${formatPortfolioCategoryLabel(selected.category)} · ${
+                      selected.metricsSummary || 'Studio Deliverable'
+                    }`,
+                    storageBucket: 'portfolio-media',
+                  })
+                }
               />
             ))}
           </div>

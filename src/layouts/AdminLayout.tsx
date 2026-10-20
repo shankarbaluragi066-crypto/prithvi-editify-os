@@ -21,13 +21,17 @@ import {
   ExternalLink,
   Image as ImageIcon,
   Palette,
+  Sparkles,
+  FileCheck,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 const ADMIN_NAV_ITEMS = [
   { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
+  { to: '/admin/ai-assistant', label: 'AI Creative Assistant', icon: Sparkles },
   { to: '/admin/website-customizer', label: 'Website Customizer (A–Z)', icon: Palette },
   { to: '/admin/inquiries', label: 'Leads & Inquiries', icon: MessageSquare },
+  { to: '/admin/quotations', label: 'Quotations & Estimates', icon: FileCheck },
   { to: '/admin/clients', label: 'Clients', icon: Users },
   { to: '/admin/projects', label: 'Projects', icon: FolderKanban },
   { to: '/admin/tasks', label: 'Tasks & Milestones', icon: CheckSquare },

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Plus,
   Printer,
@@ -17,6 +17,7 @@ import {
   Lock,
   Search,
   Filter,
+  Sparkles,
 } from 'lucide-react';
 import {
   fetchAllServicesAdmin,
@@ -79,6 +80,11 @@ import {
 } from '../utils/seedData';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
+import {
+  generateStructuredServiceContent,
+  generateStructuredPortfolioContent,
+  generateWrittenContent,
+} from '../services/aiAssistantService';
 
 const ADMIN_SERVICE_CATEGORIES = [
   'Graphic Design',
@@ -98,12 +104,20 @@ const ADMIN_SERVICE_CATEGORIES = [
 // ============================================================================
 export const AdminServicesPage: React.FC = () => {
   const { showToast, confirmAction } = useToast();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [editing, setEditing] = useState<ServiceItem | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [showMediaPicker, setShowMediaPicker] = useState<'image' | 'gallery' | 'video' | null>(null);
   const [previewMedia, setPreviewMedia] = useState<PreviewableMediaItem | null>(null);
   const [activePackageTab, setActivePackageTab] = useState<'Basic' | 'Standard' | 'Premium'>('Basic');
+  const [aiBusyAction, setAiBusyAction] = useState<string | null>(null);
+  const [seoSuggestion, setSeoSuggestion] = useState<{
+    seoTitle: string;
+    seoMetaDescription: string;
+    keywords: string;
+  } | null>(null);
 
   const [form, setForm] = useState<{
     title: string;
@@ -155,6 +169,151 @@ export const AdminServicesPage: React.FC = () => {
   useEffect(() => {
     loadServices();
   }, [loadServices]);
+
+  // Pre-fill Service Editor from AI Creative Assistant (non-destructive, never auto-saved)
+  useEffect(() => {
+    const aiPayload = (location.state as any)?.aiGeneratedService;
+    if (!aiPayload) return;
+
+    const matchedExisting = aiPayload.existingServiceId
+      ? services.find((s) => s.id === aiPayload.existingServiceId) || null
+      : null;
+
+    setEditing(matchedExisting);
+    setForm((prev) => ({
+      ...prev,
+      title: aiPayload.title || matchedExisting?.title || prev.title,
+      category: aiPayload.category || matchedExisting?.category || prev.category,
+      description: aiPayload.description || matchedExisting?.description || prev.description,
+      deliverablesSummary:
+        aiPayload.deliverablesSummary ||
+        matchedExisting?.deliverablesSummary ||
+        prev.deliverablesSummary,
+      startingPrice: matchedExisting?.startingPrice ?? prev.startingPrice,
+      priceDisplay: matchedExisting?.priceDisplay || prev.priceDisplay,
+      pricingUnit: matchedExisting?.pricingUnit || prev.pricingUnit,
+      turnaroundTime: matchedExisting?.turnaroundTime || prev.turnaroundTime,
+      revisions: matchedExisting?.revisions || prev.revisions,
+      imageUrl: matchedExisting?.imageUrl || prev.imageUrl,
+      videoPreviewUrl: matchedExisting?.videoPreviewUrl || prev.videoPreviewUrl,
+      mediaUrls: matchedExisting?.mediaUrls || prev.mediaUrls,
+      packages: matchedExisting?.packages || prev.packages,
+      published: matchedExisting ? matchedExisting.published : true,
+      sortOrder: matchedExisting ? matchedExisting.sortOrder : services.length + 1,
+    }));
+    if (aiPayload.seoTitle || aiPayload.seoMetaDescription) {
+      setSeoSuggestion({
+        seoTitle: aiPayload.seoTitle || '',
+        seoMetaDescription: aiPayload.seoMetaDescription || '',
+        keywords: Array.isArray(aiPayload.searchKeywords)
+          ? aiPayload.searchKeywords.join(', ')
+          : '',
+      });
+    }
+    setShowForm(true);
+    showToast(
+      'info',
+      'AI Draft Applied to Editor',
+      'Review and click Publish / Update when ready. Nothing was saved automatically.'
+    );
+  }, [location.state, services, showToast]);
+
+  const handleContextualGenerateServiceAI = async () => {
+    if (!form.title.trim() && !form.category.trim()) {
+      showToast('error', 'Enter a Service Title or Category first');
+      return;
+    }
+
+    const executeGeneration = async () => {
+      setAiBusyAction('generate');
+      try {
+        const res = await generateStructuredServiceContent({
+          category: form.category,
+          serviceName: form.title || `${form.category} Service`,
+          roughDescription: form.description,
+          priceDetails: form.priceDisplay,
+          deliveryDetails: `${form.turnaroundTime} · ${form.revisions}`,
+        });
+        setForm((prev) => ({
+          ...prev,
+          title: res.data.title || prev.title,
+          description: res.data.fullDescription || prev.description,
+          deliverablesSummary: res.data.deliverables || prev.deliverablesSummary,
+        }));
+        setSeoSuggestion({
+          seoTitle: res.data.seoTitle,
+          seoMetaDescription: res.data.seoMetaDescription,
+          keywords: (res.data.searchKeywords || []).join(', '),
+        });
+        showToast(
+          'success',
+          'AI Service Draft Generated',
+          'Review the fields below and click Save when approved.'
+        );
+      } catch (err) {
+        showToast('error', 'AI Generation Failed', err instanceof Error ? err.message : '');
+      } finally {
+        setAiBusyAction(null);
+      }
+    };
+
+    if (form.description.trim().length > 20) {
+      confirmAction({
+        title: 'Replace Current Service Description with AI Draft?',
+        message:
+          'Your form already contains a description. Replace the draft fields with freshly generated AI content? (Not saved to database until you click Save)',
+        onConfirm: executeGeneration,
+      });
+    } else {
+      await executeGeneration();
+    }
+  };
+
+  const handleContextualImproveServiceDescription = async () => {
+    if (!form.description.trim()) {
+      showToast('error', 'Write a rough service description first or click "Generate with AI"');
+      return;
+    }
+    setAiBusyAction('improve');
+    try {
+      const res = await generateWrittenContent({
+        task: 'Service description generator',
+        action: 'improve',
+        topicOrText: `${form.title} (${form.category})`,
+        currentDraft: form.description,
+        tone: 'Professional',
+      });
+      setForm((prev) => ({ ...prev, description: res.result }));
+      showToast('success', 'Description Improved', 'Review the updated description before saving.');
+    } catch (err) {
+      showToast('error', 'Failed to improve description', err instanceof Error ? err.message : '');
+    } finally {
+      setAiBusyAction(null);
+    }
+  };
+
+  const handleContextualGenerateServiceSEO = async () => {
+    setAiBusyAction('seo');
+    try {
+      const res = await generateStructuredServiceContent({
+        category: form.category,
+        serviceName: form.title || form.category,
+        roughDescription: form.description,
+        priceDetails: form.priceDisplay,
+        deliveryDetails: form.turnaroundTime,
+      });
+      setSeoSuggestion({
+        seoTitle: res.data.seoTitle,
+        seoMetaDescription: res.data.seoMetaDescription,
+        keywords: (res.data.searchKeywords || []).join(', '),
+      });
+      showToast('success', 'SEO Metadata Generated');
+    } catch (err) {
+      showToast('error', 'SEO Generation Failed', err instanceof Error ? err.message : '');
+    } finally {
+      setAiBusyAction(null);
+    }
+  };
 
   const handleAutoRegeneratePackages = () => {
     const generated = buildDefaultServicePackages(
@@ -294,7 +453,7 @@ export const AdminServicesPage: React.FC = () => {
           onSubmit={handleSave}
           className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-6 shadow-xs"
         >
-          <div className="flex items-center justify-between border-b border-[#E2E4DF] pb-4">
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#E2E4DF] pb-4">
             <div>
               <h2 className="text-base font-semibold text-[#172333]">
                 {editing ? `Edit Service: ${editing.title}` : 'New Creative Service Listing'}
@@ -303,8 +462,71 @@ export const AdminServicesPage: React.FC = () => {
                 Configure service overview, media gallery, deliverables, and 3-tier packages (Basic, Standard, Premium).
               </p>
             </div>
-            <span className="font-mono text-xs text-[#F18A45] font-semibold">INR MARKETPLACE</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                disabled={aiBusyAction !== null}
+                onClick={handleContextualGenerateServiceAI}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#172333] bg-[#F18A45]/20 hover:bg-[#F18A45]/30 border border-[#F18A45]/40 rounded-lg transition-colors disabled:opacity-50"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-[#B85D1D]" />
+                <span>
+                  {aiBusyAction === 'generate' ? 'Generating with AI...' : 'Generate with AI'}
+                </span>
+              </button>
+              <button
+                type="button"
+                disabled={aiBusyAction !== null}
+                onClick={handleContextualImproveServiceDescription}
+                className="px-3 py-1.5 text-xs font-semibold text-[#172333] bg-[#F5F5F1] hover:bg-[#E2E4DF] rounded-lg transition-colors disabled:opacity-50"
+              >
+                {aiBusyAction === 'improve' ? 'Improving...' : 'Improve Description'}
+              </button>
+              <button
+                type="button"
+                disabled={aiBusyAction !== null}
+                onClick={handleContextualGenerateServiceSEO}
+                className="px-3 py-1.5 text-xs font-semibold text-[#172333] bg-[#F5F5F1] hover:bg-[#E2E4DF] rounded-lg transition-colors disabled:opacity-50"
+              >
+                {aiBusyAction === 'seo' ? 'Generating SEO...' : 'Generate SEO Content'}
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/admin/ai-assistant')}
+                className="px-3 py-1.5 text-xs font-semibold text-[#172333] bg-white border border-[#E2E4DF] hover:border-[#172333] rounded-lg transition-colors"
+              >
+                Generate Cover Image →
+              </button>
+            </div>
           </div>
+
+          {seoSuggestion && (
+            <div className="p-4 bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg space-y-1.5 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-[#172333]">
+                  AI SEO Suggestions (Ready to Copy or Reference)
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSeoSuggestion(null)}
+                  className="text-[11px] text-[#6E7785] hover:text-[#172333]"
+                >
+                  Dismiss
+                </button>
+              </div>
+              <p className="text-[#172333]">
+                <strong>SEO Title:</strong> {seoSuggestion.seoTitle}
+              </p>
+              <p className="text-[#6E7785]">
+                <strong>Meta Description:</strong> {seoSuggestion.seoMetaDescription}
+              </p>
+              {seoSuggestion.keywords && (
+                <p className="font-mono text-[11px] text-[#6E7785]">
+                  Keywords: {seoSuggestion.keywords}
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Row 1: Title, Category, Pricing Unit */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -916,11 +1138,19 @@ const CATEGORIES: PortfolioCategory[] = [
 
 export const AdminPortfolioPage: React.FC = () => {
   const { showToast, confirmAction } = useToast();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [items, setItems] = useState<PortfolioItem[]>([]);
   const [editing, setEditing] = useState<PortfolioItem | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [showMediaPicker, setShowMediaPicker] = useState<'cover' | 'video' | null>(null);
   const [previewMedia, setPreviewMedia] = useState<PreviewableMediaItem | null>(null);
+  const [aiBusyAction, setAiBusyAction] = useState<string | null>(null);
+  const [portfolioSeoSuggestion, setPortfolioSeoSuggestion] = useState<{
+    seoTitle: string;
+    seoMetaDescription: string;
+    caption: string;
+  } | null>(null);
 
   const [form, setForm] = useState({
     title: '',
@@ -944,6 +1174,154 @@ export const AdminPortfolioPage: React.FC = () => {
   useEffect(() => {
     loadPortfolio();
   }, [loadPortfolio]);
+
+  // Pre-fill Portfolio Editor from AI Creative Assistant (non-destructive, never auto-saved)
+  useEffect(() => {
+    const aiPort = (location.state as any)?.aiGeneratedPortfolio;
+    if (!aiPort) return;
+
+    const matchedExisting = aiPort.existingPortfolioId
+      ? items.find((i) => i.id === aiPort.existingPortfolioId) || null
+      : null;
+
+    setEditing(matchedExisting);
+    setForm((prev) => ({
+      ...prev,
+      title: aiPort.title || matchedExisting?.title || prev.title,
+      category:
+        (CATEGORIES.includes(aiPort.category) ? aiPort.category : matchedExisting?.category) ||
+        prev.category,
+      description: aiPort.description || matchedExisting?.description || prev.description,
+      metricsSummary:
+        aiPort.metricsSummary || matchedExisting?.metricsSummary || prev.metricsSummary,
+      tagsInput:
+        Array.isArray(aiPort.tags) && aiPort.tags.length > 0
+          ? aiPort.tags.join(', ')
+          : matchedExisting?.tags?.join(', ') || prev.tagsInput,
+      coverImage: matchedExisting?.coverImage || prev.coverImage,
+      videoUrl: matchedExisting?.videoUrl || prev.videoUrl,
+      projectUrl: matchedExisting?.projectUrl || prev.projectUrl,
+      featured: matchedExisting ? matchedExisting.featured : prev.featured,
+      published: matchedExisting ? matchedExisting.published : true,
+      isSampleContent: matchedExisting ? Boolean(matchedExisting.isSampleContent) : false,
+      sortOrder: matchedExisting ? matchedExisting.sortOrder : items.length + 1,
+    }));
+    if (aiPort.seoTitle || aiPort.seoMetaDescription || aiPort.portfolioCaption) {
+      setPortfolioSeoSuggestion({
+        seoTitle: aiPort.seoTitle || '',
+        seoMetaDescription: aiPort.seoMetaDescription || '',
+        caption: aiPort.portfolioCaption || '',
+      });
+    }
+    setShowForm(true);
+    showToast(
+      'info',
+      'AI Portfolio Draft Applied',
+      'Review the fields below and click Save Portfolio Entry when approved.'
+    );
+  }, [location.state, items, showToast]);
+
+  const handleContextualGeneratePortfolioAI = async () => {
+    if (!form.title.trim()) {
+      showToast('error', 'Enter a Portfolio Project Title first');
+      return;
+    }
+
+    const executeGen = async () => {
+      setAiBusyAction('generate');
+      try {
+        const res = await generateStructuredPortfolioContent({
+          projectTitle: form.title,
+          category: form.category,
+          existingNotes: form.description,
+          keywords: form.tagsInput,
+        });
+        setForm((prev) => ({
+          ...prev,
+          title: res.data.title || prev.title,
+          description: res.data.detailedDescription || prev.description,
+          metricsSummary: res.data.deliverablesDescription || prev.metricsSummary,
+          tagsInput:
+            Array.isArray(res.data.tags) && res.data.tags.length > 0
+              ? res.data.tags.join(', ')
+              : prev.tagsInput,
+        }));
+        setPortfolioSeoSuggestion({
+          seoTitle: res.data.seoTitle,
+          seoMetaDescription: res.data.seoMetaDescription,
+          caption: res.data.portfolioCaption,
+        });
+        showToast(
+          'success',
+          'AI Portfolio Content Generated',
+          'Review and click Save Portfolio Entry when approved.'
+        );
+      } catch (err) {
+        showToast('error', 'AI Generation Failed', err instanceof Error ? err.message : '');
+      } finally {
+        setAiBusyAction(null);
+      }
+    };
+
+    if (form.description.trim().length > 20) {
+      confirmAction({
+        title: 'Replace Current Portfolio Description with AI Draft?',
+        message:
+          'Your form already has a description. Replace the draft fields with generated AI copy? (Nothing is saved until you click Save Portfolio Entry)',
+        onConfirm: executeGen,
+      });
+    } else {
+      await executeGen();
+    }
+  };
+
+  const handleContextualImprovePortfolioDesc = async () => {
+    if (!form.description.trim()) {
+      showToast('error', 'Enter a rough description first or click "Generate with AI"');
+      return;
+    }
+    setAiBusyAction('improve');
+    try {
+      const res = await generateWrittenContent({
+        task: 'Portfolio project description',
+        action: 'improve',
+        topicOrText: `${form.title} (${form.category})`,
+        currentDraft: form.description,
+        tone: 'Creative',
+      });
+      setForm((prev) => ({ ...prev, description: res.result }));
+      showToast('success', 'Portfolio Description Improved');
+    } catch (err) {
+      showToast('error', 'Improvement Failed', err instanceof Error ? err.message : '');
+    } finally {
+      setAiBusyAction(null);
+    }
+  };
+
+  const handleContextualPortfolioSEO = async () => {
+    setAiBusyAction('seo');
+    try {
+      const res = await generateStructuredPortfolioContent({
+        projectTitle: form.title || form.category,
+        category: form.category,
+        existingNotes: form.description,
+        keywords: form.tagsInput,
+      });
+      setPortfolioSeoSuggestion({
+        seoTitle: res.data.seoTitle,
+        seoMetaDescription: res.data.seoMetaDescription,
+        caption: res.data.portfolioCaption,
+      });
+      if (!form.tagsInput.trim() && res.data.tags?.length) {
+        setForm((prev) => ({ ...prev, tagsInput: res.data.tags.join(', ') }));
+      }
+      showToast('success', 'Portfolio SEO & Tags Generated');
+    } catch (err) {
+      showToast('error', 'SEO Generation Failed', err instanceof Error ? err.message : '');
+    } finally {
+      setAiBusyAction(null);
+    }
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1020,9 +1398,75 @@ export const AdminPortfolioPage: React.FC = () => {
 
       {showForm && (
         <form onSubmit={handleSave} className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-4">
-          <h2 className="text-base font-semibold text-[#172333]">
-            {editing ? `Edit Entry: ${editing.title}` : 'Create Portfolio Entry'}
-          </h2>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E2E4DF] pb-3">
+            <h2 className="text-base font-semibold text-[#172333]">
+              {editing ? `Edit Entry: ${editing.title}` : 'Create Portfolio Entry'}
+            </h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                disabled={aiBusyAction !== null}
+                onClick={handleContextualGeneratePortfolioAI}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#172333] bg-[#F18A45]/20 hover:bg-[#F18A45]/30 border border-[#F18A45]/40 rounded-lg transition-colors disabled:opacity-50"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-[#B85D1D]" />
+                <span>
+                  {aiBusyAction === 'generate' ? 'Generating...' : 'Generate with AI'}
+                </span>
+              </button>
+              <button
+                type="button"
+                disabled={aiBusyAction !== null}
+                onClick={handleContextualImprovePortfolioDesc}
+                className="px-3 py-1.5 text-xs font-semibold text-[#172333] bg-[#F5F5F1] hover:bg-[#E2E4DF] rounded-lg transition-colors disabled:opacity-50"
+              >
+                {aiBusyAction === 'improve' ? 'Improving...' : 'Improve Description'}
+              </button>
+              <button
+                type="button"
+                disabled={aiBusyAction !== null}
+                onClick={handleContextualPortfolioSEO}
+                className="px-3 py-1.5 text-xs font-semibold text-[#172333] bg-[#F5F5F1] hover:bg-[#E2E4DF] rounded-lg transition-colors disabled:opacity-50"
+              >
+                {aiBusyAction === 'seo' ? 'Generating SEO...' : 'Generate SEO Content'}
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/admin/ai-assistant')}
+                className="px-3 py-1.5 text-xs font-semibold text-[#172333] bg-white border border-[#E2E4DF] hover:border-[#172333] rounded-lg transition-colors"
+              >
+                Generate Cover Image →
+              </button>
+            </div>
+          </div>
+
+          {portfolioSeoSuggestion && (
+            <div className="p-4 bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg space-y-1.5 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-[#172333]">
+                  AI Portfolio SEO & Caption Suggestions
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setPortfolioSeoSuggestion(null)}
+                  className="text-[11px] text-[#6E7785] hover:text-[#172333]"
+                >
+                  Dismiss
+                </button>
+              </div>
+              <p className="text-[#172333]">
+                <strong>SEO Title:</strong> {portfolioSeoSuggestion.seoTitle}
+              </p>
+              <p className="text-[#6E7785]">
+                <strong>Meta Description:</strong> {portfolioSeoSuggestion.seoMetaDescription}
+              </p>
+              {portfolioSeoSuggestion.caption && (
+                <p className="text-[#6E7785]">
+                  <strong>Social Caption:</strong> {portfolioSeoSuggestion.caption}
+                </p>
+              )}
+            </div>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-medium mb-1">Title *</label>

@@ -503,3 +503,95 @@ export interface ActivityLog {
   details: string;
   createdAt?: string;
 }
+
+export type QuotationStatus = 'Draft' | 'Sent' | 'Accepted' | 'Rejected' | 'Expired';
+
+export interface QuotationLineItem {
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  amount: number;
+}
+
+export interface QuotationRecord {
+  id: string;
+  quotationNumber: string;
+  inquiryId?: string;
+  clientId: string;
+  clientUserId: string;
+  clientName: string;
+  clientEmail: string;
+  projectTitle: string;
+  serviceCategory: string;
+  scopeSummary: string;
+  deliverables: string;
+  estimatedTimeline: string;
+  issueDate: string;
+  expiryDate: string;
+  lineItems: QuotationLineItem[];
+  subtotal: number;
+  discount: number;
+  taxRate: number;
+  taxAmount: number;
+  total: number;
+  currency: 'INR';
+  status: QuotationStatus;
+  termsAndConditions: string;
+  convertedProjectId?: string;
+  convertedInvoiceId?: string;
+  clientDecisionAt?: string;
+  clientDecisionBy?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface AIBrandProfile {
+  brandName: string;
+  ownerName: string;
+  businessType: string;
+  brandVoice: string;
+  targetCustomers: string;
+  preferredWritingStyle: string;
+  brandColors: string;
+  servicesOffered: string;
+  wordsToAvoid: string;
+}
+
+export interface AIUsageHistoryEntry {
+  id: string;
+  timestamp: string;
+  workspace: 'writing' | 'service' | 'portfolio' | 'image';
+  taskLabel: string;
+  model: string;
+  status: 'success' | 'error';
+  summary: string;
+}
+
+export interface GeneratedServiceAIContent {
+  title: string;
+  shortDescription: string;
+  fullDescription: string;
+  keyBenefits: string[];
+  deliverables: string;
+  clientRequirements: string[];
+  faqs: Array<{ question: string; answer: string }>;
+  ctaText: string;
+  seoTitle: string;
+  seoMetaDescription: string;
+  searchKeywords: string[];
+}
+
+export interface GeneratedPortfolioAIContent {
+  title: string;
+  shortSummary: string;
+  detailedDescription: string;
+  creativeBrief: string;
+  designApproach: string;
+  projectHighlights: string[];
+  deliverablesDescription: string;
+  portfolioCaption: string;
+  seoTitle: string;
+  seoMetaDescription: string;
+  tags: string[];
+}
+
