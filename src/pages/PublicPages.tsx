@@ -59,12 +59,13 @@ const SERVICE_MARKETPLACE_CATEGORIES = [
 
 const PORTFOLIO_SHOWCASE_CATEGORIES = [
   'All',
-  'YouTube Thumbnails',
   'Graphic Design',
+  'Video Editing',
+  'Logo Design',
+  'YouTube Thumbnails',
   'Social Media Posts',
   'Brand Identity and Logos',
   'Promotional Ads',
-  'Video Editing',
   'Instagram Reels',
 ] as const;
 
@@ -197,12 +198,32 @@ function formatPortfolioCategoryLabel(rawCategory: string): string {
 function matchesPortfolioCategoryFilter(item: PortfolioItem, selectedFilter: string): boolean {
   if (selectedFilter === 'All') return true;
   const rawCat = (item.category || '').trim();
+  const rawCatLower = rawCat.toLowerCase();
   const displayCat = formatPortfolioCategoryLabel(rawCat);
-  if (rawCat.toLowerCase() === selectedFilter.toLowerCase()) return true;
-  if (displayCat.toLowerCase() === selectedFilter.toLowerCase()) return true;
+  const displayCatLower = displayCat.toLowerCase();
+  const filterLower = selectedFilter.toLowerCase();
+  const titleLower = (item.title || '').toLowerCase();
 
+  if (rawCatLower === filterLower || displayCatLower === filterLower) return true;
+
+  if (selectedFilter === 'Video Editing') {
+    return (
+      rawCatLower.includes('video') ||
+      rawCatLower.includes('reel') ||
+      titleLower.includes('video') ||
+      Boolean(item.videoUrl)
+    );
+  }
+  if (selectedFilter === 'Logo Design' || selectedFilter === 'Brand Identity and Logos') {
+    return (
+      rawCatLower === 'branding' ||
+      rawCatLower.includes('logo') ||
+      rawCatLower.includes('brand') ||
+      titleLower.includes('logo') ||
+      titleLower.includes('brand')
+    );
+  }
   if (selectedFilter === 'Social Media Posts' && rawCat === 'Social Media') return true;
-  if (selectedFilter === 'Brand Identity and Logos' && rawCat === 'Branding') return true;
   return false;
 }
 
@@ -396,6 +417,7 @@ const MarketplaceServiceCard: React.FC<MarketplaceServiceCardProps> = ({
 
 interface MarketplacePortfolioCardProps {
   item: PortfolioItem;
+  settings?: PublicSettings;
   primaryBg: string;
   secondaryBg: string;
   accentColor: string;
@@ -404,6 +426,7 @@ interface MarketplacePortfolioCardProps {
 
 const MarketplacePortfolioCard: React.FC<MarketplacePortfolioCardProps> = ({
   item,
+  settings,
   primaryBg,
   secondaryBg,
   accentColor,
@@ -415,6 +438,9 @@ const MarketplacePortfolioCard: React.FC<MarketplacePortfolioCardProps> = ({
     item.coverImage ||
     createStudioArtworkDataUri(item.title, item.category, accentColor, primaryBg, secondaryBg);
   const displayCat = formatPortfolioCategoryLabel(item.category);
+  const creatorName = settings?.ownerName || 'Shankar Baluragi';
+  const studioName = settings?.businessName || 'Prithvi Editify';
+  const galleryCount = 1 + (Array.isArray(item.galleryUrls) ? item.galleryUrls.filter(Boolean).length : 0);
 
   return (
     <article className="group bg-white border border-[#E2E4DF] rounded-xl overflow-hidden flex flex-col justify-between shadow-[0_1px_3px_rgba(23,35,51,0.04)] hover:-translate-y-0.5 hover:border-[#172333]/50 hover:shadow-[0_14px_32px_-8px_rgba(23,35,51,0.12)] transition-all duration-200">
@@ -446,15 +472,17 @@ const MarketplacePortfolioCard: React.FC<MarketplacePortfolioCardProps> = ({
             />
           </Link>
 
+          {/* Category Tag Overlay */}
           <span className="absolute top-3 left-3 z-20 px-2.5 py-1 text-[11px] font-semibold tracking-wide text-white bg-[#172333]/90 backdrop-blur-xs border border-white/15 rounded-md">
             {displayCat}
           </span>
 
+          {/* Quick Lightbox Preview Trigger */}
           {onQuickPreview && (
             <button
               type="button"
               onClick={() => onQuickPreview(item)}
-              title="Open interactive media preview"
+              title="Quick preview project"
               className="absolute bottom-3 right-3 z-20 inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold text-white bg-[#172333]/90 hover:bg-[#172333] rounded-md border border-white/15 shadow-xs transition-all duration-150"
             >
               {item.videoUrl ? (
@@ -462,74 +490,93 @@ const MarketplacePortfolioCard: React.FC<MarketplacePortfolioCardProps> = ({
               ) : (
                 <Eye className="w-3.5 h-3.5 text-[#F18A45]" />
               )}
-              <span>{item.videoUrl ? 'Play Reel' : 'Quick Zoom'}</span>
+              <span>Preview</span>
             </button>
           )}
         </div>
 
-        {/* 2. Project Info Body */}
-        <div className="p-5 space-y-2.5">
-          <div className="flex items-center justify-between gap-2 text-[11px] text-[#6E7785]">
-            <span className="font-semibold text-[#172333]">{displayCat}</span>
-            <span className="font-mono text-[10px] uppercase tracking-wider text-[#26734D] bg-[#26734D]/10 px-2 py-0.5 rounded">
-              Studio Project
+        {/* 2. Marketplace Card Body */}
+        <div className="p-5 space-y-3">
+          {/* Studio Attribution Strip */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div
+                className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0 shadow-2xs"
+                style={{ backgroundColor: primaryBg }}
+              >
+                {creatorName
+                  .split(' ')
+                  .map((n) => n[0])
+                  .join('')
+                  .slice(0, 2)
+                  .toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-[#172333] truncate leading-tight">
+                  {creatorName}
+                </p>
+                <p className="text-[11px] text-[#6E7785] truncate leading-tight mt-0.5">
+                  {studioName}
+                </p>
+              </div>
+            </div>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-[#26734D] bg-[#26734D]/10 px-2 py-0.5 rounded shrink-0">
+              Verified Studio
             </span>
           </div>
 
+          {/* Project Title */}
           <h3 className="text-[15px] font-semibold text-[#172333] group-hover:text-[#F18A45] transition-colors leading-snug line-clamp-2 min-h-[2.6rem]">
-            <Link to={detailPath}>{item.title}</Link>
+            <Link to={detailPath} className="focus:outline-none">
+              {item.title}
+            </Link>
           </h3>
 
+          {/* Short Description */}
           <p className="text-xs text-[#6E7785] line-clamp-2 leading-relaxed min-h-[2.25rem]">
             {item.description}
           </p>
 
-          {item.tags && item.tags.length > 0 && (
-            <div className="pt-2 border-t border-[#E2E4DF]/80 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-[#6E7785]">
-              {item.tags.slice(0, 4).map((tag, idx) => (
-                <React.Fragment key={`${tag}_${idx}`}>
-                  {idx > 0 && <span aria-hidden="true">·</span>}
-                  <span>#{tag}</span>
-                </React.Fragment>
-              ))}
-            </div>
-          )}
+          {/* Project Meta Strip */}
+          <div className="pt-2.5 border-t border-[#E2E4DF]/80 flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#6E7785]">
+            <span className="inline-flex items-center gap-1.5 font-medium text-[#172333]">
+              <Clock className="w-3.5 h-3.5 text-[#F18A45] shrink-0" />
+              <span>{item.videoUrl ? 'Video Production' : '24–48 hours'}</span>
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <RefreshCw className="w-3 h-3 text-[#6E7785] shrink-0" />
+              <span>{galleryCount > 1 ? `${galleryCount} Previews` : 'High-Res Export'}</span>
+            </span>
+            <span className="text-[#26734D] font-semibold">
+              {item.featured ? 'Featured Work' : 'Case Study'}
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* 3. Card Footer */}
+      {/* 3. Deliverable & Dual Action Footer */}
       <div className="px-5 py-3.5 bg-[#F5F5F1]/75 border-t border-[#E2E4DF] space-y-3">
-        <div className="flex items-center justify-between gap-2 text-xs">
+        <div className="flex items-baseline justify-between gap-2">
           <span className="text-[10px] font-semibold uppercase tracking-wider text-[#6E7785]">
             Deliverable
           </span>
-          <span className="font-medium text-[#172333] truncate">
-            {item.metricsSummary || 'Prithvi Editify Studio'}
+          <span className="font-mono text-sm font-bold text-[#172333] truncate max-w-[190px]">
+            {item.metricsSummary || displayCat}
           </span>
         </div>
 
         <div className="grid grid-cols-2 gap-2">
-          {onQuickPreview ? (
-            <button
-              type="button"
-              onClick={() => onQuickPreview(item)}
-              className="w-full inline-flex items-center justify-center px-3 py-2 text-xs font-medium text-[#172333] bg-white border border-[#E2E4DF] hover:border-[#172333] hover:bg-[#F5F5F1]/50 rounded-lg transition-colors text-center"
-            >
-              Quick Preview
-            </button>
-          ) : (
-            <Link
-              to={`/contact?service=${encodeURIComponent(displayCat)}`}
-              className="w-full inline-flex items-center justify-center px-3 py-2 text-xs font-medium text-[#172333] bg-white border border-[#E2E4DF] hover:border-[#172333] hover:bg-[#F5F5F1]/50 rounded-lg transition-colors text-center"
-            >
-              Contact for a Project
-            </Link>
-          )}
+          <Link
+            to={`/contact?service=${encodeURIComponent(displayCat)}`}
+            className="w-full inline-flex items-center justify-center px-3 py-2 text-xs font-medium text-[#172333] bg-white border border-[#E2E4DF] hover:border-[#172333] hover:bg-[#F5F5F1]/50 rounded-lg transition-colors text-center"
+          >
+            Contact for a Project
+          </Link>
           <Link
             to={detailPath}
             className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg transition-colors text-center"
           >
-            <span>View Details</span>
+            <span>View Project</span>
             <ArrowRight className="w-3.5 h-3.5 shrink-0 transition-transform duration-200 group-hover:translate-x-0.5" />
           </Link>
         </div>
@@ -804,6 +851,7 @@ export const HomePage: React.FC = () => {
                   <MarketplacePortfolioCard
                     key={item.id}
                     item={item}
+                    settings={settings}
                     primaryBg={primaryBg}
                     secondaryBg={secondaryBg}
                     accentColor={accentColor}
@@ -1089,7 +1137,7 @@ export const ServicesPage: React.FC = () => {
             ref={categoryScrollRef}
             role="tablist"
             aria-label="Filter services by category"
-            className="flex items-center gap-2 overflow-x-auto py-0.5 scroll-smooth flex-1"
+            className="flex items-center gap-2 overflow-x-auto py-0.5 scroll-smooth flex-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
           >
             {categoryOptions.map((cat) => {
               const active = selectedCategory === cat;
@@ -2146,10 +2194,13 @@ export const ServiceDetailPage: React.FC = () => {
 // ============================================================================
 // 3. PORTFOLIO SHOWCASE PAGE (/portfolio)
 // ============================================================================
+type PortfolioSortOption = 'recommended' | 'featured' | 'title_asc';
+
 export const PortfolioPage: React.FC = () => {
   const { settings } = useOutletContext<OutletCtx>();
   const custom = mergeSiteCustomization(settings.siteCustomization || DEFAULT_SITE_CUSTOMIZATION);
   const [searchParams, setSearchParams] = useSearchParams();
+  const categoryScrollRef = React.useRef<HTMLDivElement>(null);
 
   const initialCategory = searchParams.get('category') || 'All';
   const initialQuery = searchParams.get('q') || '';
@@ -2157,8 +2208,14 @@ export const PortfolioPage: React.FC = () => {
   const [items, setItems] = useState<PortfolioItem[]>([]);
   const [category, setCategory] = useState<string>(initialCategory);
   const [searchQuery, setSearchQuery] = useState<string>(initialQuery);
+  const [sortBy, setSortBy] = useState<PortfolioSortOption>('recommended');
   const [selectedItem, setSelectedItem] = useState<PortfolioItem | null>(null);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const paramCat = searchParams.get('category') || 'All';
+    setCategory(paramCat);
+  }, [searchParams]);
 
   useEffect(() => {
     let active = true;
@@ -2192,9 +2249,27 @@ export const PortfolioPage: React.FC = () => {
     return base;
   }, [items]);
 
+  const handleSelectCategory = (cat: string) => {
+    const nextCategory = category === cat && cat !== 'All' ? 'All' : cat;
+    setCategory(nextCategory);
+    const nextParams = new URLSearchParams(searchParams);
+    if (nextCategory === 'All') {
+      nextParams.delete('category');
+    } else {
+      nextParams.set('category', nextCategory);
+    }
+    setSearchParams(nextParams, { replace: true });
+  };
+
+  const scrollCategoryBar = (direction: 'left' | 'right') => {
+    if (!categoryScrollRef.current) return;
+    const offset = direction === 'left' ? -260 : 260;
+    categoryScrollRef.current.scrollBy({ left: offset, behavior: 'smooth' });
+  };
+
   const filtered = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    return items.filter((item) => {
+    const list = items.filter((item) => {
       if (!matchesPortfolioCategoryFilter(item, category)) return false;
       if (!q) return true;
       const displayCat = formatPortfolioCategoryLabel(item.category).toLowerCase();
@@ -2209,13 +2284,23 @@ export const PortfolioPage: React.FC = () => {
         tagsMatch
       );
     });
-  }, [items, category, searchQuery]);
 
-  const hasActiveFilters = category !== 'All' || searchQuery.trim() !== '';
+    if (sortBy === 'featured') {
+      return [...list].sort((a, b) => Number(Boolean(b.featured)) - Number(Boolean(a.featured)));
+    }
+    if (sortBy === 'title_asc') {
+      return [...list].sort((a, b) => a.title.localeCompare(b.title));
+    }
+    return [...list].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+  }, [items, category, searchQuery, sortBy]);
+
+  const hasActiveFilters =
+    category !== 'All' || searchQuery.trim() !== '' || sortBy !== 'recommended';
 
   const handleClearFilters = () => {
     setCategory('All');
     setSearchQuery('');
+    setSortBy('recommended');
     setSearchParams({});
   };
 
@@ -2224,79 +2309,156 @@ export const PortfolioPage: React.FC = () => {
   const accentColor = custom.accentColor || '#F18A45';
 
   return (
-    <div className="max-w-[1200px] mx-auto px-6 py-14 lg:py-16">
-      {/* Portfolio Header & Search */}
-      <div className="border-b border-[#E2E4DF] pb-8">
-        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
-          <div className="max-w-2xl">
-            <p className="text-xs font-semibold text-[#6E7785] tracking-wide">
-              {custom.portfolioPageKicker || 'Prithvi Editify · Curated Project Showcase'}
-            </p>
-            <h1 className="font-editorial text-3xl sm:text-4xl font-semibold text-[#172333] mt-2">
-              {custom.portfolioPageTitle || 'Creative Portfolio'}
-            </h1>
-            <p className="text-base text-[#6E7785] mt-2.5 leading-relaxed">
-              {custom.portfolioPageDescription ||
-                'Explore selected design, branding, thumbnail and video editing projects by Prithvi Editify.'}
-            </p>
-          </div>
+    <div>
+      {/* Top Horizontal Marketplace Category Filter Bar */}
+      <div className="bg-white border-b border-[#E2E4DF] sticky top-16 z-20 shadow-[0_1px_2px_rgba(23,35,51,0.03)]">
+        <div className="max-w-[1200px] mx-auto px-6 flex items-center gap-2 py-2.5">
+          <button
+            type="button"
+            onClick={() => scrollCategoryBar('left')}
+            aria-label="Scroll categories left"
+            className="hidden sm:inline-flex items-center justify-center w-7 h-7 rounded-md border border-[#E2E4DF] bg-white text-[#6E7785] hover:text-[#172333] hover:border-[#172333]/40 shrink-0 transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
 
-          {/* Search Projects Input */}
-          <div className="relative w-full sm:w-80">
-            <Search className="w-4 h-4 text-[#6E7785] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="search"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search projects…"
-              aria-label="Search projects"
-              className="w-full pl-10 pr-8 py-2.5 text-xs bg-white border border-[#E2E4DF] rounded-lg text-[#172333] placeholder-[#6E7785] focus:outline-none focus:border-[#172333] transition-colors"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery('')}
-                aria-label="Clear search"
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#6E7785] hover:text-[#172333] p-0.5"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Category Filter Buttons */}
-        <div className="mt-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div
+            ref={categoryScrollRef}
             role="tablist"
-            aria-label="Portfolio categories"
-            className="flex flex-wrap items-center gap-2"
+            aria-label="Filter portfolio projects by category"
+            className="flex items-center gap-2 overflow-x-auto py-0.5 scroll-smooth flex-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
           >
             {categoryOptions.map((cat) => {
               const active = category === cat;
+              const matchCount =
+                cat === 'All'
+                  ? items.length
+                  : items.filter((item) => matchesPortfolioCategoryFilter(item, cat)).length;
+
               return (
                 <button
                   key={cat}
                   type="button"
                   role="tab"
                   aria-selected={active}
-                  onClick={() => setCategory(cat)}
-                  className={`px-3.5 py-1.5 text-xs rounded-lg border transition-colors whitespace-nowrap shrink-0 ${
+                  onClick={() => handleSelectCategory(cat)}
+                  className={`inline-flex items-center gap-1.5 px-3.5 py-2 text-xs rounded-lg border transition-all duration-150 whitespace-nowrap shrink-0 ${
                     active
-                      ? 'bg-[#172333] text-white border-[#172333] font-semibold shadow-xs'
-                      : 'bg-white text-[#6E7785] border-[#E2E4DF] hover:text-[#172333] hover:border-[#172333]/40 font-medium'
+                      ? 'bg-[#172333] text-white border-[#172333] font-semibold shadow-2xs'
+                      : 'bg-[#F5F5F1]/70 text-[#6E7785] border-[#E2E4DF] hover:bg-white hover:text-[#172333] hover:border-[#172333]/40 font-medium'
                   }`}
                 >
-                  {cat}
+                  <span>{cat}</span>
+                  {items.length > 0 && matchCount > 0 && (
+                    <span
+                      className={`font-mono text-[10px] px-1.5 py-0.2 rounded tabular-nums ${
+                        active
+                          ? 'bg-white/15 text-white'
+                          : 'bg-[#E2E4DF]/70 text-[#172333]'
+                      }`}
+                    >
+                      {matchCount}
+                    </span>
+                  )}
                 </button>
               );
             })}
           </div>
 
-          <div className="flex items-center gap-3 text-xs text-[#6E7785] shrink-0">
-            <span className="font-mono tabular-nums">
-              {filtered.length} {filtered.length === 1 ? 'project' : 'projects'}
-            </span>
+          <button
+            type="button"
+            onClick={() => scrollCategoryBar('right')}
+            aria-label="Scroll categories right"
+            className="hidden sm:inline-flex items-center justify-center w-7 h-7 rounded-md border border-[#E2E4DF] bg-white text-[#6E7785] hover:text-[#172333] hover:border-[#172333]/40 shrink-0 transition-colors"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      <div className="max-w-[1200px] mx-auto px-6 py-12 lg:py-14">
+        {/* Portfolio Header, Search & Sort Controls */}
+        <div className="border-b border-[#E2E4DF] pb-7">
+          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+            <div className="max-w-2xl">
+              <p className="text-xs font-semibold text-[#6E7785] tracking-wide">
+                {custom.portfolioPageKicker || 'Prithvi Editify · Curated Project Showcase'}
+              </p>
+              <h1 className="font-editorial text-3xl sm:text-4xl font-semibold text-[#172333] mt-2">
+                {category === 'All'
+                  ? custom.portfolioPageTitle || 'Creative Portfolio'
+                  : category}
+              </h1>
+              <p className="text-base text-[#6E7785] mt-2.5 leading-relaxed">
+                {custom.portfolioPageDescription ||
+                  'Explore selected design, branding, thumbnail and video editing projects by Prithvi Editify.'}
+              </p>
+            </div>
+
+            {/* Search & Sort Bar */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
+              <div className="relative flex-1 sm:w-72">
+                <Search className="w-4 h-4 text-[#6E7785] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search for a project…"
+                  aria-label="Search for a project"
+                  className="w-full pl-10 pr-8 py-2.5 text-xs bg-white border border-[#E2E4DF] rounded-lg text-[#172333] placeholder-[#6E7785] focus:outline-none focus:border-[#172333] transition-colors"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    aria-label="Clear search"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#6E7785] hover:text-[#172333] p-0.5"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <SlidersHorizontal className="w-3.5 h-3.5 text-[#6E7785] shrink-0 hidden sm:block" />
+                <label htmlFor="portfolio-sort" className="text-xs text-[#6E7785] whitespace-nowrap">
+                  Sort by:
+                </label>
+                <select
+                  id="portfolio-sort"
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as PortfolioSortOption)}
+                  className="px-3 py-2.5 text-xs font-medium text-[#172333] bg-white border border-[#E2E4DF] rounded-lg focus:outline-none focus:border-[#172333] transition-colors"
+                >
+                  <option value="recommended">Recommended</option>
+                  <option value="featured">Featured First</option>
+                  <option value="title_asc">Title: A to Z</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Active Filter Status Strip */}
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-xs text-[#6E7785]">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-mono tabular-nums text-[#172333] font-semibold">
+                {filtered.length} {filtered.length === 1 ? 'project' : 'projects'} available
+              </span>
+              {category !== 'All' && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#172333]/5 text-[#172333] font-medium">
+                  <span>Category: {category}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectCategory('All')}
+                    aria-label={`Remove ${category} filter`}
+                    className="hover:text-[#F18A45]"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+            </div>
+
             {hasActiveFilters && (
               <button
                 type="button"
@@ -2304,61 +2466,61 @@ export const PortfolioPage: React.FC = () => {
                 className="inline-flex items-center gap-1 text-xs font-semibold text-[#172333] hover:text-[#F18A45] transition-colors whitespace-nowrap"
               >
                 <X className="w-3.5 h-3.5" />
-                <span>Clear filters</span>
+                <span>Clear all filters</span>
               </button>
             )}
           </div>
         </div>
-      </div>
 
-      {/* Portfolio Gallery Grid */}
-      {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-10">
-          {[1, 2, 3, 4, 5, 6].map((n) => (
-            <div
-              key={n}
-              className="h-80 bg-white border border-[#E2E4DF] rounded-lg animate-pulse"
-            />
-          ))}
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="mt-10 bg-white border border-[#E2E4DF] rounded-lg p-12 text-center max-w-xl mx-auto shadow-[0_1px_2px_rgba(23,35,51,0.04)]">
-          <p className="font-editorial text-xl font-semibold text-[#172333]">
-            No portfolio projects matched your filter
-          </p>
-          <p className="text-sm text-[#6E7785] mt-2 leading-relaxed">
-            Try clearing your search query or selecting another creative category, or contact Prithvi Editify to request a custom sample brief.
-          </p>
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-            <button
-              type="button"
-              onClick={handleClearFilters}
-              className="px-4 py-2.5 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg transition-colors"
-            >
-              Reset Filters
-            </button>
-            <Link
-              to="/contact"
-              className="px-4 py-2.5 text-xs font-semibold text-[#172333] bg-[#F5F5F1] hover:bg-[#E2E4DF] rounded-lg transition-colors"
-            >
-              Contact for a Project
-            </Link>
+        {/* Portfolio Gallery Grid — Fiverr-Inspired Marketplace Cards */}
+        {loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-10">
+            {[1, 2, 3, 4, 5, 6].map((n) => (
+              <div
+                key={n}
+                className="h-[420px] bg-white border border-[#E2E4DF] rounded-lg animate-pulse"
+              />
+            ))}
           </div>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-10">
-          {filtered.map((item) => (
-            <MarketplacePortfolioCard
-              key={item.id}
-              item={item}
-              primaryBg={primaryBg}
-              secondaryBg={secondaryBg}
-              accentColor={accentColor}
-              onQuickPreview={(selected) => setSelectedItem(selected)}
-            />
-          ))}
-        </div>
-      )}
+        ) : filtered.length === 0 ? (
+          <div className="mt-10 bg-white border border-[#E2E4DF] rounded-lg p-12 text-center max-w-xl mx-auto shadow-[0_1px_2px_rgba(23,35,51,0.04)]">
+            <h2 className="font-editorial text-xl font-semibold text-[#172333]">
+              No matching portfolio projects found
+            </h2>
+            <p className="text-sm text-[#6E7785] mt-2 leading-relaxed">
+              Try clearing your search query or selecting another creative category, or contact Prithvi Editify to request a custom sample brief.
+            </p>
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={handleClearFilters}
+                className="px-4 py-2.5 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg transition-colors"
+              >
+                Reset All Filters
+              </button>
+              <Link
+                to="/contact"
+                className="px-4 py-2.5 text-xs font-semibold text-[#172333] bg-[#F5F5F1] hover:bg-[#E2E4DF] rounded-lg transition-colors"
+              >
+                Contact for a Project
+              </Link>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-10">
+            {filtered.map((item) => (
+              <MarketplacePortfolioCard
+                key={item.id}
+                item={item}
+                settings={settings}
+                primaryBg={primaryBg}
+                secondaryBg={secondaryBg}
+                accentColor={accentColor}
+                onQuickPreview={(selected) => setSelectedItem(selected)}
+              />
+            ))}
+          </div>
+        )}
 
       {/* Portfolio CTA Banner */}
       <div className="mt-16 bg-white border border-[#E2E4DF] rounded-lg p-6 sm:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-[0_1px_2px_rgba(23,35,51,0.04)]">
@@ -2434,6 +2596,7 @@ export const PortfolioPage: React.FC = () => {
           setSelectedItem(found);
         }}
       />
+      </div>
     </div>
   );
 };
@@ -2829,6 +2992,7 @@ export const PortfolioDetailPage: React.FC = () => {
               <MarketplacePortfolioCard
                 key={rel.id}
                 item={rel}
+                settings={settings}
                 primaryBg={primaryBg}
                 secondaryBg={secondaryBg}
                 accentColor={accentColor}
