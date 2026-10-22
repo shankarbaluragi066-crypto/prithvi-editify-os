@@ -34,6 +34,7 @@ import {
 import {
   fetchClientQuotations,
   clientRespondToQuotation,
+  inferQuotationDocumentType,
 } from '../services/aiAssistantService';
 import {
   checkProjectMasterUnlockStatus,
@@ -55,6 +56,7 @@ export const ClientDashboardPage: React.FC = () => {
   const [projects, setProjects] = useState<ProjectRecord[]>([]);
   const [files, setFiles] = useState<DeliverableFile[]>([]);
   const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
+  const [quotations, setQuotations] = useState<QuotationRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -63,17 +65,20 @@ export const ClientDashboardPage: React.FC = () => {
       fetchClientProjects(user.uid),
       fetchClientFiles(user.uid),
       fetchClientInvoices(user.uid),
+      fetchClientQuotations(user.uid, profile?.email || user.email || undefined).catch(() => []),
     ])
-      .then(([p, f, inv]) => {
+      .then(([p, f, inv, q]) => {
         setProjects(p);
         setFiles(f);
         setInvoices(inv);
+        setQuotations(q);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [user]);
+  }, [user, profile?.email]);
 
   const activeProjects = projects.filter((p) => !['Completed', 'Cancelled'].includes(p.status));
+  const pendingQuotations = quotations.filter((q) => q.status === 'Sent');
   const pendingApprovals = projects.filter((p) => p.status === 'In Review');
   const unpaidInvoices = invoices.filter((i) => ['Sent', 'Partially Paid', 'Overdue'].includes(i.status));
   const paidInvoices = invoices.filter((i) => i.status === 'Paid');
@@ -107,9 +112,9 @@ export const ClientDashboardPage: React.FC = () => {
           </p>
         </div>
         <div className="bg-white border border-[#E2E4DF] rounded-lg p-5">
-          <p className="text-xs text-[#6E7785]">Pending Approvals</p>
+          <p className="text-xs text-[#6E7785]">Pending Approvals & Quotes</p>
           <p className="text-2xl font-mono font-semibold text-[#A96518] mt-1 tabular-nums">
-            {pendingApprovals.length}
+            {pendingApprovals.length + pendingQuotations.length}
           </p>
         </div>
         <div className="bg-white border border-[#E2E4DF] rounded-lg p-5">
@@ -125,6 +130,25 @@ export const ClientDashboardPage: React.FC = () => {
           </p>
         </div>
       </div>
+
+      {pendingQuotations.length > 0 && (
+        <div className="bg-white border border-[#F18A45]/40 rounded-lg p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold text-[#A96518]">
+              Action Required · {pendingQuotations.length} Quotation / Estimate Awaiting Approval
+            </p>
+            <p className="text-xs text-[#6E7785] mt-0.5">
+              Review scope, line items, and approve your project estimate or quotation in the billing portal.
+            </p>
+          </div>
+          <Link
+            to="/portal/invoices"
+            className="px-4 py-2 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg whitespace-nowrap shrink-0"
+          >
+            Review Quotations & Estimates →
+          </Link>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white border border-[#E2E4DF] rounded-lg p-6">
@@ -938,44 +962,56 @@ export const ClientInvoicesPage: React.FC = () => {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-[#E2E4DF] text-[11px] font-semibold text-[#6E7785]">
-                <th className="py-3 px-4">Quote #</th>
+                <th className="py-3 px-4">Document #</th>
+                <th className="py-3 px-4">Type</th>
                 <th className="py-3 px-4">Project</th>
                 <th className="py-3 px-4">Valid Until</th>
                 <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4 text-right">Quoted Total</th>
+                <th className="py-3 px-4 text-right">Total (INR)</th>
                 <th className="py-3 px-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E2E4DF] text-xs">
-              {quotations.map((q) => (
-                <tr key={q.id}>
-                  <td className="py-3.5 px-4 font-mono font-semibold">{q.quotationNumber}</td>
-                  <td className="py-3.5 px-4">{q.projectTitle}</td>
-                  <td className="py-3.5 px-4 font-mono text-[#6E7785]">{q.expiryDate}</td>
-                  <td className="py-3.5 px-4 font-semibold">{q.status}</td>
-                  <td className="py-3.5 px-4 text-right font-mono font-semibold tabular-nums">
-                    {formatINR(q.total)}
-                  </td>
-                  <td className="py-3.5 px-4 text-right space-x-3">
-                    {q.status === 'Sent' && (
+              {quotations.map((q) => {
+                const docType = inferQuotationDocumentType(q);
+                return (
+                  <tr key={q.id}>
+                    <td className="py-3.5 px-4 font-mono font-semibold">
+                      {q.quotationNumber}
+                      {q.version && q.version > 1 ? ` (v${q.version})` : ''}
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-[#F5F5F1] text-[#172333]">
+                        {docType}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4">{q.projectTitle}</td>
+                    <td className="py-3.5 px-4 font-mono text-[#6E7785]">{q.expiryDate}</td>
+                    <td className="py-3.5 px-4 font-semibold">{q.status}</td>
+                    <td className="py-3.5 px-4 text-right font-mono font-semibold tabular-nums">
+                      {formatINR(q.total)}
+                    </td>
+                    <td className="py-3.5 px-4 text-right space-x-3">
+                      {q.status === 'Sent' && (
+                        <button
+                          type="button"
+                          onClick={() => handleDecisionOnQuote(q, 'Accepted')}
+                          className="font-semibold text-[#26734D] hover:underline"
+                        >
+                          Approve {docType}
+                        </button>
+                      )}
                       <button
                         type="button"
-                        onClick={() => handleDecisionOnQuote(q, 'Accepted')}
-                        className="font-semibold text-[#26734D] hover:underline"
+                        onClick={() => setSelectedQuote(q)}
+                        className="font-semibold text-[#172333] hover:text-[#F18A45]"
                       >
-                        Approve Quote
+                        Inspect / Print →
                       </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => setSelectedQuote(q)}
-                      className="font-semibold text-[#172333] hover:text-[#F18A45]"
-                    >
-                      Inspect / Print →
-                    </button>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

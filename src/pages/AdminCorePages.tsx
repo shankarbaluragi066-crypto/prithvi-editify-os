@@ -106,24 +106,27 @@ export const AdminDashboardPage: React.FC = () => {
   const [projects, setProjects] = useState<ProjectRecord[]>([]);
   const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
+  const [quotations, setQuotations] = useState<QuotationRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [seeding, setSeeding] = useState(false);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [c, inq, p, inv, pay] = await Promise.all([
+      const [c, inq, p, inv, pay, q] = await Promise.all([
         fetchAllClientsAdmin(),
         fetchAllInquiriesAdmin(),
         fetchAllProjectsAdmin(),
         fetchAllInvoicesAdmin(),
         fetchAllPaymentsAdmin(),
+        fetchAllQuotationsAdmin().catch(() => []),
       ]);
       setClients(c);
       setInquiries(inq);
       setProjects(p);
       setInvoices(inv);
       setPayments(pay);
+      setQuotations(q);
     } catch (err) {
       showToast('error', 'Failed to load dashboard metrics', err instanceof Error ? err.message : '');
     } finally {
@@ -342,7 +345,13 @@ export const AdminDashboardPage: React.FC = () => {
           to="/admin/quotations"
           className="px-3 py-1.5 text-xs font-medium text-white bg-[#172333] hover:bg-[#24364A] rounded-md transition-colors whitespace-nowrap"
         >
-          + New Quotation
+          + New Quotation ({quotations.filter((q) => inferQuotationDocumentType(q) === 'Quotation').length})
+        </Link>
+        <Link
+          to="/admin/estimates"
+          className="px-3 py-1.5 text-xs font-medium text-white bg-[#172333] hover:bg-[#24364A] rounded-md transition-colors whitespace-nowrap"
+        >
+          + New Cost Estimate ({quotations.filter((q) => inferQuotationDocumentType(q) === 'Estimate').length})
         </Link>
         <Link
           to="/admin/clients"
@@ -2033,36 +2042,53 @@ export const AdminClientDetailsPage: React.FC = () => {
   const [projects, setProjects] = useState<ProjectRecord[]>([]);
   const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
   const [quotations, setQuotations] = useState<QuotationRecord[]>([]);
+  const [payments, setPayments] = useState<PaymentRecord[]>([]);
+  const [files, setFiles] = useState<DeliverableFile[]>([]);
   const [inquiries, setInquiries] = useState<InquiryRecord[]>([]);
   const [isDirty, setIsDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleteModal, setDeleteModal] = useState<SafeDeleteModalConfig | null>(null);
 
   const loadData = useCallback(async () => {
-    const [allClients, allProjects, allInvoices, allQuotes, allInquiries] = await Promise.all([
-      fetchAllClientsAdmin(),
-      fetchAllProjectsAdmin().catch(() => []),
-      fetchAllInvoicesAdmin().catch(() => []),
-      fetchAllQuotationsAdmin().catch(() => []),
-      fetchAllInquiriesAdmin().catch(() => []),
-    ]);
+    const [allClients, allProjects, allInvoices, allQuotes, allPayments, allFiles, allInquiries] =
+      await Promise.all([
+        fetchAllClientsAdmin(),
+        fetchAllProjectsAdmin().catch(() => []),
+        fetchAllInvoicesAdmin().catch(() => []),
+        fetchAllQuotationsAdmin().catch(() => []),
+        fetchAllPaymentsAdmin().catch(() => []),
+        fetchAllFilesAdmin().catch(() => []),
+        fetchAllInquiriesAdmin().catch(() => []),
+      ]);
     const found = allClients.find((c) => c.id === clientId) || null;
     setClient(found);
     setIsDirty(false);
     const emailLower = (found?.email || '').toLowerCase();
-    setProjects(
-      allProjects.filter(
-        (p) => p.clientId === clientId || (emailLower && p.clientEmail.toLowerCase() === emailLower)
-      )
+    const clientProjs = allProjects.filter(
+      (p) => p.clientId === clientId || (emailLower && p.clientEmail.toLowerCase() === emailLower)
     );
-    setInvoices(
-      allInvoices.filter(
-        (i) => i.clientId === clientId || (emailLower && i.clientEmail.toLowerCase() === emailLower)
-      )
+    const clientProjectIds = new Set(clientProjs.map((p) => p.id));
+    const clientInvs = allInvoices.filter(
+      (i) => i.clientId === clientId || (emailLower && i.clientEmail.toLowerCase() === emailLower)
     );
+    const clientInvoiceIds = new Set(clientInvs.map((i) => i.id));
+    setProjects(clientProjs);
+    setInvoices(clientInvs);
     setQuotations(
       allQuotes.filter(
         (q) => q.clientId === clientId || (emailLower && q.clientEmail.toLowerCase() === emailLower)
+      )
+    );
+    setPayments(
+      allPayments.filter(
+        (pay) => pay.clientId === clientId || clientInvoiceIds.has(pay.invoiceId)
+      )
+    );
+    setFiles(
+      allFiles.filter(
+        (f) =>
+          (found?.userId && f.clientUserId === found.userId) ||
+          clientProjectIds.has(f.projectId)
       )
     );
     setInquiries(
@@ -2348,9 +2374,17 @@ export const AdminClientDetailsPage: React.FC = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white border border-[#E2E4DF] rounded-lg p-6">
-          <h3 className="text-sm font-semibold text-[#172333] mb-3">
-            Associated Projects ({projects.length})
-          </h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-[#172333]">
+              Associated Projects ({projects.length})
+            </h3>
+            <Link
+              to="/admin/projects"
+              className="text-[11px] font-semibold text-[#172333] hover:text-[#F18A45]"
+            >
+              + New Project
+            </Link>
+          </div>
           {projects.length === 0 ? (
             <p className="text-xs text-[#6E7785]">No projects linked to this client.</p>
           ) : (
@@ -2362,7 +2396,7 @@ export const AdminClientDetailsPage: React.FC = () => {
                 <Link to={`/admin/projects/${p.id}`} className="font-semibold hover:text-[#F18A45]">
                   {p.title}
                 </Link>
-                <span className="text-[#6E7785]">
+                <span className="text-[#6E7785] font-mono tabular-nums">
                   {p.status} · {formatINR(p.budget)}
                 </span>
               </div>
@@ -2371,35 +2405,57 @@ export const AdminClientDetailsPage: React.FC = () => {
         </div>
 
         <div className="bg-white border border-[#E2E4DF] rounded-lg p-6">
-          <h3 className="text-sm font-semibold text-[#172333] mb-3">
-            Quotations & Estimates ({quotations.length})
-          </h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-[#172333]">
+              Quotations & Estimates ({quotations.length})
+            </h3>
+            <div className="flex items-center gap-2 text-[11px] font-semibold">
+              <Link to="/admin/quotations" className="text-[#172333] hover:text-[#F18A45]">
+                + Quote
+              </Link>
+              <span className="text-[#E2E4DF]">·</span>
+              <Link to="/admin/estimates" className="text-[#172333] hover:text-[#F18A45]">
+                + Estimate
+              </Link>
+            </div>
+          </div>
           {quotations.length === 0 ? (
             <p className="text-xs text-[#6E7785]">No quotations or estimates for this client.</p>
           ) : (
-            quotations.map((q) => (
-              <div
-                key={q.id}
-                className="py-2 border-b border-[#E2E4DF] last:border-0 flex justify-between text-xs"
-              >
-                <Link
-                  to="/admin/quotations"
-                  className="font-mono font-semibold hover:text-[#F18A45]"
+            quotations.map((q) => {
+              const docType = inferQuotationDocumentType(q);
+              return (
+                <div
+                  key={q.id}
+                  className="py-2 border-b border-[#E2E4DF] last:border-0 flex justify-between text-xs"
                 >
-                  {q.quotationNumber}
-                </Link>
-                <span className="font-mono tabular-nums">
-                  {formatINR(q.total)} ({q.status})
-                </span>
-              </div>
-            ))
+                  <Link
+                    to={docType === 'Estimate' ? '/admin/estimates' : '/admin/quotations'}
+                    className="font-mono font-semibold hover:text-[#F18A45]"
+                  >
+                    {q.quotationNumber} ({docType})
+                  </Link>
+                  <span className="font-mono tabular-nums">
+                    {formatINR(q.total)} ({q.status})
+                  </span>
+                </div>
+              );
+            })
           )}
         </div>
 
         <div className="bg-white border border-[#E2E4DF] rounded-lg p-6">
-          <h3 className="text-sm font-semibold text-[#172333] mb-3">
-            Client Invoices ({invoices.length})
-          </h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-[#172333]">
+              Client Invoices ({invoices.length})
+            </h3>
+            <Link
+              to="/admin/invoices"
+              className="text-[11px] font-semibold text-[#172333] hover:text-[#F18A45]"
+            >
+              + New Invoice
+            </Link>
+          </div>
           {invoices.length === 0 ? (
             <p className="text-xs text-[#6E7785]">No invoices issued to this client.</p>
           ) : (
@@ -2423,25 +2479,102 @@ export const AdminClientDetailsPage: React.FC = () => {
         </div>
       </div>
 
-      {inquiries.length > 0 && (
+      {/* Connected Payments, Deliverables & Inquiries */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white border border-[#E2E4DF] rounded-lg p-6">
-          <h3 className="text-sm font-semibold text-[#172333] mb-3">
-            Related Inquiries ({inquiries.length})
-          </h3>
-          <div className="divide-y divide-[#E2E4DF] text-xs">
-            {inquiries.map((inq) => (
-              <div key={inq.id} className="py-2.5 flex items-center justify-between">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-[#172333]">
+              Payment History ({payments.length})
+            </h3>
+            <Link
+              to="/admin/payments"
+              className="text-[11px] font-semibold text-[#172333] hover:text-[#F18A45]"
+            >
+              Payments Ledger →
+            </Link>
+          </div>
+          {payments.length === 0 ? (
+            <p className="text-xs text-[#6E7785]">No recorded payments yet.</p>
+          ) : (
+            payments.map((pay) => (
+              <div
+                key={pay.id}
+                className="py-2 border-b border-[#E2E4DF] last:border-0 flex justify-between text-xs"
+              >
+                <div>
+                  <span className="font-semibold text-[#172333]">{pay.method}</span>
+                  <span className="text-[#6E7785]"> · {pay.paymentDate}</span>
+                  {pay.transactionReference && (
+                    <p className="font-mono text-[10px] text-[#6E7785]">Ref: {pay.transactionReference}</p>
+                  )}
+                </div>
+                <span className="font-mono font-semibold text-[#26734D] tabular-nums">
+                  {formatINR(pay.amount)}
+                </span>
+              </div>
+            ))
+          )}
+        </div>
+
+        <div className="bg-white border border-[#E2E4DF] rounded-lg p-6">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-[#172333]">
+              Deliverable Files ({files.length})
+            </h3>
+            <Link
+              to="/admin/files"
+              className="text-[11px] font-semibold text-[#172333] hover:text-[#F18A45]"
+            >
+              Manage Files →
+            </Link>
+          </div>
+          {files.length === 0 ? (
+            <p className="text-xs text-[#6E7785]">No deliverable files uploaded for this client.</p>
+          ) : (
+            files.slice(0, 6).map((f) => (
+              <div
+                key={f.id}
+                className="py-2 border-b border-[#E2E4DF] last:border-0 flex justify-between text-xs"
+              >
+                <span className="font-medium text-[#172333] truncate max-w-[180px]">
+                  {f.fileName} ({f.versionLabel})
+                </span>
+                <span className="text-[#6E7785] shrink-0">{f.category}</span>
+              </div>
+            ))
+          )}
+        </div>
+
+        <div className="bg-white border border-[#E2E4DF] rounded-lg p-6">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-[#172333]">
+              Website Inquiries ({inquiries.length})
+            </h3>
+            <Link
+              to="/admin/inquiries"
+              className="text-[11px] font-semibold text-[#172333] hover:text-[#F18A45]"
+            >
+              All Inquiries →
+            </Link>
+          </div>
+          {inquiries.length === 0 ? (
+            <p className="text-xs text-[#6E7785]">No website inquiries matching this email.</p>
+          ) : (
+            inquiries.map((inq) => (
+              <div
+                key={inq.id}
+                className="py-2 border-b border-[#E2E4DF] last:border-0 flex justify-between text-xs"
+              >
                 <div>
                   <span className="font-semibold text-[#172333]">{inq.serviceRequired}</span>
-                  <span className="text-[#6E7785]"> · {inq.budgetRange}</span>
-                  <p className="text-[#6E7785] mt-0.5">{inq.description}</p>
+                  <p className="text-[#6E7785] text-[11px]">{inq.budgetRange}</p>
                 </div>
                 <span className="font-medium text-[#172333]">{inq.status}</span>
               </div>
-            ))}
-          </div>
+            ))
+          )}
         </div>
-      )}
+      </div>
 
       {deleteModal && <DependencySafeDeleteModal {...deleteModal} />}
     </div>
