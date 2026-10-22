@@ -253,6 +253,7 @@ export default function App() {
                 <Route path="website-customizer" element={<AdminSiteCustomizerPage />} />
                 <Route path="inquiries" element={<AdminInquiriesPage />} />
                 <Route path="quotations" element={<AdminQuotationsPage />} />
+                <Route path="estimates" element={<AdminQuotationsPage defaultDocType="Estimate" />} />
                 <Route path="clients" element={<AdminClientsPage />} />
                 <Route path="clients/:clientId" element={<AdminClientDetailsPage />} />
                 <Route path="projects" element={<AdminProjectsPage />} />

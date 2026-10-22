@@ -245,7 +245,8 @@ export type InvoiceStatus =
   | 'Partially Paid'
   | 'Paid'
   | 'Overdue'
-  | 'Cancelled';
+  | 'Cancelled'
+  | 'Void';
 
 export interface InvoiceLineItem {
   id: string;
@@ -504,7 +505,18 @@ export interface ActivityLog {
   createdAt?: string;
 }
 
-export type QuotationStatus = 'Draft' | 'Sent' | 'Accepted' | 'Rejected' | 'Expired';
+export type QuotationStatus = 'Draft' | 'Sent' | 'Accepted' | 'Rejected' | 'Expired' | 'Archived';
+
+export type QuotationDocumentType = 'Quotation' | 'Estimate';
+
+export interface QuotationRevisionSnapshot {
+  version: number;
+  quotationNumber: string;
+  total: number;
+  status: QuotationStatus;
+  updatedAt: string;
+  summary: string;
+}
 
 export interface QuotationLineItem {
   description: string;
@@ -516,6 +528,10 @@ export interface QuotationLineItem {
 export interface QuotationRecord {
   id: string;
   quotationNumber: string;
+  documentType?: QuotationDocumentType;
+  version?: number;
+  parentQuotationId?: string;
+  revisionHistory?: QuotationRevisionSnapshot[];
   inquiryId?: string;
   clientId: string;
   clientUserId: string;
@@ -537,12 +553,62 @@ export interface QuotationRecord {
   currency: 'INR';
   status: QuotationStatus;
   termsAndConditions: string;
+  notes?: string;
   convertedProjectId?: string;
   convertedInvoiceId?: string;
   clientDecisionAt?: string;
   clientDecisionBy?: string;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface ClientDependencySummary {
+  clientId: string;
+  clientName: string;
+  canHardDelete: boolean;
+  projectsCount: number;
+  invoicesCount: number;
+  quotationsCount: number;
+  estimatesCount: number;
+  paymentsCount: number;
+  inquiriesCount: number;
+  totalDependentCount: number;
+  outstandingBalance: number;
+  blockingReasons: string[];
+}
+
+export interface ProjectDependencySummary {
+  projectId: string;
+  projectTitle: string;
+  canHardDelete: boolean;
+  invoicesCount: number;
+  paymentsCount: number;
+  quotationsCount: number;
+  tasksCount: number;
+  filesCount: number;
+  messagesCount: number;
+  hasFinancialRecords: boolean;
+  blockingReasons: string[];
+}
+
+export interface InvoiceDeleteEligibility {
+  invoiceId: string;
+  invoiceNumber: string;
+  canHardDelete: boolean;
+  status: InvoiceStatus;
+  paymentsCount: number;
+  amountPaid: number;
+  reason: string;
+}
+
+export interface QuotationDeleteEligibility {
+  quotationId: string;
+  quotationNumber: string;
+  documentType: QuotationDocumentType;
+  canHardDelete: boolean;
+  status: QuotationStatus;
+  isConverted: boolean;
+  reason: string;
 }
 
 export interface AIBrandProfile {

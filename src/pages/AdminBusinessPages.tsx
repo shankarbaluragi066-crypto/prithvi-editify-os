@@ -18,6 +18,9 @@ import {
   Search,
   Filter,
   Sparkles,
+  ArrowUp,
+  ArrowDown,
+  AlertTriangle,
 } from 'lucide-react';
 import {
   fetchAllServicesAdmin,
@@ -30,7 +33,12 @@ import {
   fetchAllClientsAdmin,
   fetchAllProjectsAdmin,
   fetchAllInvoicesAdmin,
+  fetchInvoiceLineItems,
   saveInvoiceWithLineItemsAdmin,
+  checkInvoiceDeleteEligibilityAdmin,
+  voidInvoiceAdmin,
+  deleteInvoiceAdmin,
+  duplicateInvoiceAdmin,
   recordPaymentAdmin,
   fetchAllPaymentsAdmin,
   fetchAllFilesAdmin,
@@ -48,6 +56,12 @@ import {
   markNotificationRead,
   updateUserProfileDetails,
 } from '../services/crmService';
+import {
+  DependencySafeDeleteModal,
+  SafeDeleteModalConfig,
+  UnsavedChangesDialog,
+  RecordActionBar,
+} from '../components/CrudManagementModals';
 import { MediaLibraryManager } from '../components/MediaLibraryManager';
 import { MediaPreviewModal, PreviewableMediaItem } from '../components/MediaPreviewModal';
 import { MediaSearchFilterState } from '../components/MediaSearchFilterBar';
@@ -68,6 +82,7 @@ import {
   ClientRecord,
   ProjectRecord,
   InvoiceRecord,
+  InvoiceLineItem,
   InvoiceStatus,
   PaymentRecord,
   DeliverableFile,
@@ -1758,32 +1773,59 @@ export const AdminPortfolioPage: React.FC = () => {
 };
 
 // ============================================================================
-// 3. ADMIN INVOICES & PAYMENT RECORDING PAGE
+// 3. ADMIN INVOICES & PAYMENT RECORDING PAGE (COMPLETE CRUD + VOID + PRINT)
 // ============================================================================
+const INVOICE_STATUS_OPTIONS: InvoiceStatus[] = [
+  'Draft',
+  'Sent',
+  'Partially Paid',
+  'Paid',
+  'Overdue',
+  'Void',
+];
+
 export const AdminInvoicesPage: React.FC = () => {
-  const { showToast } = useToast();
+  const { showToast, confirmAction } = useToast();
   const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
   const [clients, setClients] = useState<ClientRecord[]>([]);
   const [projects, setProjects] = useState<ProjectRecord[]>([]);
+  const [payments, setPayments] = useState<PaymentRecord[]>([]);
+  const [services, setServices] = useState<ServiceItem[]>([]);
+
   const [showBuilder, setShowBuilder] = useState(false);
+  const [editingInvoice, setEditingInvoice] = useState<InvoiceRecord | null>(null);
+  const [formDirty, setFormDirty] = useState(false);
+  const [showUnsavedModal, setShowUnsavedModal] = useState(false);
+  const [savingInvoice, setSavingInvoice] = useState(false);
+
   const [payModalInvoice, setPayModalInvoice] = useState<InvoiceRecord | null>(null);
   const [printInvoice, setPrintInvoice] = useState<InvoiceRecord | null>(null);
+  const [printLineItems, setPrintLineItems] = useState<InvoiceLineItem[]>([]);
   const [gstMode, setGstMode] = useState<GstTaxMode>('non_gst');
 
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('All');
+  const [deleteModalConfig, setDeleteModalConfig] = useState<SafeDeleteModalConfig | null>(null);
+
   const today = new Date().toISOString().split('T')[0];
-  const [invForm, setInvForm] = useState({
+  const defaultDue = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+  const createEmptyInvoiceForm = (defaultClientId = '') => ({
     invoiceNumber: `PE-INV-${new Date().getFullYear()}-${String(Math.floor(100 + Math.random() * 900))}`,
-    clientId: '',
+    clientId: defaultClientId,
     projectId: '',
     issueDate: today,
-    dueDate: today,
+    dueDate: defaultDue,
     discount: 0,
     taxRate: 0,
+    amountPaid: 0,
     status: 'Sent' as InvoiceStatus,
     paymentInstructions: DEFAULT_PRIVATE_SETTINGS.defaultPaymentInstructions,
     notes: 'Thank you for working with Prithvi Editify.',
     lineItems: [{ description: 'Social Media Post Design', quantity: 2, unitPrice: 500 }],
   });
+
+  const [invForm, setInvForm] = useState(() => createEmptyInvoiceForm());
 
   const [payForm, setPayForm] = useState({
     amount: 0,
@@ -1794,14 +1836,18 @@ export const AdminInvoicesPage: React.FC = () => {
   });
 
   const loadData = useCallback(async () => {
-    const [inv, cli, proj] = await Promise.all([
+    const [inv, cli, proj, payList, srvList] = await Promise.all([
       fetchAllInvoicesAdmin(),
       fetchAllClientsAdmin(),
       fetchAllProjectsAdmin(),
+      fetchAllPaymentsAdmin().catch(() => []),
+      fetchAllServicesAdmin().catch(() => []),
     ]);
     setInvoices(inv);
     setClients(cli);
     setProjects(proj);
+    setPayments(payList);
+    setServices(srvList);
     if (cli.length > 0 && !invForm.clientId) {
       setInvForm((prev) => ({ ...prev, clientId: cli[0].id }));
     }
@@ -1810,6 +1856,117 @@ export const AdminInvoicesPage: React.FC = () => {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const updateInvForm = (patch: Partial<typeof invForm>) => {
+    setInvForm((prev) => ({ ...prev, ...patch }));
+    setFormDirty(true);
+  };
+
+  const parseSummaryFallbackItems = (inv: InvoiceRecord) => {
+    if (!inv.itemsSummary) {
+      return [{ description: inv.projectTitle || 'Creative Design Service', quantity: 1, unitPrice: inv.subtotal || inv.total || 500 }];
+    }
+    const parts = inv.itemsSummary.split(' · ').map((s) => s.trim()).filter(Boolean);
+    const parsed = parts.map((part) => {
+      const match = part.match(/^(.*?)\s*\((\d+(?:\.\d+)?)\s*[×x]\s*₹?(\d+(?:\.\d+)?)\)$/);
+      if (match) {
+        return {
+          description: match[1].trim(),
+          quantity: Number(match[2]) || 1,
+          unitPrice: Number(match[3]) || 0,
+        };
+      }
+      return {
+        description: part,
+        quantity: 1,
+        unitPrice: Math.round((inv.subtotal || inv.total || 500) / Math.max(1, parts.length)),
+      };
+    });
+    return parsed.length > 0
+      ? parsed
+      : [{ description: inv.projectTitle || 'Creative Service', quantity: 1, unitPrice: inv.subtotal || 500 }];
+  };
+
+  const handleOpenCreateInvoice = () => {
+    setEditingInvoice(null);
+    setGstMode('non_gst');
+    setInvForm(createEmptyInvoiceForm(clients[0]?.id || ''));
+    setFormDirty(false);
+    setShowBuilder(true);
+  };
+
+  const handleOpenEditInvoice = async (inv: InvoiceRecord) => {
+    setEditingInvoice(inv);
+    let loadedItems: Array<{ description: string; quantity: number; unitPrice: number }> = [];
+    try {
+      const dbItems = await fetchInvoiceLineItems(inv.id);
+      if (dbItems.length > 0) {
+        loadedItems = dbItems.map((li) => ({
+          description: li.description,
+          quantity: Number(li.quantity) || 1,
+          unitPrice: Number(li.unitPrice) || 0,
+        }));
+      }
+    } catch {
+      // Fallback below
+    }
+    if (loadedItems.length === 0) {
+      loadedItems = parseSummaryFallbackItems(inv);
+    }
+
+    if (inv.taxRate === 18) {
+      setGstMode(inv.notes?.includes('IGST') ? 'igst_18' : 'cgst_sgst_18');
+    } else if (inv.taxRate > 0) {
+      setGstMode('custom');
+    } else {
+      setGstMode('non_gst');
+    }
+
+    setInvForm({
+      invoiceNumber: inv.invoiceNumber,
+      clientId: inv.clientId,
+      projectId: inv.projectId || '',
+      issueDate: inv.issueDate,
+      dueDate: inv.dueDate,
+      discount: inv.discount,
+      taxRate: inv.taxRate,
+      amountPaid: inv.amountPaid,
+      status: inv.status,
+      paymentInstructions:
+        inv.paymentInstructions || DEFAULT_PRIVATE_SETTINGS.defaultPaymentInstructions,
+      notes: (inv.notes || '').replace(/\s*\[.*?\]\s*$/, ''),
+      lineItems: loadedItems,
+    });
+    setFormDirty(false);
+    setShowBuilder(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleOpenPrintInvoice = async (inv: InvoiceRecord) => {
+    setPrintInvoice(inv);
+    try {
+      const dbItems = await fetchInvoiceLineItems(inv.id);
+      if (dbItems.length > 0) {
+        setPrintLineItems(dbItems);
+      } else {
+        const fallback = parseSummaryFallbackItems(inv);
+        setPrintLineItems(
+          fallback.map((li, idx) => ({
+            id: `temp-${idx}`,
+            invoiceId: inv.id,
+            clientUserId: inv.clientUserId,
+            description: li.description,
+            quantity: li.quantity,
+            unitPrice: li.unitPrice,
+            amount: Math.round(li.quantity * li.unitPrice),
+            sortOrder: idx + 1,
+          }))
+        );
+      }
+    } catch {
+      setPrintLineItems([]);
+    }
+  };
 
   const effectiveTaxRate =
     gstMode === 'non_gst'
@@ -1822,7 +1979,7 @@ export const AdminInvoicesPage: React.FC = () => {
     items: invForm.lineItems,
     discount: invForm.discount,
     taxRate: effectiveTaxRate,
-    amountPaid: 0,
+    amountPaid: editingInvoice ? editingInvoice.amountPaid : invForm.amountPaid,
   });
 
   const gstDetails = computeGstBreakdown({
@@ -1831,28 +1988,38 @@ export const AdminInvoicesPage: React.FC = () => {
     gstMode,
   });
 
-  const handleCreateInvoice = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const performSaveInvoice = async () => {
     const client = clients.find((c) => c.id === invForm.clientId);
-    if (!client) {
-      showToast('error', 'Client Required', 'Please create and select a client first.');
+    if (!client && !editingInvoice) {
+      showToast('error', 'Client Required', 'Please select a client for this invoice.');
       return;
     }
-    const proj = projects.find((p) => p.id === invForm.projectId);
+    if (!invForm.invoiceNumber.trim()) {
+      showToast('error', 'Invoice Number Required', 'Please enter a valid invoice number.');
+      return;
+    }
+    if (totals.validationErrors.length > 0) {
+      showToast('error', 'Validation Error', totals.validationErrors[0]);
+      return;
+    }
 
+    const proj = projects.find((p) => p.id === invForm.projectId);
+    const cleanNotes = invForm.notes.replace(/\s*\[.*?\]\s*$/, '').trim();
+
+    setSavingInvoice(true);
     try {
       await saveInvoiceWithLineItemsAdmin(
         {
-          invoiceNumber: invForm.invoiceNumber,
-          clientId: client.id,
-          clientUserId: client.userId || '',
-          clientName: client.fullName,
-          clientEmail: client.email,
+          invoiceNumber: invForm.invoiceNumber.trim(),
+          clientId: client?.id || editingInvoice?.clientId || '',
+          clientUserId: client?.userId || editingInvoice?.clientUserId || '',
+          clientName: client?.fullName || editingInvoice?.clientName || 'Client',
+          clientEmail: client?.email || editingInvoice?.clientEmail || '',
           projectId: proj?.id || '',
-          projectTitle: proj?.title || 'General Creative Services',
+          projectTitle: proj?.title || editingInvoice?.projectTitle || 'General Creative Services',
           issueDate: invForm.issueDate,
           dueDate: invForm.dueDate,
-          itemsSummary: invForm.lineItems
+          itemsSummary: totals.normalizedItems
             .map((li) => `${li.description} (${li.quantity} × ₹${li.unitPrice})`)
             .join(' · '),
           subtotal: totals.subtotal,
@@ -1860,29 +2027,136 @@ export const AdminInvoicesPage: React.FC = () => {
           taxRate: effectiveTaxRate,
           taxAmount: totals.taxAmount,
           total: totals.total,
-          amountPaid: 0,
+          amountPaid: totals.amountPaid,
           balanceDue: totals.balanceDue,
           currency: 'INR',
           status: invForm.status,
           paymentInstructions: invForm.paymentInstructions,
-          notes:
-            gstMode !== 'non_gst'
-              ? `${invForm.notes} [${gstDetails.label}]`
-              : invForm.notes,
+          notes: gstMode !== 'non_gst' ? `${cleanNotes} [${gstDetails.label}]` : cleanNotes,
         },
-        invForm.lineItems.map((li, idx) => ({
+        totals.normalizedItems.map((li, idx) => ({
           description: li.description,
           quantity: li.quantity,
           unitPrice: li.unitPrice,
-          amount: Math.round(li.quantity * li.unitPrice),
+          amount: li.amount,
           sortOrder: idx + 1,
-        }))
+        })),
+        editingInvoice || undefined
       );
-      showToast('success', 'Invoice Created', `${invForm.invoiceNumber} saved in INR.`);
+
+      showToast(
+        'success',
+        editingInvoice ? 'Invoice Updated' : 'Invoice Created',
+        `${invForm.invoiceNumber} saved (${formatINR(totals.total)}).`
+      );
+      setFormDirty(false);
+      setShowUnsavedModal(false);
       setShowBuilder(false);
+      setEditingInvoice(null);
       await loadData();
     } catch (err) {
-      showToast('error', 'Failed to create invoice', err instanceof Error ? err.message : '');
+      showToast('error', 'Failed to save invoice', err instanceof Error ? err.message : '');
+    } finally {
+      setSavingInvoice(false);
+    }
+  };
+
+  const handleSaveInvoiceSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await performSaveInvoice();
+  };
+
+  const handleRequestCloseBuilder = () => {
+    if (formDirty) {
+      setShowUnsavedModal(true);
+      return;
+    }
+    setShowBuilder(false);
+    setEditingInvoice(null);
+  };
+
+  const handleDuplicateInvoice = async (inv: InvoiceRecord) => {
+    try {
+      await duplicateInvoiceAdmin(inv);
+      await loadData();
+      showToast('success', 'Invoice Duplicated', `Created a new Draft copy of ${inv.invoiceNumber}.`);
+    } catch (err) {
+      showToast('error', 'Duplicate Failed', err instanceof Error ? err.message : '');
+    }
+  };
+
+  const handleVoidInvoice = (inv: InvoiceRecord) => {
+    confirmAction({
+      title: `Void / Cancel Invoice ${inv.invoiceNumber}`,
+      message: `Mark invoice ${inv.invoiceNumber} as Void? All recorded payments (${formatINR(
+        inv.amountPaid
+      )}) will remain preserved in the audit log, and the active balance due will be set to ₹0.`,
+      confirmLabel: 'Void Invoice',
+      onConfirm: async () => {
+        try {
+          await voidInvoiceAdmin(inv, 'Marked Void by Admin');
+          await loadData();
+          if (printInvoice?.id === inv.id) {
+            setPrintInvoice((prev) => (prev ? { ...prev, status: 'Void', balanceDue: 0 } : null));
+          }
+          showToast('success', 'Invoice Voided', `${inv.invoiceNumber} has been marked as Void.`);
+        } catch (err) {
+          showToast('error', 'Failed to void invoice', err instanceof Error ? err.message : '');
+        }
+      },
+    });
+  };
+
+  const handleOpenDeleteInvoiceModal = async (inv: InvoiceRecord) => {
+    try {
+      const eligibility = await checkInvoiceDeleteEligibilityAdmin(inv);
+      setDeleteModalConfig({
+        isOpen: true,
+        recordType: 'Invoice',
+        recordTitle: inv.projectTitle || inv.invoiceNumber,
+        recordIdentifier: inv.invoiceNumber,
+        clientName: inv.clientName,
+        monetaryTotal: inv.total,
+        statusLabel: inv.status,
+        canHardDelete: eligibility.canHardDelete,
+        blockingReason: eligibility.reason,
+        dependencyItems: [
+          {
+            label: 'Invoice Status',
+            count: inv.status,
+          },
+          {
+            label: 'Recorded Payments',
+            count: `${eligibility.paymentsCount} (${formatINR(eligibility.amountPaid)})`,
+          },
+        ],
+        requireExplicitCheckbox: true,
+        archiveActionLabel:
+          inv.status !== 'Void' ? 'Void / Cancel Invoice Instead (Recommended)' : undefined,
+        requiresReasonForArchive: true,
+        defaultArchiveReason: 'Cancelled / Voided by Studio Admin',
+        onConfirmArchiveOrVoid:
+          inv.status !== 'Void'
+            ? async (reason) => {
+                await voidInvoiceAdmin(inv, reason || 'Voided via safe deletion guard');
+                await loadData();
+                showToast('success', 'Invoice Voided', `${inv.invoiceNumber} marked as Void.`);
+              }
+            : undefined,
+        onConfirmHardDelete: async () => {
+          await deleteInvoiceAdmin(inv);
+          if (printInvoice?.id === inv.id) setPrintInvoice(null);
+          if (editingInvoice?.id === inv.id) {
+            setShowBuilder(false);
+            setEditingInvoice(null);
+          }
+          await loadData();
+          showToast('success', 'Draft Invoice Deleted', `${inv.invoiceNumber} permanently removed.`);
+        },
+        onClose: () => setDeleteModalConfig(null),
+      });
+    } catch (err) {
+      showToast('error', 'Check Failed', err instanceof Error ? err.message : '');
     }
   };
 
@@ -1906,33 +2180,57 @@ export const AdminInvoicesPage: React.FC = () => {
     }
   };
 
+  const filteredInvoices = invoices.filter((inv) => {
+    const matchesStatus = statusFilter === 'All' || inv.status === statusFilter;
+    const q = searchQuery.toLowerCase().trim();
+    const matchesSearch =
+      !q ||
+      inv.invoiceNumber.toLowerCase().includes(q) ||
+      inv.clientName.toLowerCase().includes(q) ||
+      inv.projectTitle.toLowerCase().includes(q);
+    return matchesStatus && matchesSearch;
+  });
+
+  const clientProjects = projects.filter(
+    (p) => !invForm.clientId || p.clientId === invForm.clientId
+  );
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4 no-print">
+      <div className="flex flex-wrap items-center justify-between gap-4 no-print">
         <div>
           <h1 className="font-editorial text-2xl font-semibold text-[#172333]">
             Invoices, GST & INR Billing
           </h1>
           <p className="text-xs text-[#6E7785] mt-1">
-            Create multi-line-item invoices in INR with optional GST (SAC 9983), dynamic UPI QR codes, and one-click WhatsApp dispatch.
+            Create, edit, duplicate, void, or delete INR invoices with itemized HSN/SAC 9983 billing, UPI QR codes, and payment protection.
           </p>
         </div>
         <button
           type="button"
-          onClick={() => setShowBuilder(!showBuilder)}
+          onClick={() => (showBuilder ? handleRequestCloseBuilder() : handleOpenCreateInvoice())}
           className="px-4 py-2 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg"
         >
-          {showBuilder ? 'Close Invoice Builder' : '+ Create Invoice'}
+          {showBuilder ? 'Close Invoice Editor' : '+ Create Invoice'}
         </button>
       </div>
 
       {showBuilder && (
         <form
-          onSubmit={handleCreateInvoice}
-          className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-5 no-print"
+          onSubmit={handleSaveInvoiceSubmit}
+          className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-5 no-print shadow-xs"
         >
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E2E4DF] pb-3">
-            <h2 className="text-base font-semibold text-[#172333]">New INR Invoice</h2>
+            <div>
+              <h2 className="text-base font-semibold text-[#172333]">
+                {editingInvoice
+                  ? `Edit Invoice · ${editingInvoice.invoiceNumber}`
+                  : 'Create New INR Invoice'}
+              </h2>
+              <p className="text-[11px] text-[#6E7785]">
+                All line item quantities, discounts, and GST rates recalculate totals and balance due automatically.
+              </p>
+            </div>
             <div className="flex flex-wrap items-center gap-1.5 bg-[#F5F5F1] p-1 rounded-lg border border-[#E2E4DF] text-xs">
               {(
                 [
@@ -1945,7 +2243,10 @@ export const AdminInvoicesPage: React.FC = () => {
                 <button
                   key={opt.id}
                   type="button"
-                  onClick={() => setGstMode(opt.id)}
+                  onClick={() => {
+                    setGstMode(opt.id);
+                    setFormDirty(true);
+                  }}
                   className={`px-2.5 py-1 rounded font-medium transition-colors ${
                     gstMode === opt.id
                       ? 'bg-[#172333] text-white font-semibold'
@@ -1958,14 +2259,29 @@ export const AdminInvoicesPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+          {/* Controlled Editing Notice for Paid / Partially Paid / Sent Invoices */}
+          {editingInvoice && editingInvoice.amountPaid > 0 && (
+            <div className="p-3.5 bg-[#B87514]/10 border border-[#B87514]/30 rounded-lg flex items-start gap-2.5 text-xs text-[#172333]">
+              <AlertTriangle className="w-4 h-4 text-[#B87514] shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-[#B87514]">
+                  Controlled Editing Mode — Verified Payments Recorded ({formatINR(editingInvoice.amountPaid)})
+                </p>
+                <p className="text-[#6E7785] mt-0.5">
+                  Existing payment history is protected. Saving changes to line items, discounts, or tax will automatically recalculate the remaining Balance Due ({formatINR(totals.balanceDue)}) and update status accordingly.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-4">
             <div>
               <label className="block text-xs font-medium mb-1">Invoice Number *</label>
               <input
                 type="text"
                 required
                 value={invForm.invoiceNumber}
-                onChange={(e) => setInvForm({ ...invForm, invoiceNumber: e.target.value })}
+                onChange={(e) => updateInvForm({ invoiceNumber: e.target.value })}
                 className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
               />
             </div>
@@ -1974,7 +2290,7 @@ export const AdminInvoicesPage: React.FC = () => {
               <select
                 required
                 value={invForm.clientId}
-                onChange={(e) => setInvForm({ ...invForm, clientId: e.target.value })}
+                onChange={(e) => updateInvForm({ clientId: e.target.value })}
                 className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
               >
                 <option value="">Select client...</option>
@@ -1986,11 +2302,40 @@ export const AdminInvoicesPage: React.FC = () => {
               </select>
             </div>
             <div>
+              <label className="block text-xs font-medium mb-1">Linked Project</label>
+              <select
+                value={invForm.projectId}
+                onChange={(e) => updateInvForm({ projectId: e.target.value })}
+                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              >
+                <option value="">General Creative Services</option>
+                {clientProjects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1">Status</label>
+              <select
+                value={invForm.status}
+                onChange={(e) => updateInvForm({ status: e.target.value as InvoiceStatus })}
+                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              >
+                {INVOICE_STATUS_OPTIONS.map((st) => (
+                  <option key={st} value={st}>
+                    {st}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
               <label className="block text-xs font-medium mb-1">Issue Date</label>
               <input
                 type="date"
                 value={invForm.issueDate}
-                onChange={(e) => setInvForm({ ...invForm, issueDate: e.target.value })}
+                onChange={(e) => updateInvForm({ issueDate: e.target.value })}
                 className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
               />
             </div>
@@ -1999,7 +2344,7 @@ export const AdminInvoicesPage: React.FC = () => {
               <input
                 type="date"
                 value={invForm.dueDate}
-                onChange={(e) => setInvForm({ ...invForm, dueDate: e.target.value })}
+                onChange={(e) => updateInvForm({ dueDate: e.target.value })}
                 className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
               />
             </div>
@@ -2007,75 +2352,172 @@ export const AdminInvoicesPage: React.FC = () => {
 
           {/* Line Items */}
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-[#172333]">Line Items (HSN/SAC 9983)</span>
-              <button
-                type="button"
-                onClick={() =>
-                  setInvForm({
-                    ...invForm,
-                    lineItems: [
-                      ...invForm.lineItems,
-                      { description: 'Creative Service Item', quantity: 1, unitPrice: 500 },
-                    ],
-                  })
-                }
-                className="text-xs font-semibold text-[#F18A45] hover:underline"
-              >
-                + Add Line Item
-              </button>
-            </div>
-            {invForm.lineItems.map((item, idx) => (
-              <div key={idx} className="grid grid-cols-12 gap-2 items-center">
-                <input
-                  type="text"
-                  required
-                  value={item.description}
-                  onChange={(e) => {
-                    const next = [...invForm.lineItems];
-                    next[idx].description = e.target.value;
-                    setInvForm({ ...invForm, lineItems: next });
-                  }}
-                  placeholder="Description"
-                  className="col-span-6 px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
-                />
-                <input
-                  type="number"
-                  min={1}
-                  value={item.quantity}
-                  onChange={(e) => {
-                    const next = [...invForm.lineItems];
-                    next[idx].quantity = Number(e.target.value);
-                    setInvForm({ ...invForm, lineItems: next });
-                  }}
-                  className="col-span-2 px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
-                />
-                <input
-                  type="number"
-                  min={0}
-                  value={item.unitPrice}
-                  onChange={(e) => {
-                    const next = [...invForm.lineItems];
-                    next[idx].unitPrice = Number(e.target.value);
-                    setInvForm({ ...invForm, lineItems: next });
-                  }}
-                  className="col-span-3 px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
-                />
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-xs font-semibold text-[#172333]">
+                Itemized Line Items (HSN/SAC 9983)
+              </span>
+              <div className="flex items-center gap-2">
+                {services.length > 0 && (
+                  <select
+                    defaultValue=""
+                    onChange={(e) => {
+                      const srv = services.find((s) => s.id === e.target.value);
+                      if (!srv) return;
+                      updateInvForm({
+                        lineItems: [
+                          ...invForm.lineItems,
+                          {
+                            description: `${srv.title} (${srv.category})`,
+                            quantity: 1,
+                            unitPrice: srv.startingPrice || 500,
+                          },
+                        ],
+                      });
+                      e.target.value = '';
+                    }}
+                    className="px-2.5 py-1 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-md"
+                  >
+                    <option value="">+ Add from Services Catalog...</option>
+                    {services.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.title} ({s.priceDisplay})
+                      </option>
+                    ))}
+                  </select>
+                )}
                 <button
                   type="button"
-                  disabled={invForm.lineItems.length <= 1}
                   onClick={() =>
-                    setInvForm({
-                      ...invForm,
-                      lineItems: invForm.lineItems.filter((_, i) => i !== idx),
+                    updateInvForm({
+                      lineItems: [
+                        ...invForm.lineItems,
+                        { description: 'Creative Service Item', quantity: 1, unitPrice: 500 },
+                      ],
                     })
                   }
-                  className="col-span-1 text-xs text-[#B93832] disabled:opacity-30"
+                  className="text-xs font-semibold text-[#F18A45] hover:underline"
                 >
-                  ×
+                  + Add Line Item
                 </button>
               </div>
-            ))}
+            </div>
+
+            <div className="hidden sm:grid grid-cols-12 gap-2 px-1 text-[11px] font-semibold text-[#6E7785]">
+              <div className="col-span-5">Description</div>
+              <div className="col-span-2">Quantity</div>
+              <div className="col-span-2">Unit Price (₹)</div>
+              <div className="col-span-2 text-right">Line Total</div>
+              <div className="col-span-1 text-right">Actions</div>
+            </div>
+
+            {invForm.lineItems.map((item, idx) => {
+              const lineTotal = Math.round((Number(item.quantity) || 0) * (Number(item.unitPrice) || 0));
+              return (
+                <div key={idx} className="grid grid-cols-12 gap-2 items-center">
+                  <input
+                    type="text"
+                    required
+                    value={item.description}
+                    onChange={(e) => {
+                      const next = [...invForm.lineItems];
+                      next[idx] = { ...next[idx], description: e.target.value };
+                      updateInvForm({ lineItems: next });
+                    }}
+                    placeholder="Service / Deliverable description"
+                    className="col-span-12 sm:col-span-5 px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                  />
+                  <input
+                    type="number"
+                    min={1}
+                    step="any"
+                    value={item.quantity}
+                    onChange={(e) => {
+                      const next = [...invForm.lineItems];
+                      next[idx] = { ...next[idx], quantity: Number(e.target.value) };
+                      updateInvForm({ lineItems: next });
+                    }}
+                    className="col-span-4 sm:col-span-2 px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                  />
+                  <input
+                    type="number"
+                    min={0}
+                    step="any"
+                    value={item.unitPrice}
+                    onChange={(e) => {
+                      const next = [...invForm.lineItems];
+                      next[idx] = { ...next[idx], unitPrice: Number(e.target.value) };
+                      updateInvForm({ lineItems: next });
+                    }}
+                    className="col-span-4 sm:col-span-2 px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                  />
+                  <div className="col-span-2 sm:col-span-2 text-right font-mono text-xs font-semibold text-[#172333] tabular-nums">
+                    {formatINR(lineTotal)}
+                  </div>
+                  <div className="col-span-2 sm:col-span-1 flex items-center justify-end gap-1">
+                    <button
+                      type="button"
+                      disabled={idx === 0}
+                      onClick={() => {
+                        const next = [...invForm.lineItems];
+                        [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+                        updateInvForm({ lineItems: next });
+                      }}
+                      title="Move Up"
+                      className="p-1 text-[#6E7785] hover:text-[#172333] disabled:opacity-25"
+                    >
+                      <ArrowUp className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={idx === invForm.lineItems.length - 1}
+                      onClick={() => {
+                        const next = [...invForm.lineItems];
+                        [next[idx + 1], next[idx]] = [next[idx], next[idx + 1]];
+                        updateInvForm({ lineItems: next });
+                      }}
+                      title="Move Down"
+                      className="p-1 text-[#6E7785] hover:text-[#172333] disabled:opacity-25"
+                    >
+                      <ArrowDown className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={invForm.lineItems.length <= 1}
+                      onClick={() =>
+                        updateInvForm({
+                          lineItems: invForm.lineItems.filter((_, i) => i !== idx),
+                        })
+                      }
+                      title="Remove Line Item"
+                      className="p-1 text-xs font-bold text-[#B93832] disabled:opacity-30"
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-[#E2E4DF]">
+            <div>
+              <label className="block text-xs font-medium mb-1">Payment Instructions</label>
+              <textarea
+                rows={2}
+                value={invForm.paymentInstructions}
+                onChange={(e) => updateInvForm({ paymentInstructions: e.target.value })}
+                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1">Invoice Notes / Terms</label>
+              <textarea
+                rows={2}
+                value={invForm.notes}
+                onChange={(e) => updateInvForm({ notes: e.target.value })}
+                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-[#E2E4DF]">
@@ -2085,7 +2527,7 @@ export const AdminInvoicesPage: React.FC = () => {
                 type="number"
                 min={0}
                 value={invForm.discount}
-                onChange={(e) => setInvForm({ ...invForm, discount: Number(e.target.value) })}
+                onChange={(e) => updateInvForm({ discount: Number(e.target.value) })}
                 className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
               />
             </div>
@@ -2099,7 +2541,7 @@ export const AdminInvoicesPage: React.FC = () => {
                   min={0}
                   max={100}
                   value={invForm.taxRate}
-                  onChange={(e) => setInvForm({ ...invForm, taxRate: Number(e.target.value) })}
+                  onChange={(e) => updateInvForm({ taxRate: Number(e.target.value) })}
                   className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
                 />
               ) : (
@@ -2108,24 +2550,44 @@ export const AdminInvoicesPage: React.FC = () => {
                 </div>
               )}
             </div>
-            <div className="bg-[#F5F5F1] rounded-lg p-3 text-right">
-              <p className="text-xs text-[#6E7785]">Calculated Invoice Total</p>
-              <p className="text-xl font-mono font-semibold text-[#172333] tabular-nums">
-                {formatINR(totals.total)}
+            <div className="bg-[#F5F5F1] rounded-lg p-3 text-right space-y-0.5">
+              <div className="flex justify-between text-[11px] text-[#6E7785]">
+                <span>Subtotal: {formatINR(totals.subtotal)}</span>
+                <span>Tax: {formatINR(totals.taxAmount)}</span>
+              </div>
+              <p className="text-lg font-mono font-semibold text-[#172333] tabular-nums">
+                Total: {formatINR(totals.total)}
+              </p>
+              <p className="text-[11px] font-mono text-[#B93832]">
+                Paid: {formatINR(totals.amountPaid)} · Balance Due: {formatINR(totals.balanceDue)}
               </p>
             </div>
           </div>
 
-          <button
-            type="submit"
-            className="px-5 py-2.5 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg"
-          >
-            Issue Invoice
-          </button>
+          <div className="flex flex-wrap items-center gap-3 pt-2">
+            <button
+              type="submit"
+              disabled={savingInvoice}
+              className="px-5 py-2.5 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg disabled:opacity-50"
+            >
+              {savingInvoice
+                ? 'Saving Invoice...'
+                : editingInvoice
+                ? 'Save Invoice Changes'
+                : 'Issue Invoice'}
+            </button>
+            <button
+              type="button"
+              onClick={handleRequestCloseBuilder}
+              className="px-4 py-2 text-xs font-medium text-[#6E7785] hover:text-[#172333]"
+            >
+              Cancel
+            </button>
+          </div>
         </form>
       )}
 
-      {/* Printable Invoice Preview */}
+      {/* Printable / Inspector Invoice Preview */}
       {printInvoice && (
         <div className="bg-white border border-[#172333] rounded-lg p-8 space-y-6">
           <div className="flex items-start justify-between border-b border-[#E2E4DF] pb-6">
@@ -2136,7 +2598,9 @@ export const AdminInvoicesPage: React.FC = () => {
               <h2 className="font-editorial text-2xl font-semibold text-[#172333]">
                 Prithvi Editify
               </h2>
-              <p className="text-xs text-[#6E7785]">Shankar Baluragi · Creative Design & Video Studio</p>
+              <p className="text-xs text-[#6E7785]">
+                Shankar Baluragi · Creative Design & Video Studio
+              </p>
             </div>
             <div className="text-right">
               <p className="font-mono text-lg font-semibold text-[#172333]">
@@ -2145,7 +2609,15 @@ export const AdminInvoicesPage: React.FC = () => {
               <p className="text-xs text-[#6E7785]">
                 Issued: {printInvoice.issueDate} · Due: {printInvoice.dueDate}
               </p>
-              <p className="text-xs font-semibold text-[#172333] mt-1">
+              <p
+                className={`text-xs font-semibold mt-1 ${
+                  printInvoice.status === 'Paid'
+                    ? 'text-[#26734D]'
+                    : printInvoice.status === 'Void'
+                    ? 'text-[#B93832]'
+                    : 'text-[#172333]'
+                }`}
+              >
                 Status: {printInvoice.status}
               </p>
             </div>
@@ -2154,19 +2626,47 @@ export const AdminInvoicesPage: React.FC = () => {
           <div className="grid grid-cols-2 gap-6 text-xs">
             <div>
               <p className="font-semibold text-[#6E7785]">Billed To:</p>
-              <p className="text-sm font-semibold text-[#172333] mt-0.5">{printInvoice.clientName}</p>
+              <p className="text-sm font-semibold text-[#172333] mt-0.5">
+                {printInvoice.clientName}
+              </p>
               <p className="text-[#6E7785]">{printInvoice.clientEmail}</p>
             </div>
             <div className="text-right">
               <p className="font-semibold text-[#6E7785]">Project Scope (SAC 9983):</p>
-              <p className="text-[#172333] mt-0.5">{printInvoice.projectTitle}</p>
+              <p className="text-[#172333] font-medium mt-0.5">{printInvoice.projectTitle}</p>
             </div>
           </div>
 
-          <div className="p-4 bg-[#F5F5F1] rounded-lg text-xs">
-            <p className="font-semibold text-[#172333] mb-1">Line Items Summary:</p>
-            <p className="text-[#6E7785]">{printInvoice.itemsSummary}</p>
-          </div>
+          {/* Itemized Line Items Table */}
+          {printLineItems.length > 0 ? (
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="border-b border-[#E2E4DF] text-[#6E7785]">
+                  <th className="py-2">Description</th>
+                  <th className="py-2 text-right">Qty</th>
+                  <th className="py-2 text-right">Unit Price</th>
+                  <th className="py-2 text-right">Amount</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#E2E4DF]">
+                {printLineItems.map((li, i) => (
+                  <tr key={li.id || i}>
+                    <td className="py-2.5 font-medium text-[#172333]">{li.description}</td>
+                    <td className="py-2.5 text-right font-mono">{li.quantity}</td>
+                    <td className="py-2.5 text-right font-mono">{formatINR(li.unitPrice)}</td>
+                    <td className="py-2.5 text-right font-mono font-semibold">
+                      {formatINR(li.amount)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div className="p-4 bg-[#F5F5F1] rounded-lg text-xs">
+              <p className="font-semibold text-[#172333] mb-1">Line Items Summary:</p>
+              <p className="text-[#6E7785]">{printInvoice.itemsSummary}</p>
+            </div>
+          )}
 
           <div className="flex justify-end">
             <div className="w-72 space-y-1.5 text-xs">
@@ -2216,11 +2716,38 @@ export const AdminInvoicesPage: React.FC = () => {
             </div>
           </div>
 
+          {/* Payment History for this Invoice */}
+          {(() => {
+            const invPayments = payments.filter((p) => p.invoiceId === printInvoice.id);
+            if (invPayments.length === 0) return null;
+            return (
+              <div className="p-4 bg-[#F5F5F1] rounded-lg space-y-2 text-xs">
+                <p className="font-semibold text-[#172333]">
+                  Verified Payment History ({invPayments.length})
+                </p>
+                <div className="divide-y divide-[#E2E4DF]">
+                  {invPayments.map((p) => (
+                    <div key={p.id} className="py-1.5 flex items-center justify-between">
+                      <span>
+                        {p.paymentDate} · {p.method} (UTR: {p.transactionReference || 'N/A'})
+                      </span>
+                      <span className="font-mono font-semibold text-[#26734D]">
+                        {formatINR(p.amount)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Scannable UPI QR Code on Printable Invoice */}
-          <UpiQrCodeCard
-            amount={printInvoice.balanceDue}
-            referenceNumber={printInvoice.invoiceNumber}
-          />
+          {printInvoice.status !== 'Void' && printInvoice.balanceDue > 0 && (
+            <UpiQrCodeCard
+              amount={printInvoice.balanceDue}
+              referenceNumber={printInvoice.invoiceNumber}
+            />
+          )}
 
           <div className="pt-4 border-t border-[#E2E4DF] text-xs text-[#6E7785]">
             <p className="font-semibold text-[#172333]">Payment Instructions & Notes:</p>
@@ -2237,6 +2764,17 @@ export const AdminInvoicesPage: React.FC = () => {
               <Printer className="w-3.5 h-3.5" />
               <span>Print / Save as PDF</span>
             </button>
+            <button
+              type="button"
+              onClick={() => {
+                const target = printInvoice;
+                setPrintInvoice(null);
+                handleOpenEditInvoice(target);
+              }}
+              className="px-4 py-2 text-xs font-semibold text-[#172333] bg-[#F5F5F1] hover:bg-[#E2E4DF] rounded-lg"
+            >
+              Edit Invoice
+            </button>
             <a
               href={buildWhatsAppInvoiceShareLink(
                 printInvoice,
@@ -2251,13 +2789,40 @@ export const AdminInvoicesPage: React.FC = () => {
             <button
               type="button"
               onClick={() => setPrintInvoice(null)}
-              className="px-4 py-2 text-xs font-semibold text-[#172333] bg-[#F5F5F1] rounded-lg"
+              className="px-4 py-2 text-xs font-semibold text-[#6E7785] hover:text-[#172333]"
             >
-              Close Printable View
+              Close Preview
             </button>
           </div>
         </div>
       )}
+
+      {/* Search & Status Filter Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 no-print">
+        <div className="flex flex-wrap items-center gap-1 p-1 bg-[#E2E4DF]/60 rounded-lg w-fit">
+          {['All', ...INVOICE_STATUS_OPTIONS].map((st) => (
+            <button
+              key={st}
+              type="button"
+              onClick={() => setStatusFilter(st)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                statusFilter === st
+                  ? 'bg-white text-[#172333] shadow-xs font-semibold'
+                  : 'text-[#6E7785] hover:text-[#172333]'
+              }`}
+            >
+              {st}
+            </button>
+          ))}
+        </div>
+        <input
+          type="search"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search invoice #, client, project..."
+          className="px-3.5 py-2 text-xs bg-white border border-[#E2E4DF] rounded-lg w-full sm:w-72"
+        />
+      </div>
 
       {/* Invoices Table */}
       <div className="bg-white border border-[#E2E4DF] rounded-lg overflow-x-auto no-print">
@@ -2265,7 +2830,7 @@ export const AdminInvoicesPage: React.FC = () => {
           <thead>
             <tr className="border-b border-[#E2E4DF] text-[11px] font-semibold text-[#6E7785]">
               <th className="py-3 px-4">Invoice #</th>
-              <th className="py-3 px-4">Client</th>
+              <th className="py-3 px-4">Client & Project</th>
               <th className="py-3 px-4">Due Date</th>
               <th className="py-3 px-4">Status</th>
               <th className="py-3 px-4 text-right">Total</th>
@@ -2274,63 +2839,88 @@ export const AdminInvoicesPage: React.FC = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-[#E2E4DF] text-xs">
-            {invoices.length === 0 ? (
+            {filteredInvoices.length === 0 ? (
               <tr>
                 <td colSpan={7} className="py-8 text-center text-[#6E7785]">
-                  No invoices created yet.
+                  No invoices match the current filter.
                 </td>
               </tr>
             ) : (
-              invoices.map((inv) => {
+              filteredInvoices.map((inv) => {
                 const clientObj = clients.find((c) => c.id === inv.clientId);
                 return (
                   <tr key={inv.id} className="hover:bg-[#F5F5F1]/50">
                     <td className="py-3.5 px-4 font-mono font-semibold text-[#172333]">
                       {inv.invoiceNumber}
                     </td>
-                    <td className="py-3.5 px-4 text-[#6E7785]">{inv.clientName}</td>
+                    <td className="py-3.5 px-4">
+                      <p className="font-semibold text-[#172333]">{inv.clientName}</p>
+                      <p className="text-[11px] text-[#6E7785]">{inv.projectTitle}</p>
+                    </td>
                     <td className="py-3.5 px-4 font-mono text-[#6E7785]">{inv.dueDate}</td>
-                    <td className="py-3.5 px-4 font-medium text-[#172333]">{inv.status}</td>
+                    <td className="py-3.5 px-4">
+                      <span
+                        className={`font-semibold ${
+                          inv.status === 'Paid'
+                            ? 'text-[#26734D]'
+                            : inv.status === 'Void' || inv.status === 'Overdue'
+                            ? 'text-[#B93832]'
+                            : inv.status === 'Partially Paid'
+                            ? 'text-[#B87514]'
+                            : 'text-[#172333]'
+                        }`}
+                      >
+                        {inv.status}
+                      </span>
+                    </td>
                     <td className="py-3.5 px-4 text-right font-mono tabular-nums">
                       {formatINR(inv.total)}
                     </td>
                     <td className="py-3.5 px-4 text-right font-mono font-semibold tabular-nums">
                       {formatINR(inv.balanceDue)}
                     </td>
-                    <td className="py-3.5 px-4 text-right space-x-3 whitespace-nowrap">
-                      <a
-                        href={buildWhatsAppInvoiceShareLink(inv, clientObj?.phone)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-semibold text-[#26734D] hover:underline"
-                      >
-                        WhatsApp
-                      </a>
-                      <button
-                        type="button"
-                        onClick={() => setPrintInvoice(inv)}
-                        className="font-semibold text-[#172333] hover:text-[#F18A45]"
-                      >
-                        QR / Print PDF
-                      </button>
-                      {inv.balanceDue > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setPayModalInvoice(inv);
-                            setPayForm({
-                              amount: inv.balanceDue,
-                              method: 'UPI',
-                              transactionReference: '',
-                              paymentDate: today,
-                              notes: 'Manual payment verified by Admin',
-                            });
-                          }}
-                          className="font-semibold text-[#26734D] hover:underline"
+                    <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                      <div className="inline-flex items-center justify-end gap-2 flex-wrap">
+                        {inv.balanceDue > 0 && inv.status !== 'Void' && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPayModalInvoice(inv);
+                              setPayForm({
+                                amount: inv.balanceDue,
+                                method: 'UPI',
+                                transactionReference: '',
+                                paymentDate: today,
+                                notes: 'Manual payment verified by Admin',
+                              });
+                            }}
+                            className="px-2 py-1 text-[11px] font-semibold text-white bg-[#26734D] hover:bg-[#1f5f3f] rounded-md"
+                          >
+                            + Payment
+                          </button>
+                        )}
+                        <a
+                          href={buildWhatsAppInvoiceShareLink(inv, clientObj?.phone)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-2 py-1 text-[11px] font-semibold text-[#26734D] bg-[#26734D]/10 hover:bg-[#26734D]/20 rounded-md"
                         >
-                          Record Payment
-                        </button>
-                      )}
+                          WhatsApp
+                        </a>
+                        <RecordActionBar
+                          onView={() => handleOpenPrintInvoice(inv)}
+                          viewLabel="View / PDF"
+                          onEdit={() => handleOpenEditInvoice(inv)}
+                          onDuplicate={() => handleDuplicateInvoice(inv)}
+                          onArchiveOrVoid={
+                            inv.status !== 'Void' && inv.status !== 'Draft'
+                              ? () => handleVoidInvoice(inv)
+                              : undefined
+                          }
+                          archiveLabel="Void"
+                          onDelete={() => handleOpenDeleteInvoiceModal(inv)}
+                        />
+                      </div>
                     </td>
                   </tr>
                 );
@@ -2410,6 +3000,23 @@ export const AdminInvoicesPage: React.FC = () => {
           </form>
         </div>
       )}
+
+      {/* Unsaved Changes Protection Modal */}
+      <UnsavedChangesDialog
+        isOpen={showUnsavedModal}
+        recordLabel={editingInvoice ? `Invoice ${editingInvoice.invoiceNumber}` : 'this new invoice'}
+        onContinueEditing={() => setShowUnsavedModal(false)}
+        onDiscardChanges={() => {
+          setShowUnsavedModal(false);
+          setFormDirty(false);
+          setShowBuilder(false);
+          setEditingInvoice(null);
+        }}
+        onSaveAndClose={performSaveInvoice}
+      />
+
+      {/* Dependency-Safe Delete / Void Modal */}
+      {deleteModalConfig && <DependencySafeDeleteModal {...deleteModalConfig} />}
     </div>
   );
 };

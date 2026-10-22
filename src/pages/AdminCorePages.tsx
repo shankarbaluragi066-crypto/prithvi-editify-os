@@ -51,7 +51,19 @@ import {
   postProjectMessage,
   seedInitialStudioCatalog,
   fetchAllServicesAdmin,
+  fetchAllFilesAdmin,
+  checkClientDependenciesAdmin,
+  archiveClientAdmin,
+  deleteClientAdmin,
+  checkProjectDependenciesAdmin,
+  archiveProjectAdmin,
+  deleteProjectAdmin,
+  duplicateProjectAdmin,
 } from '../services/crmService';
+import {
+  fetchAllQuotationsAdmin,
+  inferQuotationDocumentType,
+} from '../services/aiAssistantService';
 import {
   PROJECT_MILESTONE_TEMPLATES,
   buildTasksFromMilestoneTemplate,
@@ -59,6 +71,12 @@ import {
   getProofingPins,
   checkProjectMasterUnlockStatus,
 } from '../services/workflowEnhancementsService';
+import {
+  DependencySafeDeleteModal,
+  SafeDeleteModalConfig,
+  UnsavedChangesDialog,
+  RecordActionBar,
+} from '../components/CrudManagementModals';
 import {
   ClientRecord,
   InquiryRecord,
@@ -71,6 +89,8 @@ import {
   InvoiceRecord,
   PaymentRecord,
   ProjectMessage,
+  QuotationRecord,
+  DeliverableFile,
 } from '../types/crm';
 import { formatINR, formatDate } from '../utils/formatters';
 import { useToast } from '../contexts/ToastContext';
@@ -1151,14 +1171,36 @@ export const AdminInquiriesPage: React.FC = () => {
 };
 
 // ============================================================================
-// 3. ADMIN CLIENTS & CLIENT DETAILS PAGES
+// 3. ADMIN CLIENTS & CLIENT DETAILS PAGES (COMPLETE CRUD & DEPENDENCY SAFETY)
 // ============================================================================
 export const AdminClientsPage: React.FC = () => {
   const { showToast } = useToast();
+  const navigate = useNavigate();
+
   const [clients, setClients] = useState<ClientRecord[]>([]);
+  const [projects, setProjects] = useState<ProjectRecord[]>([]);
+  const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
+  const [quotations, setQuotations] = useState<QuotationRecord[]>([]);
+  const [inquiries, setInquiries] = useState<InquiryRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'invited' | 'deactivated'>('all');
+
+  // Create / Edit Form Modal State
   const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({
+  const [editingClient, setEditingClient] = useState<ClientRecord | null>(null);
+  const [isDirty, setIsDirty] = useState(false);
+  const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
+  const [savingClient, setSavingClient] = useState(false);
+
+  // Quick View Client Details Modal State
+  const [viewingClient, setViewingClient] = useState<ClientRecord | null>(null);
+
+  // Safe Delete Modal State
+  const [deleteModal, setDeleteModal] = useState<SafeDeleteModalConfig | null>(null);
+
+  const emptyClientForm = {
     fullName: '',
     email: '',
     phone: '',
@@ -1168,13 +1210,29 @@ export const AdminClientsPage: React.FC = () => {
     accountStatus: 'active' as 'active' | 'invited' | 'deactivated',
     userId: '',
     adminNotes: '',
-  });
+  };
+
+  const [formData, setFormData] = useState(emptyClientForm);
 
   const loadClients = useCallback(async () => {
+    setLoading(true);
     try {
-      setClients(await fetchAllClientsAdmin());
+      const [cList, pList, invList, qList, inqList] = await Promise.all([
+        fetchAllClientsAdmin(),
+        fetchAllProjectsAdmin().catch(() => []),
+        fetchAllInvoicesAdmin().catch(() => []),
+        fetchAllQuotationsAdmin().catch(() => []),
+        fetchAllInquiriesAdmin().catch(() => []),
+      ]);
+      setClients(cList);
+      setProjects(pList);
+      setInvoices(invList);
+      setQuotations(qList);
+      setInquiries(inqList);
     } catch (err) {
       showToast('error', 'Failed to load clients', err instanceof Error ? err.message : '');
+    } finally {
+      setLoading(false);
     }
   }, [showToast]);
 
@@ -1182,68 +1240,277 @@ export const AdminClientsPage: React.FC = () => {
     loadClients();
   }, [loadClients]);
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.fullName.trim() || !formData.email.trim()) return;
-    // Prevent duplicate email where practical
-    const exists = clients.some((c) => c.email.toLowerCase() === formData.email.trim().toLowerCase());
-    if (exists) {
-      showToast('warning', 'Duplicate Client Email', 'A client record with this email already exists.');
-      return;
-    }
-    try {
-      await saveClientAdmin(formData);
-      showToast('success', 'Client Profile Created');
+  const handleOpenCreate = () => {
+    setEditingClient(null);
+    setFormData(emptyClientForm);
+    setIsDirty(false);
+    setShowForm(true);
+  };
+
+  const handleOpenEdit = (client: ClientRecord) => {
+    setEditingClient(client);
+    setFormData({
+      fullName: client.fullName,
+      email: client.email,
+      phone: client.phone,
+      companyName: client.companyName,
+      country: client.country || 'India',
+      preferredContact: client.preferredContact || 'WhatsApp',
+      accountStatus: client.accountStatus || 'active',
+      userId: client.userId || '',
+      adminNotes: client.adminNotes || '',
+    });
+    setIsDirty(false);
+    setShowForm(true);
+  };
+
+  const handleAttemptCloseForm = () => {
+    if (isDirty) {
+      setShowUnsavedDialog(true);
+    } else {
       setShowForm(false);
-      setFormData({
-        fullName: '',
-        email: '',
-        phone: '',
-        companyName: '',
-        country: 'India',
-        preferredContact: 'WhatsApp',
-        accountStatus: 'active',
-        userId: '',
-        adminNotes: '',
-      });
-      await loadClients();
-    } catch (err) {
-      showToast('error', 'Failed to create client', err instanceof Error ? err.message : '');
+      setEditingClient(null);
+      setIsDirty(false);
     }
   };
 
+  const updateFormField = <K extends keyof typeof formData>(key: K, value: (typeof formData)[K]) => {
+    setFormData((prev) => ({ ...prev, [key]: value }));
+    setIsDirty(true);
+  };
+
+  const saveClientRecord = async (): Promise<boolean> => {
+    if (!formData.fullName.trim()) {
+      showToast('error', 'Name Required', 'Please enter the client full name.');
+      return false;
+    }
+    const cleanEmail = formData.email.trim().toLowerCase();
+    if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      showToast('error', 'Valid Email Required', 'Please enter a valid client email address.');
+      return false;
+    }
+
+    const duplicate = clients.some(
+      (c) => c.id !== editingClient?.id && c.email.toLowerCase() === cleanEmail
+    );
+    if (duplicate) {
+      showToast(
+        'warning',
+        'Duplicate Client Email',
+        'Another client profile already uses this email address.'
+      );
+      return false;
+    }
+
+    setSavingClient(true);
+    try {
+      await saveClientAdmin(
+        {
+          ...formData,
+          fullName: formData.fullName.trim(),
+          email: cleanEmail,
+          phone: formData.phone.trim(),
+          companyName: formData.companyName.trim(),
+          country: formData.country.trim() || 'India',
+          adminNotes: formData.adminNotes.trim(),
+        },
+        editingClient || undefined
+      );
+      showToast(
+        'success',
+        editingClient ? 'Client Profile Updated' : 'Client Profile Created',
+        `${formData.fullName.trim()} saved to database.`
+      );
+      setShowForm(false);
+      setEditingClient(null);
+      setIsDirty(false);
+      setShowUnsavedDialog(false);
+      await loadClients();
+      return true;
+    } catch (err) {
+      showToast(
+        'error',
+        editingClient ? 'Failed to update client' : 'Failed to create client',
+        err instanceof Error ? err.message : ''
+      );
+      return false;
+    } finally {
+      setSavingClient(false);
+    }
+  };
+
+  const handleSubmitForm = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await saveClientRecord();
+  };
+
+  const handleTriggerDeleteClient = async (client: ClientRecord) => {
+    try {
+      const deps = await checkClientDependenciesAdmin(client, quotations);
+      setDeleteModal({
+        isOpen: true,
+        recordType: 'Client Profile',
+        recordTitle: client.fullName,
+        recordIdentifier: client.email,
+        clientName: client.companyName || client.fullName,
+        monetaryTotal: deps.outstandingBalance > 0 ? deps.outstandingBalance : undefined,
+        statusLabel: client.accountStatus,
+        canHardDelete: deps.canHardDelete,
+        blockingReason: deps.canHardDelete
+          ? `This client profile has 0 linked projects, invoices, quotations, estimates, or payments. It can be safely deleted from the database.`
+          : `Cannot permanently delete "${client.fullName}" because this client has ${deps.blockingReasons.join(', ')}. Permanent deletion would break project and financial history. Mark the client as Deactivated / Archived instead.`,
+        dependencyItems: [
+          { label: 'Projects', count: deps.projectsCount },
+          { label: 'Invoices', count: deps.invoicesCount },
+          { label: 'Quotations', count: deps.quotationsCount },
+          { label: 'Estimates', count: deps.estimatesCount },
+          { label: 'Payments', count: deps.paymentsCount },
+          { label: 'Inquiries', count: deps.inquiriesCount },
+        ],
+        requireExplicitCheckbox: true,
+        archiveActionLabel:
+          client.accountStatus === 'deactivated'
+            ? 'Reactivate Client Profile'
+            : 'Archive / Mark Inactive Instead',
+        onConfirmArchiveOrVoid: async () => {
+          const nextStatus = client.accountStatus === 'deactivated' ? 'active' : 'deactivated';
+          await archiveClientAdmin(client, nextStatus);
+          showToast(
+            'success',
+            nextStatus === 'deactivated' ? 'Client Archived' : 'Client Reactivated',
+            `${client.fullName} is now marked as ${nextStatus}.`
+          );
+          if (viewingClient?.id === client.id) {
+            setViewingClient({ ...client, accountStatus: nextStatus });
+          }
+          await loadClients();
+        },
+        onConfirmHardDelete: async () => {
+          await deleteClientAdmin(client, quotations);
+          showToast('success', 'Client Profile Deleted', `${client.fullName} was permanently removed.`);
+          if (viewingClient?.id === client.id) setViewingClient(null);
+          await loadClients();
+        },
+        onClose: () => setDeleteModal(null),
+      });
+    } catch (err) {
+      showToast('error', 'Dependency Check Failed', err instanceof Error ? err.message : '');
+    }
+  };
+
+  const handleToggleArchiveClient = async (client: ClientRecord) => {
+    const nextStatus = client.accountStatus === 'deactivated' ? 'active' : 'deactivated';
+    try {
+      await archiveClientAdmin(client, nextStatus);
+      showToast(
+        'success',
+        nextStatus === 'deactivated' ? 'Client Marked Inactive' : 'Client Reactivated',
+        `${client.fullName} status updated to ${nextStatus}.`
+      );
+      await loadClients();
+    } catch (err) {
+      showToast('error', 'Failed to update client status', err instanceof Error ? err.message : '');
+    }
+  };
+
+  // Precompute per-client metrics
+  const clientMetricsMap = useMemo(() => {
+    const map = new Map<
+      string,
+      {
+        projectsCount: number;
+        invoicesCount: number;
+        quotationsCount: number;
+        outstandingBalance: number;
+        totalPaid: number;
+      }
+    >();
+    for (const c of clients) {
+      const emailLower = c.email.toLowerCase();
+      const cProjects = projects.filter(
+        (p) => p.clientId === c.id || (emailLower && p.clientEmail.toLowerCase() === emailLower)
+      );
+      const cInvoices = invoices.filter(
+        (i) => i.clientId === c.id || (emailLower && i.clientEmail.toLowerCase() === emailLower)
+      );
+      const cQuotes = quotations.filter(
+        (q) => q.clientId === c.id || (emailLower && q.clientEmail.toLowerCase() === emailLower)
+      );
+      const outstandingBalance = cInvoices
+        .filter((i) => i.status !== 'Void' && i.status !== 'Cancelled' && i.status !== 'Draft')
+        .reduce((sum, i) => sum + (Number(i.balanceDue) || 0), 0);
+      const totalPaid = cInvoices.reduce((sum, i) => sum + (Number(i.amountPaid) || 0), 0);
+
+      map.set(c.id, {
+        projectsCount: cProjects.length,
+        invoicesCount: cInvoices.length,
+        quotationsCount: cQuotes.length,
+        outstandingBalance,
+        totalPaid,
+      });
+    }
+    return map;
+  }, [clients, projects, invoices, quotations]);
+
   const filtered = clients.filter((c) => {
-    const q = search.toLowerCase();
-    return (
+    const matchesStatus = statusFilter === 'all' || c.accountStatus === statusFilter;
+    const q = search.toLowerCase().trim();
+    const matchesSearch =
       !q ||
       c.fullName.toLowerCase().includes(q) ||
       c.email.toLowerCase().includes(q) ||
-      c.companyName.toLowerCase().includes(q)
-    );
+      c.companyName.toLowerCase().includes(q) ||
+      c.phone.toLowerCase().includes(q);
+    return matchesStatus && matchesSearch;
   });
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="font-editorial text-2xl font-semibold text-[#172333]">Client Directory</h1>
           <p className="text-xs text-[#6E7785] mt-1">
-            Manage client profiles, portal User IDs, contact preferences, and account status.
+            Create, view, edit, archive, and safely manage client profiles, portal access, and linked financial records.
           </p>
         </div>
         <button
           type="button"
-          onClick={() => setShowForm(!showForm)}
+          onClick={handleOpenCreate}
           className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg whitespace-nowrap"
         >
           <UserPlus className="w-4 h-4" />
-          <span>{showForm ? 'Close Form' : 'New Client Profile'}</span>
+          <span>+ New Client Profile</span>
         </button>
       </div>
 
+      {/* Create / Edit Client Modal / Panel */}
       {showForm && (
-        <form onSubmit={handleCreate} className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-4">
-          <h2 className="text-base font-semibold text-[#172333]">Create Client Profile</h2>
+        <form
+          onSubmit={handleSubmitForm}
+          className="bg-white border border-[#172333] rounded-lg p-6 space-y-4 shadow-sm"
+        >
+          <div className="flex items-center justify-between border-b border-[#E2E4DF] pb-3">
+            <div>
+              <h2 className="text-base font-semibold text-[#172333]">
+                {editingClient
+                  ? `Edit Client Profile: ${editingClient.fullName}`
+                  : 'Create New Client Profile'}
+              </h2>
+              <p className="text-xs text-[#6E7785] mt-0.5">
+                {editingClient
+                  ? 'Changes to client name or email automatically synchronize across linked projects and invoices.'
+                  : 'Add a client record to link projects, quotations, estimates, and INR invoices.'}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleAttemptCloseForm}
+              className="text-xs font-medium text-[#6E7785] hover:text-[#172333]"
+            >
+              Close
+            </button>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-medium mb-1">Full Name *</label>
@@ -1251,7 +1518,8 @@ export const AdminClientsPage: React.FC = () => {
                 type="text"
                 required
                 value={formData.fullName}
-                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                onChange={(e) => updateFormField('fullName', e.target.value)}
+                placeholder="e.g. Rohan Deshmukh"
                 className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
               />
             </div>
@@ -1261,16 +1529,18 @@ export const AdminClientsPage: React.FC = () => {
                 type="email"
                 required
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                onChange={(e) => updateFormField('email', e.target.value)}
+                placeholder="client@company.com"
                 className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium mb-1">Phone / WhatsApp</label>
+              <label className="block text-xs font-medium mb-1">Phone / WhatsApp Number</label>
               <input
                 type="text"
                 value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                onChange={(e) => updateFormField('phone', e.target.value)}
+                placeholder="+91 98765 43210"
                 className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
               />
             </div>
@@ -1279,31 +1549,30 @@ export const AdminClientsPage: React.FC = () => {
               <input
                 type="text"
                 value={formData.companyName}
-                onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+                onChange={(e) => updateFormField('companyName', e.target.value)}
+                placeholder="e.g. Apex Creator Studio"
                 className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium mb-1">
-                Supabase Auth User UUID (Optional — links client portal)
-              </label>
+              <label className="block text-xs font-medium mb-1">Billing Location / Country</label>
               <input
                 type="text"
-                value={formData.userId}
-                onChange={(e) => setFormData({ ...formData, userId: e.target.value })}
-                placeholder="Paste client UUID when registered"
-                className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                value={formData.country}
+                onChange={(e) => updateFormField('country', e.target.value)}
+                placeholder="Bengaluru, Karnataka, India"
+                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium mb-1">Preferred Contact</label>
+              <label className="block text-xs font-medium mb-1">Preferred Contact Method</label>
               <select
                 value={formData.preferredContact}
                 onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    preferredContact: e.target.value as 'Email' | 'WhatsApp' | 'Phone',
-                  })
+                  updateFormField(
+                    'preferredContact',
+                    e.target.value as 'Email' | 'WhatsApp' | 'Phone'
+                  )
                 }
                 className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
               >
@@ -1312,101 +1581,493 @@ export const AdminClientsPage: React.FC = () => {
                 <option value="Phone">Phone</option>
               </select>
             </div>
+            <div>
+              <label className="block text-xs font-medium mb-1">Account Status</label>
+              <select
+                value={formData.accountStatus}
+                onChange={(e) =>
+                  updateFormField(
+                    'accountStatus',
+                    e.target.value as 'active' | 'invited' | 'deactivated'
+                  )
+                }
+                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              >
+                <option value="active">Active</option>
+                <option value="invited">Invited</option>
+                <option value="deactivated">Deactivated / Archived</option>
+              </select>
+            </div>
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-medium mb-1">
+                Supabase Auth User UUID (Optional — links Client Portal login)
+              </label>
+              <input
+                type="text"
+                value={formData.userId}
+                onChange={(e) => updateFormField('userId', e.target.value)}
+                placeholder="Paste client UUID when registered in Supabase Auth"
+                className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              />
+            </div>
           </div>
+
           <div>
-            <label className="block text-xs font-medium mb-1">Private Admin Notes (Never visible to client)</label>
+            <label className="block text-xs font-medium mb-1">
+              Private Admin Notes (Never visible to client)
+            </label>
             <textarea
               rows={2}
               value={formData.adminNotes}
-              onChange={(e) => setFormData({ ...formData, adminNotes: e.target.value })}
+              onChange={(e) => updateFormField('adminNotes', e.target.value)}
+              placeholder="Internal notes on brand guidelines, GSTIN, billing preferences..."
               className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
             />
           </div>
-          <button
-            type="submit"
-            className="px-4 py-2 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg"
-          >
-            Save Client Profile
-          </button>
+
+          <div className="flex items-center justify-end gap-3 pt-2 border-t border-[#E2E4DF]">
+            <button
+              type="button"
+              disabled={savingClient}
+              onClick={handleAttemptCloseForm}
+              className="px-4 py-2 text-xs font-medium text-[#6E7785] hover:text-[#172333]"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={savingClient}
+              className="px-5 py-2 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg disabled:opacity-50"
+            >
+              {savingClient
+                ? 'Saving...'
+                : editingClient
+                ? 'Save Client Changes'
+                : 'Save Client Profile'}
+            </button>
+          </div>
         </form>
       )}
 
-      <div className="relative max-w-sm">
-        <Search className="w-4 h-4 text-[#6E7785] absolute left-3 top-2.5" />
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search clients by name, brand, or email..."
-          className="w-full pl-9 pr-3 py-2 text-xs bg-white border border-[#E2E4DF] rounded-lg"
-        />
+      {/* Search & Status Filter Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-1 p-1 bg-[#E2E4DF]/60 rounded-lg w-fit">
+          {(
+            [
+              { id: 'all', label: `All (${clients.length})` },
+              {
+                id: 'active',
+                label: `Active (${clients.filter((c) => c.accountStatus === 'active').length})`,
+              },
+              {
+                id: 'invited',
+                label: `Invited (${clients.filter((c) => c.accountStatus === 'invited').length})`,
+              },
+              {
+                id: 'deactivated',
+                label: `Archived / Inactive (${
+                  clients.filter((c) => c.accountStatus === 'deactivated').length
+                })`,
+              },
+            ] as const
+          ).map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setStatusFilter(tab.id)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                statusFilter === tab.id
+                  ? 'bg-white text-[#172333] shadow-xs font-semibold'
+                  : 'text-[#6E7785] hover:text-[#172333]'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="relative w-full sm:w-80">
+          <Search className="w-4 h-4 text-[#6E7785] absolute left-3 top-2.5" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search name, brand, email, phone..."
+            className="w-full pl-9 pr-3 py-2 text-xs bg-white border border-[#E2E4DF] rounded-lg"
+          />
+        </div>
       </div>
 
+      {/* Clients Table */}
       <div className="bg-white border border-[#E2E4DF] rounded-lg overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-[#E2E4DF] text-[11px] font-semibold text-[#6E7785]">
-              <th className="py-3 px-4">Client Name</th>
-              <th className="py-3 px-4">Brand / Company</th>
-              <th className="py-3 px-4">Email & Phone</th>
-              <th className="py-3 px-4">Preferred Contact</th>
-              <th className="py-3 px-4">Account Status</th>
-              <th className="py-3 px-4 text-right">Action</th>
+              <th className="py-3 px-4">Client Name & Brand</th>
+              <th className="py-3 px-4">Email & WhatsApp / Phone</th>
+              <th className="py-3 px-4">Status</th>
+              <th className="py-3 px-4 text-center">Related Projects</th>
+              <th className="py-3 px-4 text-right">Outstanding Balance</th>
+              <th className="py-3 px-4">Created</th>
+              <th className="py-3 px-4 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#E2E4DF] text-xs">
-            {filtered.length === 0 ? (
+            {loading ? (
               <tr>
-                <td colSpan={6} className="py-8 text-center text-[#6E7785]">
-                  No client profiles found.
+                <td colSpan={7} className="py-8 text-center text-[#6E7785]">
+                  Loading client directory...
+                </td>
+              </tr>
+            ) : filtered.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="py-8 text-center text-[#6E7785]">
+                  No client profiles match the current filter.
                 </td>
               </tr>
             ) : (
-              filtered.map((c) => (
-                <tr key={c.id} className="hover:bg-[#F5F5F1]/50">
-                  <td className="py-3.5 px-4 font-semibold text-[#172333]">{c.fullName}</td>
-                  <td className="py-3.5 px-4 text-[#6E7785]">{c.companyName || '—'}</td>
-                  <td className="py-3.5 px-4 text-[#6E7785]">
-                    {c.email}
-                    {c.phone ? ` · ${c.phone}` : ''}
-                  </td>
-                  <td className="py-3.5 px-4 text-[#6E7785]">{c.preferredContact}</td>
-                  <td className="py-3.5 px-4 font-medium text-[#172333]">{c.accountStatus}</td>
-                  <td className="py-3.5 px-4 text-right">
-                    <Link
-                      to={`/admin/clients/${c.id}`}
-                      className="font-semibold text-[#172333] hover:text-[#F18A45]"
-                    >
-                      Manage →
-                    </Link>
-                  </td>
-                </tr>
-              ))
+              filtered.map((c) => {
+                const metrics = clientMetricsMap.get(c.id) || {
+                  projectsCount: 0,
+                  invoicesCount: 0,
+                  quotationsCount: 0,
+                  outstandingBalance: 0,
+                  totalPaid: 0,
+                };
+                return (
+                  <tr key={c.id} className="hover:bg-[#F5F5F1]/50">
+                    <td className="py-3.5 px-4">
+                      <Link
+                        to={`/admin/clients/${c.id}`}
+                        className="font-semibold text-[#172333] hover:text-[#F18A45]"
+                      >
+                        {c.fullName}
+                      </Link>
+                      <p className="text-[11px] text-[#6E7785]">
+                        {c.companyName || 'Independent Client'} · {c.country || 'India'}
+                      </p>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#6E7785]">
+                      <span className="text-[#172333]">{c.email}</span>
+                      <span className="block text-[11px]">
+                        {c.phone || 'No phone'} · Prefers {c.preferredContact}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <span
+                        className={`font-semibold ${
+                          c.accountStatus === 'active'
+                            ? 'text-[#26734D]'
+                            : c.accountStatus === 'deactivated'
+                            ? 'text-[#B93832]'
+                            : 'text-[#A96518]'
+                        }`}
+                      >
+                        {c.accountStatus === 'active'
+                          ? 'Active'
+                          : c.accountStatus === 'deactivated'
+                          ? 'Archived'
+                          : 'Invited'}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 text-center font-mono">
+                      <span className="font-semibold text-[#172333]">{metrics.projectsCount}</span>
+                      {metrics.quotationsCount > 0 && (
+                        <span className="block text-[10px] text-[#6E7785]">
+                          {metrics.quotationsCount} quote(s)
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3.5 px-4 text-right font-mono tabular-nums">
+                      <span
+                        className={
+                          metrics.outstandingBalance > 0
+                            ? 'font-semibold text-[#B93832]'
+                            : 'text-[#6E7785]'
+                        }
+                      >
+                        {formatINR(metrics.outstandingBalance)}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#6E7785] whitespace-nowrap">
+                      {formatDate(c.createdAt)}
+                    </td>
+                    <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                      <RecordActionBar
+                        onView={() => setViewingClient(c)}
+                        onEdit={() => handleOpenEdit(c)}
+                        onArchiveOrVoid={() => handleToggleArchiveClient(c)}
+                        archiveLabel={c.accountStatus === 'deactivated' ? 'Activate' : 'Archive'}
+                        onDelete={() => handleTriggerDeleteClient(c)}
+                      />
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
       </div>
+
+      {/* Quick View Client Details Modal */}
+      {viewingClient && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#172333]/65 p-4 overflow-y-auto"
+        >
+          <div className="bg-white border border-[#E2E4DF] rounded-lg max-w-3xl w-full p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[#E2E4DF] pb-4">
+              <div>
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#F18A45]">
+                  Client Profile Inspector
+                </span>
+                <h2 className="font-editorial text-xl font-semibold text-[#172333] mt-0.5">
+                  {viewingClient.fullName}
+                </h2>
+                <p className="text-xs text-[#6E7785]">
+                  {viewingClient.companyName || 'Independent Client'} · {viewingClient.email} ·{' '}
+                  {viewingClient.phone || 'No phone'}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const target = viewingClient;
+                    setViewingClient(null);
+                    handleOpenEdit(target);
+                  }}
+                  className="px-3 py-1.5 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg"
+                >
+                  Edit Profile
+                </button>
+                <Link
+                  to={`/admin/clients/${viewingClient.id}`}
+                  className="px-3 py-1.5 text-xs font-semibold text-[#172333] bg-[#F5F5F1] hover:bg-[#E2E4DF] rounded-lg"
+                >
+                  Full Page →
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setViewingClient(null)}
+                  className="px-2.5 py-1.5 text-xs text-[#6E7785] hover:text-[#172333]"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+
+            {(() => {
+              const emailLower = viewingClient.email.toLowerCase();
+              const cProjects = projects.filter(
+                (p) =>
+                  p.clientId === viewingClient.id ||
+                  (emailLower && p.clientEmail.toLowerCase() === emailLower)
+              );
+              const cInvoices = invoices.filter(
+                (i) =>
+                  i.clientId === viewingClient.id ||
+                  (emailLower && i.clientEmail.toLowerCase() === emailLower)
+              );
+              const cQuotes = quotations.filter(
+                (q) =>
+                  q.clientId === viewingClient.id ||
+                  (emailLower && q.clientEmail.toLowerCase() === emailLower)
+              );
+              const cInquiries = inquiries.filter(
+                (inq) => emailLower && inq.email.toLowerCase() === emailLower
+              );
+              const totalBilled = cInvoices
+                .filter((i) => i.status !== 'Void' && i.status !== 'Cancelled')
+                .reduce((s, i) => s + i.total, 0);
+              const totalPaid = cInvoices.reduce((s, i) => s + i.amountPaid, 0);
+              const balanceDue = cInvoices
+                .filter((i) => i.status !== 'Void' && i.status !== 'Cancelled')
+                .reduce((s, i) => s + i.balanceDue, 0);
+
+              return (
+                <div className="space-y-5 text-xs">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="p-3 bg-[#F5F5F1] rounded-lg">
+                      <p className="text-[#6E7785]">Account Status</p>
+                      <p className="font-semibold text-[#172333] mt-0.5 capitalize">
+                        {viewingClient.accountStatus}
+                      </p>
+                    </div>
+                    <div className="p-3 bg-[#F5F5F1] rounded-lg">
+                      <p className="text-[#6E7785]">Total Billed</p>
+                      <p className="font-mono font-semibold text-[#172333] mt-0.5">
+                        {formatINR(totalBilled)}
+                      </p>
+                    </div>
+                    <div className="p-3 bg-[#F5F5F1] rounded-lg">
+                      <p className="text-[#6E7785]">Total Paid</p>
+                      <p className="font-mono font-semibold text-[#26734D] mt-0.5">
+                        {formatINR(totalPaid)}
+                      </p>
+                    </div>
+                    <div className="p-3 bg-[#F5F5F1] rounded-lg">
+                      <p className="text-[#6E7785]">Balance Due</p>
+                      <p className="font-mono font-semibold text-[#B93832] mt-0.5">
+                        {formatINR(balanceDue)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {viewingClient.adminNotes && (
+                    <div className="p-3.5 bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg">
+                      <p className="font-semibold text-[#172333] mb-1">Private Admin Notes:</p>
+                      <p className="text-[#6E7785] whitespace-pre-wrap">{viewingClient.adminNotes}</p>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="border border-[#E2E4DF] rounded-lg p-4 space-y-2">
+                      <p className="font-semibold text-[#172333]">
+                        Related Projects ({cProjects.length})
+                      </p>
+                      {cProjects.length === 0 ? (
+                        <p className="text-[#6E7785]">No projects linked yet.</p>
+                      ) : (
+                        cProjects.map((p) => (
+                          <div
+                            key={p.id}
+                            className="flex items-center justify-between py-1.5 border-b border-[#E2E4DF] last:border-0"
+                          >
+                            <Link
+                              to={`/admin/projects/${p.id}`}
+                              className="font-semibold text-[#172333] hover:text-[#F18A45]"
+                            >
+                              {p.title}
+                            </Link>
+                            <span className="text-[#6E7785]">
+                              {p.status} · {formatINR(p.budget)}
+                            </span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    <div className="border border-[#E2E4DF] rounded-lg p-4 space-y-2">
+                      <p className="font-semibold text-[#172333]">
+                        Invoices ({cInvoices.length}) & Quotes/Estimates ({cQuotes.length})
+                      </p>
+                      {cInvoices.map((inv) => (
+                        <div
+                          key={inv.id}
+                          className="flex items-center justify-between py-1 border-b border-[#E2E4DF] last:border-0"
+                        >
+                          <span className="font-mono font-semibold">{inv.invoiceNumber}</span>
+                          <span className="font-mono">
+                            {formatINR(inv.total)} ({inv.status})
+                          </span>
+                        </div>
+                      ))}
+                      {cQuotes.map((q) => (
+                        <div
+                          key={q.id}
+                          className="flex items-center justify-between py-1 border-b border-[#E2E4DF] last:border-0"
+                        >
+                          <span className="font-mono text-[#6E7785]">
+                            {q.quotationNumber} ({inferQuotationDocumentType(q)})
+                          </span>
+                          <span className="font-mono">
+                            {formatINR(q.total)} ({q.status})
+                          </span>
+                        </div>
+                      ))}
+                      {cInvoices.length === 0 && cQuotes.length === 0 && (
+                        <p className="text-[#6E7785]">No invoices or quotations yet.</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {cInquiries.length > 0 && (
+                    <div className="border border-[#E2E4DF] rounded-lg p-4 space-y-1.5">
+                      <p className="font-semibold text-[#172333]">
+                        Original Website Inquiries ({cInquiries.length})
+                      </p>
+                      {cInquiries.map((inq) => (
+                        <p key={inq.id} className="text-[#6E7785]">
+                          {inq.serviceRequired} · {inq.budgetRange} · Status: {inq.status} (
+                          {formatDate(inq.createdAt)})
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
+      {/* Unsaved Changes Protection Modal */}
+      <UnsavedChangesDialog
+        isOpen={showUnsavedDialog}
+        recordLabel={editingClient ? `Client "${editingClient.fullName}"` : 'this new client profile'}
+        onSaveAndClose={async () => {
+          await saveClientRecord();
+        }}
+        onDiscardChanges={() => {
+          setShowUnsavedDialog(false);
+          setShowForm(false);
+          setEditingClient(null);
+          setIsDirty(false);
+        }}
+        onContinueEditing={() => setShowUnsavedDialog(false)}
+      />
+
+      {/* Dependency-Safe Delete / Archive Modal */}
+      {deleteModal && <DependencySafeDeleteModal {...deleteModal} />}
     </div>
   );
 };
 
 export const AdminClientDetailsPage: React.FC = () => {
   const { clientId } = useParams<{ clientId: string }>();
+  const navigate = useNavigate();
   const { showToast } = useToast();
   const [client, setClient] = useState<ClientRecord | null>(null);
   const [projects, setProjects] = useState<ProjectRecord[]>([]);
   const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
+  const [quotations, setQuotations] = useState<QuotationRecord[]>([]);
+  const [inquiries, setInquiries] = useState<InquiryRecord[]>([]);
+  const [isDirty, setIsDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [deleteModal, setDeleteModal] = useState<SafeDeleteModalConfig | null>(null);
 
   const loadData = useCallback(async () => {
-    const [allClients, allProjects, allInvoices] = await Promise.all([
+    const [allClients, allProjects, allInvoices, allQuotes, allInquiries] = await Promise.all([
       fetchAllClientsAdmin(),
-      fetchAllProjectsAdmin(),
-      fetchAllInvoicesAdmin(),
+      fetchAllProjectsAdmin().catch(() => []),
+      fetchAllInvoicesAdmin().catch(() => []),
+      fetchAllQuotationsAdmin().catch(() => []),
+      fetchAllInquiriesAdmin().catch(() => []),
     ]);
     const found = allClients.find((c) => c.id === clientId) || null;
     setClient(found);
-    setProjects(allProjects.filter((p) => p.clientId === clientId));
-    setInvoices(allInvoices.filter((i) => i.clientId === clientId));
+    setIsDirty(false);
+    const emailLower = (found?.email || '').toLowerCase();
+    setProjects(
+      allProjects.filter(
+        (p) => p.clientId === clientId || (emailLower && p.clientEmail.toLowerCase() === emailLower)
+      )
+    );
+    setInvoices(
+      allInvoices.filter(
+        (i) => i.clientId === clientId || (emailLower && i.clientEmail.toLowerCase() === emailLower)
+      )
+    );
+    setQuotations(
+      allQuotes.filter(
+        (q) => q.clientId === clientId || (emailLower && q.clientEmail.toLowerCase() === emailLower)
+      )
+    );
+    setInquiries(
+      allInquiries.filter((inq) => emailLower && inq.email.toLowerCase() === emailLower)
+    );
   }, [clientId]);
 
   useEffect(() => {
@@ -1417,45 +2078,170 @@ export const AdminClientDetailsPage: React.FC = () => {
     return <div className="text-xs text-[#6E7785] py-12">Client record not found.</div>;
   }
 
+  const updateField = <K extends keyof ClientRecord>(key: K, val: ClientRecord[K]) => {
+    setClient((prev) => (prev ? { ...prev, [key]: val } : prev));
+    setIsDirty(true);
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!client.fullName.trim() || !client.email.trim()) {
+      showToast('error', 'Required Fields', 'Client full name and email are required.');
+      return;
+    }
+    setSaving(true);
     try {
       await saveClientAdmin(client, client);
-      showToast('success', 'Client Profile Updated');
+      setIsDirty(false);
+      showToast('success', 'Client Profile Updated', `${client.fullName} saved.`);
+      await loadData();
     } catch (err) {
       showToast('error', 'Update Failed', err instanceof Error ? err.message : '');
+    } finally {
+      setSaving(false);
     }
   };
 
+  const handleOpenDelete = async () => {
+    const deps = await checkClientDependenciesAdmin(client, quotations);
+    setDeleteModal({
+      isOpen: true,
+      recordType: 'Client Profile',
+      recordTitle: client.fullName,
+      recordIdentifier: client.email,
+      clientName: client.companyName || client.fullName,
+      monetaryTotal: deps.outstandingBalance > 0 ? deps.outstandingBalance : undefined,
+      statusLabel: client.accountStatus,
+      canHardDelete: deps.canHardDelete,
+      blockingReason: deps.canHardDelete
+        ? `This client profile has 0 linked records and can be permanently removed.`
+        : `Cannot permanently delete "${client.fullName}" because this client has ${deps.blockingReasons.join(', ')}. Mark the client as Archived / Inactive instead.`,
+      dependencyItems: [
+        { label: 'Projects', count: deps.projectsCount },
+        { label: 'Invoices', count: deps.invoicesCount },
+        { label: 'Quotations', count: deps.quotationsCount },
+        { label: 'Estimates', count: deps.estimatesCount },
+        { label: 'Payments', count: deps.paymentsCount },
+        { label: 'Inquiries', count: deps.inquiriesCount },
+      ],
+      requireExplicitCheckbox: true,
+      archiveActionLabel:
+        client.accountStatus === 'deactivated'
+          ? 'Reactivate Client Profile'
+          : 'Archive / Mark Inactive Instead',
+      onConfirmArchiveOrVoid: async () => {
+        const nextStatus = client.accountStatus === 'deactivated' ? 'active' : 'deactivated';
+        await archiveClientAdmin(client, nextStatus);
+        showToast('success', 'Client Status Updated', `Marked as ${nextStatus}.`);
+        await loadData();
+      },
+      onConfirmHardDelete: async () => {
+        await deleteClientAdmin(client, quotations);
+        showToast('success', 'Client Profile Deleted');
+        navigate('/admin/clients');
+      },
+      onClose: () => setDeleteModal(null),
+    });
+  };
+
+  const totalBilled = invoices
+    .filter((i) => i.status !== 'Void' && i.status !== 'Cancelled')
+    .reduce((sum, i) => sum + i.total, 0);
+  const totalPaid = invoices.reduce((sum, i) => sum + i.amountPaid, 0);
+  const outstandingBalance = invoices
+    .filter((i) => i.status !== 'Void' && i.status !== 'Cancelled')
+    .reduce((sum, i) => sum + i.balanceDue, 0);
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <Link to="/admin/clients" className="text-xs text-[#6E7785] hover:text-[#172333]">
-            ← Back to Clients
+            ← Back to Client Directory
           </Link>
-          <h1 className="font-editorial text-2xl font-semibold text-[#172333] mt-1">{client.fullName}</h1>
+          <h1 className="font-editorial text-2xl font-semibold text-[#172333] mt-1">
+            {client.fullName}
+          </h1>
+          <p className="text-xs text-[#6E7785]">
+            {client.companyName || 'Independent Client'} · {client.email} · {client.phone || 'No phone'}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={async () => {
+              const nextStatus = client.accountStatus === 'deactivated' ? 'active' : 'deactivated';
+              await archiveClientAdmin(client, nextStatus);
+              showToast('success', `Client Marked ${nextStatus}`);
+              await loadData();
+            }}
+            className="px-3.5 py-2 text-xs font-semibold text-[#172333] bg-white border border-[#E2E4DF] hover:border-[#172333] rounded-lg"
+          >
+            {client.accountStatus === 'deactivated' ? 'Reactivate Client' : 'Archive / Mark Inactive'}
+          </button>
+          <button
+            type="button"
+            onClick={handleOpenDelete}
+            className="px-3.5 py-2 text-xs font-semibold text-white bg-[#B93832] hover:bg-[#992B26] rounded-lg"
+          >
+            Delete Client
+          </button>
+        </div>
+      </div>
+
+      {/* Financial Summary Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+        <div className="bg-white border border-[#E2E4DF] rounded-lg p-4">
+          <p className="text-[#6E7785]">Total Projects</p>
+          <p className="text-lg font-mono font-semibold text-[#172333] mt-1">{projects.length}</p>
+        </div>
+        <div className="bg-white border border-[#E2E4DF] rounded-lg p-4">
+          <p className="text-[#6E7785]">Total Billed (INR)</p>
+          <p className="text-lg font-mono font-semibold text-[#172333] mt-1">
+            {formatINR(totalBilled)}
+          </p>
+        </div>
+        <div className="bg-white border border-[#E2E4DF] rounded-lg p-4">
+          <p className="text-[#6E7785]">Total Paid (INR)</p>
+          <p className="text-lg font-mono font-semibold text-[#26734D] mt-1">
+            {formatINR(totalPaid)}
+          </p>
+        </div>
+        <div className="bg-white border border-[#E2E4DF] rounded-lg p-4">
+          <p className="text-[#6E7785]">Outstanding Balance</p>
+          <p className="text-lg font-mono font-semibold text-[#B93832] mt-1">
+            {formatINR(outstandingBalance)}
+          </p>
         </div>
       </div>
 
       <form onSubmit={handleSave} className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-4">
-        <h2 className="text-base font-semibold text-[#172333]">Client Profile & Portal Access</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-semibold text-[#172333]">
+            Edit Client Profile & Portal Access
+          </h2>
+          {isDirty && (
+            <span className="text-[11px] font-semibold text-[#A96518]">Unsaved edits</span>
+          )}
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <label className="block text-xs font-medium mb-1">Full Name</label>
+            <label className="block text-xs font-medium mb-1">Full Name *</label>
             <input
               type="text"
+              required
               value={client.fullName}
-              onChange={(e) => setClient({ ...client, fullName: e.target.value })}
+              onChange={(e) => updateField('fullName', e.target.value)}
               className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium mb-1">Email</label>
+            <label className="block text-xs font-medium mb-1">Email *</label>
             <input
               type="email"
+              required
               value={client.email}
-              onChange={(e) => setClient({ ...client, email: e.target.value })}
+              onChange={(e) => updateField('email', e.target.value)}
               className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
             />
           </div>
@@ -1464,7 +2250,7 @@ export const AdminClientDetailsPage: React.FC = () => {
             <input
               type="text"
               value={client.phone}
-              onChange={(e) => setClient({ ...client, phone: e.target.value })}
+              onChange={(e) => updateField('phone', e.target.value)}
               className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
             />
           </div>
@@ -1473,16 +2259,42 @@ export const AdminClientDetailsPage: React.FC = () => {
             <input
               type="text"
               value={client.companyName}
-              onChange={(e) => setClient({ ...client, companyName: e.target.value })}
+              onChange={(e) => updateField('companyName', e.target.value)}
               className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
             />
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1">Location / Billing Address</label>
+            <input
+              type="text"
+              value={client.country || 'India'}
+              onChange={(e) => updateField('country', e.target.value)}
+              className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1">Preferred Contact</label>
+            <select
+              value={client.preferredContact}
+              onChange={(e) =>
+                updateField(
+                  'preferredContact',
+                  e.target.value as 'Email' | 'WhatsApp' | 'Phone'
+                )
+              }
+              className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+            >
+              <option value="WhatsApp">WhatsApp</option>
+              <option value="Email">Email</option>
+              <option value="Phone">Phone</option>
+            </select>
           </div>
           <div>
             <label className="block text-xs font-medium mb-1">Portal User UID</label>
             <input
               type="text"
               value={client.userId}
-              onChange={(e) => setClient({ ...client, userId: e.target.value })}
+              onChange={(e) => updateField('userId', e.target.value)}
               placeholder="Authenticated Supabase User UUID"
               className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
             />
@@ -1492,16 +2304,16 @@ export const AdminClientDetailsPage: React.FC = () => {
             <select
               value={client.accountStatus}
               onChange={(e) =>
-                setClient({
-                  ...client,
-                  accountStatus: e.target.value as 'active' | 'invited' | 'deactivated',
-                })
+                updateField(
+                  'accountStatus',
+                  e.target.value as 'active' | 'invited' | 'deactivated'
+                )
               }
               className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
             >
               <option value="active">Active</option>
               <option value="invited">Invited</option>
-              <option value="deactivated">Deactivated</option>
+              <option value="deactivated">Deactivated / Archived</option>
             </select>
           </div>
         </div>
@@ -1510,53 +2322,134 @@ export const AdminClientDetailsPage: React.FC = () => {
           <textarea
             rows={3}
             value={client.adminNotes}
-            onChange={(e) => setClient({ ...client, adminNotes: e.target.value })}
+            onChange={(e) => updateField('adminNotes', e.target.value)}
             className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
           />
         </div>
-        <button
-          type="submit"
-          className="px-4 py-2 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg"
-        >
-          Save Changes
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="submit"
+            disabled={saving}
+            className="px-4 py-2 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg disabled:opacity-50"
+          >
+            {saving ? 'Saving...' : 'Save Changes'}
+          </button>
+          {isDirty && (
+            <button
+              type="button"
+              onClick={() => loadData()}
+              className="px-3.5 py-2 text-xs font-medium text-[#6E7785] hover:text-[#172333]"
+            >
+              Discard Unsaved Edits
+            </button>
+          )}
+        </div>
       </form>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white border border-[#E2E4DF] rounded-lg p-6">
           <h3 className="text-sm font-semibold text-[#172333] mb-3">
             Associated Projects ({projects.length})
           </h3>
-          {projects.map((p) => (
-            <div key={p.id} className="py-2 border-b border-[#E2E4DF] flex justify-between text-xs">
-              <Link to={`/admin/projects/${p.id}`} className="font-semibold hover:text-[#F18A45]">
-                {p.title}
-              </Link>
-              <span>{p.status}</span>
-            </div>
-          ))}
+          {projects.length === 0 ? (
+            <p className="text-xs text-[#6E7785]">No projects linked to this client.</p>
+          ) : (
+            projects.map((p) => (
+              <div
+                key={p.id}
+                className="py-2 border-b border-[#E2E4DF] last:border-0 flex justify-between text-xs"
+              >
+                <Link to={`/admin/projects/${p.id}`} className="font-semibold hover:text-[#F18A45]">
+                  {p.title}
+                </Link>
+                <span className="text-[#6E7785]">
+                  {p.status} · {formatINR(p.budget)}
+                </span>
+              </div>
+            ))
+          )}
+        </div>
+
+        <div className="bg-white border border-[#E2E4DF] rounded-lg p-6">
+          <h3 className="text-sm font-semibold text-[#172333] mb-3">
+            Quotations & Estimates ({quotations.length})
+          </h3>
+          {quotations.length === 0 ? (
+            <p className="text-xs text-[#6E7785]">No quotations or estimates for this client.</p>
+          ) : (
+            quotations.map((q) => (
+              <div
+                key={q.id}
+                className="py-2 border-b border-[#E2E4DF] last:border-0 flex justify-between text-xs"
+              >
+                <Link
+                  to="/admin/quotations"
+                  className="font-mono font-semibold hover:text-[#F18A45]"
+                >
+                  {q.quotationNumber}
+                </Link>
+                <span className="font-mono tabular-nums">
+                  {formatINR(q.total)} ({q.status})
+                </span>
+              </div>
+            ))
+          )}
         </div>
 
         <div className="bg-white border border-[#E2E4DF] rounded-lg p-6">
           <h3 className="text-sm font-semibold text-[#172333] mb-3">
             Client Invoices ({invoices.length})
           </h3>
-          {invoices.map((inv) => (
-            <div key={inv.id} className="py-2 border-b border-[#E2E4DF] flex justify-between text-xs">
-              <span className="font-mono font-semibold">{inv.invoiceNumber}</span>
-              <span className="font-mono tabular-nums">
-                {formatINR(inv.total)} ({inv.status})
-              </span>
-            </div>
-          ))}
+          {invoices.length === 0 ? (
+            <p className="text-xs text-[#6E7785]">No invoices issued to this client.</p>
+          ) : (
+            invoices.map((inv) => (
+              <div
+                key={inv.id}
+                className="py-2 border-b border-[#E2E4DF] last:border-0 flex justify-between text-xs"
+              >
+                <Link
+                  to="/admin/invoices"
+                  className="font-mono font-semibold hover:text-[#F18A45]"
+                >
+                  {inv.invoiceNumber}
+                </Link>
+                <span className="font-mono tabular-nums">
+                  {formatINR(inv.total)} ({inv.status})
+                </span>
+              </div>
+            ))
+          )}
         </div>
       </div>
+
+      {inquiries.length > 0 && (
+        <div className="bg-white border border-[#E2E4DF] rounded-lg p-6">
+          <h3 className="text-sm font-semibold text-[#172333] mb-3">
+            Related Inquiries ({inquiries.length})
+          </h3>
+          <div className="divide-y divide-[#E2E4DF] text-xs">
+            {inquiries.map((inq) => (
+              <div key={inq.id} className="py-2.5 flex items-center justify-between">
+                <div>
+                  <span className="font-semibold text-[#172333]">{inq.serviceRequired}</span>
+                  <span className="text-[#6E7785]"> · {inq.budgetRange}</span>
+                  <p className="text-[#6E7785] mt-0.5">{inq.description}</p>
+                </div>
+                <span className="font-medium text-[#172333]">{inq.status}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {deleteModal && <DependencySafeDeleteModal {...deleteModal} />}
     </div>
   );
 };
 
 // ============================================================================
-// 4. ADMIN PROJECTS & PROJECT DETAILS PAGES
+// 4. ADMIN PROJECTS & PROJECT DETAILS PAGES (COMPLETE CRUD & DEPENDENCY SAFETY)
 // ============================================================================
 const PROJECT_STATUSES: ProjectStatus[] = [
   'Inquiry',
@@ -1572,15 +2465,30 @@ const PROJECT_STATUSES: ProjectStatus[] = [
 
 export const AdminProjectsPage: React.FC = () => {
   const { showToast } = useToast();
+  const navigate = useNavigate();
+
   const [projects, setProjects] = useState<ProjectRecord[]>([]);
   const [clients, setClients] = useState<ClientRecord[]>([]);
-  const [showCreate, setShowCreate] = useState(false);
+  const [quotations, setQuotations] = useState<QuotationRecord[]>([]);
+  const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
+  const [tasks, setTasks] = useState<TaskRecord[]>([]);
+  const [files, setFiles] = useState<DeliverableFile[]>([]);
+
+  const [showBuilder, setShowBuilder] = useState(false);
+  const [editingProject, setEditingProject] = useState<ProjectRecord | null>(null);
+  const [viewingProject, setViewingProject] = useState<ProjectRecord | null>(null);
+  const [isDirty, setIsDirty] = useState(false);
+  const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
+  const [savingProject, setSavingProject] = useState(false);
+  const [deleteModal, setDeleteModal] = useState<SafeDeleteModalConfig | null>(null);
+
   const [statusFilter, setStatusFilter] = useState<string>('All');
+  const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
   const [milestoneTemplateId, setMilestoneTemplateId] = useState<string>('tpl-yt-video');
 
   const today = new Date().toISOString().split('T')[0];
-  const [form, setForm] = useState({
+  const emptyForm = {
     clientId: '',
     title: '',
     serviceType: 'Social Media Post Design',
@@ -1594,12 +2502,25 @@ export const AdminProjectsPage: React.FC = () => {
     progress: 10,
     latestUpdate: 'Project brief confirmed and queued for design.',
     internalNotes: '',
-  });
+  };
+
+  const [form, setForm] = useState(emptyForm);
 
   const loadData = useCallback(async () => {
-    const [p, c] = await Promise.all([fetchAllProjectsAdmin(), fetchAllClientsAdmin()]);
+    const [p, c, q, inv, t, f] = await Promise.all([
+      fetchAllProjectsAdmin(),
+      fetchAllClientsAdmin().catch(() => []),
+      fetchAllQuotationsAdmin().catch(() => []),
+      fetchAllInvoicesAdmin().catch(() => []),
+      fetchAllTasksAdmin().catch(() => []),
+      fetchAllFilesAdmin().catch(() => []),
+    ]);
     setProjects(p);
     setClients(c);
+    setQuotations(q);
+    setInvoices(inv);
+    setTasks(t);
+    setFiles(f);
     if (c.length > 0 && !form.clientId) {
       setForm((prev) => ({ ...prev, clientId: c[0].id }));
     }
@@ -1609,40 +2530,97 @@ export const AdminProjectsPage: React.FC = () => {
     loadData();
   }, [loadData]);
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const targetClient = clients.find((c) => c.id === form.clientId);
-    if (!targetClient) {
-      showToast('error', 'Select a Client', 'Please create a client profile first.');
-      return;
+  const handleOpenCreate = () => {
+    setEditingProject(null);
+    setForm({
+      ...emptyForm,
+      clientId: clients[0]?.id || '',
+    });
+    setIsDirty(false);
+    setShowBuilder(true);
+  };
+
+  const handleOpenEdit = async (proj: ProjectRecord) => {
+    const notes = await fetchProjectInternalNoteAdmin(proj.id).catch(() => '');
+    setEditingProject(proj);
+    setForm({
+      clientId: proj.clientId || clients.find((c) => c.email === proj.clientEmail)?.id || '',
+      title: proj.title,
+      serviceType: proj.serviceType,
+      description: proj.description,
+      brief: proj.brief,
+      budget: proj.budget,
+      startDate: proj.startDate || today,
+      deadline: proj.deadline || today,
+      priority: proj.priority,
+      status: proj.status,
+      progress: proj.progress,
+      latestUpdate: proj.latestUpdate,
+      internalNotes: notes,
+    });
+    setIsDirty(false);
+    setShowBuilder(true);
+  };
+
+  const updateFormField = <K extends keyof typeof form>(key: K, val: (typeof form)[K]) => {
+    setForm((prev) => ({ ...prev, [key]: val }));
+    setIsDirty(true);
+  };
+
+  const handleAttemptCloseBuilder = () => {
+    if (isDirty) {
+      setShowUnsavedDialog(true);
+    } else {
+      setShowBuilder(false);
+      setEditingProject(null);
+      setIsDirty(false);
     }
+  };
+
+  const saveProjectRecord = async (): Promise<boolean> => {
+    if (!form.title.trim()) {
+      showToast('error', 'Project Title Required', 'Please enter a title for the project.');
+      return false;
+    }
+    const targetClient = clients.find((c) => c.id === form.clientId);
+    if (!targetClient && !editingProject) {
+      showToast('error', 'Select a Client', 'Please create and select a client profile first.');
+      return false;
+    }
+    if (Number(form.budget) < 0) {
+      showToast('error', 'Invalid Budget', 'Project budget cannot be negative.');
+      return false;
+    }
+
+    setSavingProject(true);
     try {
       const projectId = await saveProjectAdmin(
         {
-          clientId: targetClient.id,
-          clientUserId: targetClient.userId || '',
-          clientName: targetClient.fullName,
-          clientEmail: targetClient.email,
-          title: form.title,
-          description: form.description,
-          serviceType: form.serviceType,
-          brief: form.brief,
-          budget: Number(form.budget) || 0,
+          clientId: targetClient?.id || editingProject?.clientId || '',
+          clientUserId: targetClient?.userId || editingProject?.clientUserId || '',
+          clientName: targetClient?.fullName || editingProject?.clientName || 'Studio Client',
+          clientEmail: targetClient?.email || editingProject?.clientEmail || '',
+          title: form.title.trim(),
+          description: form.description.trim(),
+          serviceType: form.serviceType.trim(),
+          brief: form.brief.trim(),
+          budget: Math.max(0, Number(form.budget) || 0),
           startDate: form.startDate,
           deadline: form.deadline,
           priority: form.priority,
           status: form.status,
-          progress: Number(form.progress) || 0,
-          latestUpdate: form.latestUpdate,
+          progress: Math.min(100, Math.max(0, Number(form.progress) || 0)),
+          latestUpdate: form.latestUpdate.trim(),
         },
-        form.internalNotes
+        form.internalNotes,
+        editingProject || undefined
       );
 
-      if (milestoneTemplateId && milestoneTemplateId !== 'none') {
+      if (!editingProject && milestoneTemplateId && milestoneTemplateId !== 'none') {
         const templateTasks = buildTasksFromMilestoneTemplate(
           milestoneTemplateId,
           projectId,
-          targetClient.userId || '',
+          targetClient?.userId || '',
           form.startDate
         );
         for (const t of templateTasks) {
@@ -1651,16 +2629,92 @@ export const AdminProjectsPage: React.FC = () => {
         showToast(
           'success',
           'Project & Milestone Tasks Created',
-          `Initialized ${form.title} with ${templateTasks.length} standard production milestones.`
+          `Initialized ${form.title} with ${templateTasks.length} production milestones.`
         );
       } else {
-        showToast('success', 'Project Created');
+        showToast(
+          'success',
+          editingProject ? 'Project Updated' : 'Project Created',
+          `${form.title.trim()} saved to database.`
+        );
       }
 
-      setShowCreate(false);
+      setShowBuilder(false);
+      setEditingProject(null);
+      setIsDirty(false);
+      setShowUnsavedDialog(false);
       await loadData();
+      return true;
     } catch (err) {
-      showToast('error', 'Failed to create project', err instanceof Error ? err.message : '');
+      showToast('error', 'Failed to save project', err instanceof Error ? err.message : '');
+      return false;
+    } finally {
+      setSavingProject(false);
+    }
+  };
+
+  const handleSubmitForm = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await saveProjectRecord();
+  };
+
+  const handleDuplicateProject = async (proj: ProjectRecord) => {
+    try {
+      const newId = await duplicateProjectAdmin(proj);
+      showToast('success', 'Project Duplicated', `Created copy of "${proj.title}".`);
+      await loadData();
+      navigate(`/admin/projects/${newId}`);
+    } catch (err) {
+      showToast('error', 'Duplicate Failed', err instanceof Error ? err.message : '');
+    }
+  };
+
+  const handleTriggerDeleteProject = async (proj: ProjectRecord) => {
+    try {
+      const deps = await checkProjectDependenciesAdmin(proj, quotations);
+      setDeleteModal({
+        isOpen: true,
+        recordType: 'Project',
+        recordTitle: proj.title,
+        clientName: proj.clientName,
+        monetaryTotal: proj.budget,
+        statusLabel: proj.status,
+        canHardDelete: deps.canHardDelete,
+        blockingReason: deps.canHardDelete
+          ? `This project has 0 linked invoices, payments, quotations, or deliverable files. Deleting it will also clean up ${deps.tasksCount} task(s) and ${deps.messagesCount} comment(s).`
+          : `Cannot permanently delete "${proj.title}" because it has ${deps.blockingReasons.join(', ')}. Permanent deletion is blocked to protect client billing and deliverable history. Mark the project as Cancelled or On Hold instead.`,
+        dependencyItems: [
+          { label: 'Invoices', count: deps.invoicesCount },
+          { label: 'Payments', count: deps.paymentsCount },
+          { label: 'Quotes/Est.', count: deps.quotationsCount },
+          { label: 'Deliverables', count: deps.filesCount },
+          { label: 'Tasks', count: deps.tasksCount },
+          { label: 'Messages', count: deps.messagesCount },
+        ],
+        requireExplicitCheckbox: true,
+        archiveActionLabel:
+          proj.status === 'Cancelled' ? 'Mark Project On Hold' : 'Archive / Mark Cancelled Instead',
+        requiresReasonForArchive: true,
+        defaultArchiveReason: 'Project archived / cancelled by studio administrator',
+        onConfirmArchiveOrVoid: async (reason) => {
+          const targetStatus = proj.status === 'Cancelled' ? 'On Hold' : 'Cancelled';
+          await archiveProjectAdmin(proj, targetStatus, reason);
+          showToast('success', `Project Marked ${targetStatus}`, proj.title);
+          if (viewingProject?.id === proj.id) {
+            setViewingProject({ ...proj, status: targetStatus });
+          }
+          await loadData();
+        },
+        onConfirmHardDelete: async () => {
+          await deleteProjectAdmin(proj, quotations);
+          showToast('success', 'Project Deleted', `"${proj.title}" was permanently removed.`);
+          if (viewingProject?.id === proj.id) setViewingProject(null);
+          await loadData();
+        },
+        onClose: () => setDeleteModal(null),
+      });
+    } catch (err) {
+      showToast('error', 'Dependency Check Failed', err instanceof Error ? err.message : '');
     }
   };
 
@@ -1694,8 +2748,16 @@ export const AdminProjectsPage: React.FC = () => {
     }
   };
 
-  const filtered =
-    statusFilter === 'All' ? projects : projects.filter((p) => p.status === statusFilter);
+  const filtered = projects.filter((p) => {
+    const matchesStatus = statusFilter === 'All' || p.status === statusFilter;
+    const q = search.toLowerCase().trim();
+    const matchesSearch =
+      !q ||
+      p.title.toLowerCase().includes(q) ||
+      p.clientName.toLowerCase().includes(q) ||
+      p.serviceType.toLowerCase().includes(q);
+    return matchesStatus && matchesSearch;
+  });
 
   const KANBAN_COLUMNS: Array<{ label: string; status: ProjectStatus; match: ProjectStatus[] }> = [
     { label: 'Planned', status: 'Planned', match: ['Inquiry', 'Planned', 'On Hold'] },
@@ -1711,7 +2773,7 @@ export const AdminProjectsPage: React.FC = () => {
         <div>
           <h1 className="font-editorial text-2xl font-semibold text-[#172333]">Projects</h1>
           <p className="text-xs text-[#6E7785] mt-1">
-            Track project briefs, apply production milestone templates, or toggle between Table & Kanban Board views.
+            Create, view, edit, duplicate, archive, and safely manage studio projects across Table & Kanban Board views.
           </p>
         </div>
         <div className="flex items-center gap-2.5">
@@ -1743,39 +2805,54 @@ export const AdminProjectsPage: React.FC = () => {
           </div>
           <button
             type="button"
-            onClick={() => setShowCreate(!showCreate)}
+            onClick={handleOpenCreate}
             className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg"
           >
             <FolderPlus className="w-4 h-4" />
-            <span>{showCreate ? 'Close Form' : 'Create Project'}</span>
+            <span>+ Create Project</span>
           </button>
         </div>
       </div>
 
-      {showCreate && (
-        <form onSubmit={handleCreate} className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-4">
+      {/* Create / Edit Project Builder Modal / Form */}
+      {showBuilder && (
+        <form
+          onSubmit={handleSubmitForm}
+          className="bg-white border border-[#172333] rounded-lg p-6 space-y-4 shadow-sm"
+        >
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#E2E4DF] pb-3">
-            <h2 className="text-base font-semibold text-[#172333]">Create New Project</h2>
-            <div className="flex items-center gap-2">
-              <label className="text-xs font-semibold text-[#172333]">
-                Project Milestone Template:
-              </label>
-              <select
-                value={milestoneTemplateId}
-                onChange={(e) => setMilestoneTemplateId(e.target.value)}
-                className="px-3 py-1.5 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg font-medium text-[#172333]"
-              >
-                <option value="none">— No Milestone Template (Blank) —</option>
-                {PROJECT_MILESTONE_TEMPLATES.map((tpl) => (
-                  <option key={tpl.id} value={tpl.id}>
-                    {tpl.name}
-                  </option>
-                ))}
-              </select>
+            <div>
+              <h2 className="text-base font-semibold text-[#172333]">
+                {editingProject ? `Edit Project: ${editingProject.title}` : 'Create New Project'}
+              </h2>
+              <p className="text-xs text-[#6E7785] mt-0.5">
+                {editingProject
+                  ? 'Update project scope, client association, timeline, status, budget, or private admin notes.'
+                  : 'Configure project details and optionally initialize production milestone tasks.'}
+              </p>
             </div>
+            {!editingProject && (
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-semibold text-[#172333]">
+                  Milestone Template:
+                </label>
+                <select
+                  value={milestoneTemplateId}
+                  onChange={(e) => setMilestoneTemplateId(e.target.value)}
+                  className="px-3 py-1.5 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg font-medium text-[#172333]"
+                >
+                  <option value="none">— No Milestone Template (Blank) —</option>
+                  {PROJECT_MILESTONE_TEMPLATES.map((tpl) => (
+                    <option key={tpl.id} value={tpl.id}>
+                      {tpl.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
-          {milestoneTemplateId !== 'none' && (
+          {!editingProject && milestoneTemplateId !== 'none' && (
             <div className="p-3 bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg text-xs">
               <p className="font-semibold text-[#172333]">
                 Auto-Populated Production Milestones:{' '}
@@ -1797,7 +2874,7 @@ export const AdminProjectsPage: React.FC = () => {
               <select
                 required
                 value={form.clientId}
-                onChange={(e) => setForm({ ...form, clientId: e.target.value })}
+                onChange={(e) => updateFormField('clientId', e.target.value)}
                 className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
               >
                 <option value="">Select client...</option>
@@ -1814,45 +2891,51 @@ export const AdminProjectsPage: React.FC = () => {
                 type="text"
                 required
                 value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
+                onChange={(e) => updateFormField('title', e.target.value)}
                 placeholder="YouTube Channel Rebrand & 5 Thumbnails"
                 className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium mb-1">Service Type *</label>
+              <label className="block text-xs font-medium mb-1">Service Category *</label>
               <input
                 type="text"
                 required
                 value={form.serviceType}
-                onChange={(e) => setForm({ ...form, serviceType: e.target.value })}
+                onChange={(e) => updateFormField('serviceType', e.target.value)}
                 className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium mb-1">Agreed Budget (INR)</label>
+              <label className="block text-xs font-medium mb-1">Status</label>
+              <select
+                value={form.status}
+                onChange={(e) => updateFormField('status', e.target.value as ProjectStatus)}
+                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              >
+                {PROJECT_STATUSES.map((st) => (
+                  <option key={st} value={st}>
+                    {st}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1">Progress (%)</label>
               <input
                 type="number"
                 min={0}
-                value={form.budget}
-                onChange={(e) => setForm({ ...form, budget: Number(e.target.value) })}
+                max={100}
+                value={form.progress}
+                onChange={(e) => updateFormField('progress', Number(e.target.value))}
                 className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium mb-1">Deadline</label>
-              <input
-                type="date"
-                value={form.deadline}
-                onChange={(e) => setForm({ ...form, deadline: e.target.value })}
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
               />
             </div>
             <div>
               <label className="block text-xs font-medium mb-1">Priority</label>
               <select
                 value={form.priority}
-                onChange={(e) => setForm({ ...form, priority: e.target.value as PriorityLevel })}
+                onChange={(e) => updateFormField('priority', e.target.value as PriorityLevel)}
                 className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
               >
                 <option value="Low">Low</option>
@@ -1861,14 +2944,72 @@ export const AdminProjectsPage: React.FC = () => {
                 <option value="Urgent">Urgent</option>
               </select>
             </div>
+            <div>
+              <label className="block text-xs font-medium mb-1">Start Date</label>
+              <input
+                type="date"
+                value={form.startDate}
+                onChange={(e) => updateFormField('startDate', e.target.value)}
+                className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1">Due Date / Deadline</label>
+              <input
+                type="date"
+                value={form.deadline}
+                onChange={(e) => updateFormField('deadline', e.target.value)}
+                className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1">Agreed Budget (INR)</label>
+              <input
+                type="number"
+                min={0}
+                value={form.budget}
+                onChange={(e) => updateFormField('budget', Number(e.target.value))}
+                className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              />
+            </div>
           </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium mb-1">Project Brief (Client Visible)</label>
+              <label className="block text-xs font-medium mb-1">
+                Project Description / Scope Summary
+              </label>
+              <input
+                type="text"
+                value={form.description}
+                onChange={(e) => updateFormField('description', e.target.value)}
+                placeholder="Short summary of project deliverables..."
+                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1">
+                Client-Visible Status Update Banner
+              </label>
+              <input
+                type="text"
+                value={form.latestUpdate}
+                onChange={(e) => updateFormField('latestUpdate', e.target.value)}
+                placeholder="Latest milestone update shown in Client Portal..."
+                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium mb-1">
+                Project Brief & Deliverables (Client Visible)
+              </label>
               <textarea
                 rows={3}
                 value={form.brief}
-                onChange={(e) => setForm({ ...form, brief: e.target.value })}
+                onChange={(e) => updateFormField('brief', e.target.value)}
                 className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
               />
             </div>
@@ -1879,77 +3020,137 @@ export const AdminProjectsPage: React.FC = () => {
               <textarea
                 rows={3}
                 value={form.internalNotes}
-                onChange={(e) => setForm({ ...form, internalNotes: e.target.value })}
+                onChange={(e) => updateFormField('internalNotes', e.target.value)}
                 className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
               />
             </div>
           </div>
-          <button
-            type="submit"
-            className="px-4 py-2 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg"
-          >
-            Save Project
-          </button>
+
+          <div className="flex items-center justify-end gap-3 pt-2 border-t border-[#E2E4DF]">
+            <button
+              type="button"
+              disabled={savingProject}
+              onClick={handleAttemptCloseBuilder}
+              className="px-4 py-2 text-xs font-medium text-[#6E7785] hover:text-[#172333]"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={savingProject}
+              className="px-5 py-2 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg disabled:opacity-50"
+            >
+              {savingProject
+                ? 'Saving...'
+                : editingProject
+                ? 'Save Project Changes'
+                : 'Save Project'}
+            </button>
+          </div>
         </form>
       )}
 
       {viewMode === 'table' ? (
         <>
-          <div className="flex flex-wrap items-center gap-1 p-1 bg-[#E2E4DF]/60 rounded-lg w-fit">
-            {['All', ...PROJECT_STATUSES].map((st) => (
-              <button
-                key={st}
-                type="button"
-                onClick={() => setStatusFilter(st)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap ${
-                  statusFilter === st
-                    ? 'bg-white text-[#172333] shadow-sm font-semibold'
-                    : 'text-[#6E7785] hover:text-[#172333]'
-                }`}
-              >
-                {st}
-              </button>
-            ))}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-1 p-1 bg-[#E2E4DF]/60 rounded-lg w-fit">
+              {['All', ...PROJECT_STATUSES].map((st) => (
+                <button
+                  key={st}
+                  type="button"
+                  onClick={() => setStatusFilter(st)}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap ${
+                    statusFilter === st
+                      ? 'bg-white text-[#172333] shadow-sm font-semibold'
+                      : 'text-[#6E7785] hover:text-[#172333]'
+                  }`}
+                >
+                  {st}
+                </button>
+              ))}
+            </div>
+
+            <div className="relative w-full sm:w-72">
+              <Search className="w-4 h-4 text-[#6E7785] absolute left-3 top-2.5" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search project, client, service..."
+                className="w-full pl-9 pr-3 py-2 text-xs bg-white border border-[#E2E4DF] rounded-lg"
+              />
+            </div>
           </div>
 
           <div className="bg-white border border-[#E2E4DF] rounded-lg overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-[#E2E4DF] text-[11px] font-semibold text-[#6E7785]">
-                  <th className="py-3 px-4">Project Title</th>
+                  <th className="py-3 px-4">Project Title & Service</th>
                   <th className="py-3 px-4">Client</th>
                   <th className="py-3 px-4">Status</th>
                   <th className="py-3 px-4">Progress</th>
                   <th className="py-3 px-4">Deadline</th>
                   <th className="py-3 px-4 text-right">Budget (INR)</th>
-                  <th className="py-3 px-4 text-right">Action</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E2E4DF] text-xs">
                 {filtered.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="py-8 text-center text-[#6E7785]">
-                      No projects found.
+                      No projects match the current filter.
                     </td>
                   </tr>
                 ) : (
                   filtered.map((p) => (
                     <tr key={p.id} className="hover:bg-[#F5F5F1]/50">
-                      <td className="py-3.5 px-4 font-semibold text-[#172333]">{p.title}</td>
-                      <td className="py-3.5 px-4 text-[#6E7785]">{p.clientName}</td>
-                      <td className="py-3.5 px-4 font-medium text-[#172333]">{p.status}</td>
-                      <td className="py-3.5 px-4 font-mono tabular-nums">{p.progress}%</td>
-                      <td className="py-3.5 px-4 font-mono text-[#6E7785]">{p.deadline}</td>
-                      <td className="py-3.5 px-4 text-right font-mono tabular-nums">
-                        {formatINR(p.budget)}
-                      </td>
-                      <td className="py-3.5 px-4 text-right">
+                      <td className="py-3.5 px-4">
                         <Link
                           to={`/admin/projects/${p.id}`}
                           className="font-semibold text-[#172333] hover:text-[#F18A45]"
                         >
-                          Open →
+                          {p.title}
                         </Link>
+                        <p className="text-[11px] text-[#6E7785]">
+                          {p.serviceType} · Priority: {p.priority}
+                        </p>
+                      </td>
+                      <td className="py-3.5 px-4 text-[#6E7785]">{p.clientName}</td>
+                      <td className="py-3.5 px-4">
+                        <span
+                          className={`font-semibold ${
+                            p.status === 'Completed'
+                              ? 'text-[#26734D]'
+                              : p.status === 'Cancelled'
+                              ? 'text-[#B93832]'
+                              : p.status === 'Revision Requested' || p.status === 'On Hold'
+                              ? 'text-[#A96518]'
+                              : 'text-[#172333]'
+                          }`}
+                        >
+                          {p.status}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 font-mono tabular-nums">{p.progress}%</td>
+                      <td className="py-3.5 px-4 font-mono text-[#6E7785]">{p.deadline || '—'}</td>
+                      <td className="py-3.5 px-4 text-right font-mono tabular-nums">
+                        {formatINR(p.budget)}
+                      </td>
+                      <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                        <RecordActionBar
+                          onView={() => setViewingProject(p)}
+                          onEdit={() => handleOpenEdit(p)}
+                          onDuplicate={() => handleDuplicateProject(p)}
+                          onArchiveOrVoid={async () => {
+                            const nextStatus = p.status === 'Cancelled' ? 'Planned' : 'Cancelled';
+                            await archiveProjectAdmin(p, nextStatus as 'Cancelled' | 'On Hold');
+                            showToast('success', `Project Marked ${nextStatus}`, p.title);
+                            await loadData();
+                          }}
+                          archiveLabel={p.status === 'Cancelled' ? 'Restore' : 'Cancel'}
+                          onDelete={() => handleTriggerDeleteProject(p)}
+                        />
                       </td>
                     </tr>
                   ))
@@ -2013,7 +3214,23 @@ export const AdminProjectsPage: React.FC = () => {
                           </span>
                           <span className="font-mono text-[#6E7785]">Due {p.deadline || '—'}</span>
                         </div>
-                        <div className="flex items-center justify-between gap-1 pt-2 border-t border-[#E2E4DF]">
+                        <div className="flex items-center justify-between gap-1 pt-2 border-t border-[#E2E4DF] text-[10px]">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEdit(p)}
+                            className="font-semibold text-[#172333] hover:text-[#F18A45]"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleTriggerDeleteProject(p)}
+                            className="font-semibold text-[#B93832] hover:underline"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                        <div className="flex items-center justify-between gap-1 pt-1">
                           {prevCol ? (
                             <button
                               type="button"
@@ -2044,33 +3261,165 @@ export const AdminProjectsPage: React.FC = () => {
           })}
         </div>
       )}
+
+      {/* Quick View Project Inspector Modal */}
+      {viewingProject && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#172333]/65 p-4 overflow-y-auto"
+        >
+          <div className="bg-white border border-[#E2E4DF] rounded-lg max-w-3xl w-full p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[#E2E4DF] pb-4">
+              <div>
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#F18A45]">
+                  Project Overview · {viewingProject.serviceType}
+                </span>
+                <h2 className="font-editorial text-xl font-semibold text-[#172333] mt-0.5">
+                  {viewingProject.title}
+                </h2>
+                <p className="text-xs text-[#6E7785]">
+                  Client: {viewingProject.clientName} ({viewingProject.clientEmail}) · Status:{' '}
+                  <strong>{viewingProject.status}</strong> ({viewingProject.progress}%)
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const target = viewingProject;
+                    setViewingProject(null);
+                    handleOpenEdit(target);
+                  }}
+                  className="px-3 py-1.5 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg"
+                >
+                  Edit Project
+                </button>
+                <Link
+                  to={`/admin/projects/${viewingProject.id}`}
+                  className="px-3 py-1.5 text-xs font-semibold text-[#172333] bg-[#F5F5F1] hover:bg-[#E2E4DF] rounded-lg"
+                >
+                  Full Workspace →
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setViewingProject(null)}
+                  className="px-2.5 py-1.5 text-xs text-[#6E7785] hover:text-[#172333]"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+
+            {(() => {
+              const pTasks = tasks.filter((t) => t.projectId === viewingProject.id);
+              const pInvoices = invoices.filter((i) => i.projectId === viewingProject.id);
+              const pFiles = files.filter((f) => f.projectId === viewingProject.id);
+
+              return (
+                <div className="space-y-4 text-xs">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="p-3 bg-[#F5F5F1] rounded-lg">
+                      <p className="text-[#6E7785]">Budget (INR)</p>
+                      <p className="font-mono font-semibold text-[#172333] mt-0.5">
+                        {formatINR(viewingProject.budget)}
+                      </p>
+                    </div>
+                    <div className="p-3 bg-[#F5F5F1] rounded-lg">
+                      <p className="text-[#6E7785]">Timeline</p>
+                      <p className="font-mono text-[#172333] mt-0.5">
+                        {viewingProject.startDate || '—'} → {viewingProject.deadline || '—'}
+                      </p>
+                    </div>
+                    <div className="p-3 bg-[#F5F5F1] rounded-lg">
+                      <p className="text-[#6E7785]">Milestones / Tasks</p>
+                      <p className="font-mono font-semibold text-[#172333] mt-0.5">
+                        {pTasks.filter((t) => t.status === 'Done').length} / {pTasks.length} Done
+                      </p>
+                    </div>
+                    <div className="p-3 bg-[#F5F5F1] rounded-lg">
+                      <p className="text-[#6E7785]">Deliverables & Invoices</p>
+                      <p className="font-mono font-semibold text-[#172333] mt-0.5">
+                        {pFiles.length} file(s) · {pInvoices.length} inv.
+                      </p>
+                    </div>
+                  </div>
+
+                  {viewingProject.brief && (
+                    <div className="p-3.5 bg-[#F5F5F1] rounded-lg">
+                      <p className="font-semibold text-[#172333] mb-1">Creative Brief:</p>
+                      <p className="text-[#6E7785] whitespace-pre-wrap">{viewingProject.brief}</p>
+                    </div>
+                  )}
+
+                  {viewingProject.latestUpdate && (
+                    <div className="p-3.5 bg-[#F5F5F1] rounded-lg">
+                      <p className="font-semibold text-[#172333] mb-1">Latest Client Status Update:</p>
+                      <p className="text-[#6E7785]">{viewingProject.latestUpdate}</p>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
+      {/* Unsaved Changes Protection Modal */}
+      <UnsavedChangesDialog
+        isOpen={showUnsavedDialog}
+        recordLabel={editingProject ? `Project "${editingProject.title}"` : 'this new project'}
+        onSaveAndClose={async () => {
+          await saveProjectRecord();
+        }}
+        onDiscardChanges={() => {
+          setShowUnsavedDialog(false);
+          setShowBuilder(false);
+          setEditingProject(null);
+          setIsDirty(false);
+        }}
+        onContinueEditing={() => setShowUnsavedDialog(false)}
+      />
+
+      {deleteModal && <DependencySafeDeleteModal {...deleteModal} />}
     </div>
   );
 };
 
 export const AdminProjectDetailsPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
+  const navigate = useNavigate();
   const { showToast } = useToast();
   const { profile } = useAuth();
   const [project, setProject] = useState<ProjectRecord | null>(null);
+  const [clients, setClients] = useState<ClientRecord[]>([]);
+  const [quotations, setQuotations] = useState<QuotationRecord[]>([]);
   const [internalNotes, setInternalNotes] = useState('');
   const [messages, setMessages] = useState<ProjectMessage[]>([]);
   const [tasks, setTasks] = useState<TaskRecord[]>([]);
   const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [msgVisibility, setMsgVisibility] = useState<'client' | 'internal'>('client');
+  const [isDirty, setIsDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [deleteModal, setDeleteModal] = useState<SafeDeleteModalConfig | null>(null);
 
   const loadProject = useCallback(async () => {
     if (!projectId) return;
-    const [all, allTasks, allInvoices] = await Promise.all([
+    const [all, allClients, allQuotes, allTasks, allInvoices] = await Promise.all([
       fetchAllProjectsAdmin(),
+      fetchAllClientsAdmin().catch(() => []),
+      fetchAllQuotationsAdmin().catch(() => []),
       fetchAllTasksAdmin().catch(() => []),
       fetchAllInvoicesAdmin().catch(() => []),
     ]);
     const found = all.find((p) => p.id === projectId) || null;
     setProject(found);
+    setClients(allClients);
+    setQuotations(allQuotes);
     setTasks(allTasks.filter((t) => t.projectId === projectId));
     setInvoices(allInvoices.filter((inv) => inv.projectId === projectId));
+    setIsDirty(false);
     if (found) {
       const notes = await fetchProjectInternalNoteAdmin(found.id);
       setInternalNotes(notes);
@@ -2087,14 +3436,69 @@ export const AdminProjectDetailsPage: React.FC = () => {
     return <div className="text-xs text-[#6E7785] py-12">Project not found.</div>;
   }
 
+  const updateProjectField = <K extends keyof ProjectRecord>(key: K, val: ProjectRecord[K]) => {
+    setProject((prev) => (prev ? { ...prev, [key]: val } : prev));
+    setIsDirty(true);
+  };
+
   const handleSaveProject = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!project.title.trim()) {
+      showToast('error', 'Project Title Required', 'Please enter a valid project title.');
+      return;
+    }
+    setSaving(true);
     try {
       await saveProjectAdmin(project, internalNotes, project);
+      setIsDirty(false);
       showToast('success', 'Project & Internal Notes Updated');
+      await loadProject();
     } catch (err) {
       showToast('error', 'Failed to update project', err instanceof Error ? err.message : '');
+    } finally {
+      setSaving(false);
     }
+  };
+
+  const handleOpenDelete = async () => {
+    const deps = await checkProjectDependenciesAdmin(project, quotations);
+    setDeleteModal({
+      isOpen: true,
+      recordType: 'Project',
+      recordTitle: project.title,
+      clientName: project.clientName,
+      monetaryTotal: project.budget,
+      statusLabel: project.status,
+      canHardDelete: deps.canHardDelete,
+      blockingReason: deps.canHardDelete
+        ? `This project has 0 linked financial or deliverable records and can be permanently removed.`
+        : `Cannot permanently delete "${project.title}" because it has ${deps.blockingReasons.join(', ')}. Mark the project as Cancelled or On Hold instead.`,
+      dependencyItems: [
+        { label: 'Invoices', count: deps.invoicesCount },
+        { label: 'Payments', count: deps.paymentsCount },
+        { label: 'Quotes/Est.', count: deps.quotationsCount },
+        { label: 'Deliverables', count: deps.filesCount },
+        { label: 'Tasks', count: deps.tasksCount },
+        { label: 'Messages', count: deps.messagesCount },
+      ],
+      requireExplicitCheckbox: true,
+      archiveActionLabel:
+        project.status === 'Cancelled' ? 'Mark Project On Hold' : 'Archive / Mark Cancelled Instead',
+      requiresReasonForArchive: true,
+      defaultArchiveReason: 'Project archived / cancelled by studio administrator',
+      onConfirmArchiveOrVoid: async (reason) => {
+        const nextStatus = project.status === 'Cancelled' ? 'On Hold' : 'Cancelled';
+        await archiveProjectAdmin(project, nextStatus, reason);
+        showToast('success', `Project Marked ${nextStatus}`);
+        await loadProject();
+      },
+      onConfirmHardDelete: async () => {
+        await deleteProjectAdmin(project, quotations);
+        showToast('success', 'Project Deleted');
+        navigate('/admin/projects');
+      },
+      onClose: () => setDeleteModal(null),
+    });
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -2134,27 +3538,107 @@ export const AdminProjectDetailsPage: React.FC = () => {
             Client: {project.clientName} ({project.clientEmail}) · Service: {project.serviceType}
           </p>
         </div>
-        <div className="text-right text-xs">
-          <span
-            className={`font-semibold ${
-              unlockInfo.isUnlocked ? 'text-[#26734D]' : 'text-[#A96518]'
-            }`}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="text-right text-xs">
+            <span
+              className={`font-semibold ${
+                unlockInfo.isUnlocked ? 'text-[#26734D]' : 'text-[#A96518]'
+              }`}
+            >
+              {unlockInfo.isUnlocked
+                ? 'Master Files Unlocked (Invoice Settled)'
+                : 'Watermarked Preview Mode Active'}
+            </span>
+            <p className="text-[11px] text-[#6E7785]">{unlockInfo.reason}</p>
+          </div>
+          <button
+            type="button"
+            onClick={async () => {
+              const newId = await duplicateProjectAdmin(project);
+              showToast('success', 'Project Duplicated');
+              navigate(`/admin/projects/${newId}`);
+            }}
+            className="px-3 py-2 text-xs font-semibold text-[#172333] bg-white border border-[#E2E4DF] hover:border-[#172333] rounded-lg"
           >
-            {unlockInfo.isUnlocked
-              ? 'Master Files Unlocked (Invoice Settled)'
-              : 'Watermarked Preview Mode Active'}
-          </span>
-          <p className="text-[11px] text-[#6E7785]">{unlockInfo.reason}</p>
+            Duplicate Project
+          </button>
+          <button
+            type="button"
+            onClick={handleOpenDelete}
+            className="px-3.5 py-2 text-xs font-semibold text-white bg-[#B93832] hover:bg-[#992B26] rounded-lg"
+          >
+            Delete / Archive Project
+          </button>
         </div>
       </div>
 
       <form onSubmit={handleSaveProject} className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-semibold text-[#172333]">
+            Edit Project Details, Timeline & Scope
+          </h2>
+          {isDirty && (
+            <span className="text-[11px] font-semibold text-[#A96518]">Unsaved edits</span>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-xs font-medium mb-1">Project Title *</label>
+            <input
+              type="text"
+              required
+              value={project.title}
+              onChange={(e) => updateProjectField('title', e.target.value)}
+              className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1">Client Association</label>
+            <select
+              value={project.clientId}
+              onChange={(e) => {
+                const found = clients.find((c) => c.id === e.target.value);
+                if (found) {
+                  setProject({
+                    ...project,
+                    clientId: found.id,
+                    clientUserId: found.userId || '',
+                    clientName: found.fullName,
+                    clientEmail: found.email,
+                  });
+                  setIsDirty(true);
+                }
+              }}
+              className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+            >
+              <option value={project.clientId}>{project.clientName}</option>
+              {clients
+                .filter((c) => c.id !== project.clientId)
+                .map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.fullName} ({c.email})
+                  </option>
+                ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1">Service Category</label>
+            <input
+              type="text"
+              value={project.serviceType}
+              onChange={(e) => updateProjectField('serviceType', e.target.value)}
+              className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-6 gap-4">
           <div>
             <label className="block text-xs font-medium mb-1">Status</label>
             <select
               value={project.status}
-              onChange={(e) => setProject({ ...project, status: e.target.value as ProjectStatus })}
+              onChange={(e) => updateProjectField('status', e.target.value as ProjectStatus)}
               className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
             >
               {PROJECT_STATUSES.map((st) => (
@@ -2165,13 +3649,35 @@ export const AdminProjectDetailsPage: React.FC = () => {
             </select>
           </div>
           <div>
+            <label className="block text-xs font-medium mb-1">Priority</label>
+            <select
+              value={project.priority}
+              onChange={(e) => updateProjectField('priority', e.target.value as PriorityLevel)}
+              className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+            >
+              <option value="Low">Low</option>
+              <option value="Medium">Medium</option>
+              <option value="High">High</option>
+              <option value="Urgent">Urgent</option>
+            </select>
+          </div>
+          <div>
             <label className="block text-xs font-medium mb-1">Progress (%)</label>
             <input
               type="number"
               min={0}
               max={100}
               value={project.progress}
-              onChange={(e) => setProject({ ...project, progress: Number(e.target.value) })}
+              onChange={(e) => updateProjectField('progress', Number(e.target.value))}
+              className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1">Start Date</label>
+            <input
+              type="date"
+              value={project.startDate}
+              onChange={(e) => updateProjectField('startDate', e.target.value)}
               className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
             />
           </div>
@@ -2180,8 +3686,8 @@ export const AdminProjectDetailsPage: React.FC = () => {
             <input
               type="date"
               value={project.deadline}
-              onChange={(e) => setProject({ ...project, deadline: e.target.value })}
-              className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              onChange={(e) => updateProjectField('deadline', e.target.value)}
+              className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
             />
           </div>
           <div>
@@ -2190,22 +3696,35 @@ export const AdminProjectDetailsPage: React.FC = () => {
               type="number"
               min={0}
               value={project.budget}
-              onChange={(e) => setProject({ ...project, budget: Number(e.target.value) })}
+              onChange={(e) => updateProjectField('budget', Number(e.target.value))}
               className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
             />
           </div>
         </div>
 
-        <div>
-          <label className="block text-xs font-medium mb-1">
-            Client-Visible Status Update Banner
-          </label>
-          <input
-            type="text"
-            value={project.latestUpdate}
-            onChange={(e) => setProject({ ...project, latestUpdate: e.target.value })}
-            className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
-          />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium mb-1">
+              Project Scope Description
+            </label>
+            <input
+              type="text"
+              value={project.description}
+              onChange={(e) => updateProjectField('description', e.target.value)}
+              className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1">
+              Client-Visible Status Update Banner
+            </label>
+            <input
+              type="text"
+              value={project.latestUpdate}
+              onChange={(e) => updateProjectField('latestUpdate', e.target.value)}
+              className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+            />
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2214,7 +3733,7 @@ export const AdminProjectDetailsPage: React.FC = () => {
             <textarea
               rows={3}
               value={project.brief}
-              onChange={(e) => setProject({ ...project, brief: e.target.value })}
+              onChange={(e) => updateProjectField('brief', e.target.value)}
               className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
             />
           </div>
@@ -2226,18 +3745,33 @@ export const AdminProjectDetailsPage: React.FC = () => {
             <textarea
               rows={3}
               value={internalNotes}
-              onChange={(e) => setInternalNotes(e.target.value)}
+              onChange={(e) => {
+                setInternalNotes(e.target.value);
+                setIsDirty(true);
+              }}
               className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
             />
           </div>
         </div>
 
-        <button
-          type="submit"
-          className="px-4 py-2 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg"
-        >
-          Save Project Changes
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="submit"
+            disabled={saving}
+            className="px-4 py-2 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg disabled:opacity-50"
+          >
+            {saving ? 'Saving...' : 'Save Project Changes'}
+          </button>
+          {isDirty && (
+            <button
+              type="button"
+              onClick={() => loadProject()}
+              className="px-3.5 py-2 text-xs font-medium text-[#6E7785] hover:text-[#172333]"
+            >
+              Discard Unsaved Edits
+            </button>
+          )}
+        </div>
       </form>
 
       {/* Project Milestones & Proofing Pins */}
@@ -2409,6 +3943,8 @@ export const AdminProjectDetailsPage: React.FC = () => {
           </button>
         </form>
       </div>
+
+      {deleteModal && <DependencySafeDeleteModal {...deleteModal} />}
     </div>
   );
 };

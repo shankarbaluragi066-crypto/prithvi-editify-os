@@ -974,5 +974,65 @@ drop policy if exists "project_files_admin_delete" on storage.objects;
 create policy "project_files_admin_delete" on storage.objects
   for delete to authenticated using (bucket_id = 'project-files' and public.is_admin());
 
+-- ============================================================================
+-- 14. QUOTATIONS & COST ESTIMATES TABLE (WITH REVISION HISTORY & RLS)
+-- ============================================================================
+create table if not exists public.quotations (
+  id text primary key,
+  quotation_number text not null unique,
+  document_type text not null default 'Quotation' check (document_type in ('Quotation', 'Estimate')),
+  version integer not null default 1,
+  parent_quotation_id text,
+  revision_history jsonb not null default '[]'::jsonb,
+  inquiry_id text,
+  client_id text not null default '',
+  client_user_id text not null default '',
+  client_name text not null default '',
+  client_email text not null default '',
+  project_title text not null default '',
+  service_category text not null default 'Graphic Design',
+  scope_summary text not null default '',
+  deliverables text not null default '',
+  estimated_timeline text not null default '',
+  issue_date text not null default '',
+  expiry_date text not null default '',
+  line_items jsonb not null default '[]'::jsonb,
+  subtotal numeric(12,2) not null default 0,
+  discount numeric(12,2) not null default 0,
+  tax_rate numeric(5,2) not null default 0,
+  tax_amount numeric(12,2) not null default 0,
+  total numeric(12,2) not null default 0,
+  currency text not null default 'INR',
+  status text not null default 'Draft',
+  notes text not null default '',
+  terms_and_conditions text not null default '',
+  converted_project_id text,
+  converted_invoice_id text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.quotations add column if not exists document_type text not null default 'Quotation';
+alter table public.quotations add column if not exists version integer not null default 1;
+alter table public.quotations add column if not exists parent_quotation_id text;
+alter table public.quotations add column if not exists revision_history jsonb not null default '[]'::jsonb;
+alter table public.quotations add column if not exists notes text not null default '';
+
+create index if not exists idx_quotations_doc_type on public.quotations(document_type);
+create index if not exists idx_quotations_client_id on public.quotations(client_id);
+create index if not exists idx_quotations_status on public.quotations(status);
+
+alter table public.quotations enable row level security;
+grant select, insert, update, delete on public.quotations to anon, authenticated, service_role;
+
+drop policy if exists "quotations_public_read_by_id" on public.quotations;
+create policy "quotations_public_read_by_id" on public.quotations
+  for select using (true);
+
+drop policy if exists "quotations_admin_all" on public.quotations;
+create policy "quotations_admin_all" on public.quotations
+  for all to authenticated using (public.is_admin()) with check (public.is_admin());
+
 -- Force PostgREST to reload schema cache immediately
 NOTIFY pgrst, 'reload schema';
+

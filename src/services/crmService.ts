@@ -26,6 +26,10 @@ import {
   MediaAsset,
   MediaBucket,
   MediaCategory,
+  ClientDependencySummary,
+  ProjectDependencySummary,
+  InvoiceDeleteEligibility,
+  InvoiceStatus,
 } from '../types/crm';
 import {
   SEED_SERVICES,
@@ -1483,6 +1487,34 @@ export async function saveClientAdmin(
       legacyFallbacks,
       'saveClientAdmin (update)'
     );
+
+    // Keep linked projects and invoices synchronized if client name or email changed
+    if (
+      existingClient.fullName !== cleanName ||
+      existingClient.email.toLowerCase() !== payload.email
+    ) {
+      try {
+        await supabase
+          .from('projects')
+          .update({
+            client_name: cleanName,
+            client_email: payload.email,
+            client_user_id: payload.user_id,
+          })
+          .eq('client_id', existingClient.id);
+        await supabase
+          .from('invoices')
+          .update({
+            client_name: cleanName,
+            client_email: payload.email,
+            client_user_id: payload.user_id,
+          })
+          .eq('client_id', existingClient.id);
+      } catch {
+        // Non-fatal cascade update
+      }
+    }
+
     await logAdminActivity('Updated Client Profile', 'client', existingClient.id, cleanName);
     return existingClient.id;
   } else {
@@ -1495,6 +1527,128 @@ export async function saveClientAdmin(
     await logAdminActivity('Created Client Profile', 'client', newId, cleanName);
     return newId;
   }
+}
+
+export async function checkClientDependenciesAdmin(
+  client: ClientRecord,
+  quotationsList: Array<{ clientId?: string; clientEmail?: string; documentType?: string; quotationNumber?: string }> = []
+): Promise<ClientDependencySummary> {
+  const [projects, invoices, payments, inquiries] = await Promise.all([
+    fetchAllProjectsAdmin().catch(() => []),
+    fetchAllInvoicesAdmin().catch(() => []),
+    fetchAllPaymentsAdmin().catch(() => []),
+    fetchAllInquiriesAdmin().catch(() => []),
+  ]);
+
+  const emailLower = (client.email || '').toLowerCase();
+
+  const linkedProjects = projects.filter(
+    (p) => p.clientId === client.id || (emailLower && p.clientEmail.toLowerCase() === emailLower)
+  );
+  const linkedInvoices = invoices.filter(
+    (i) => i.clientId === client.id || (emailLower && i.clientEmail.toLowerCase() === emailLower)
+  );
+  const linkedPayments = payments.filter((pay) => pay.clientId === client.id);
+  const linkedInquiries = inquiries.filter(
+    (inq) => emailLower && inq.email.toLowerCase() === emailLower
+  );
+  const linkedQuotesAll = quotationsList.filter(
+    (q) =>
+      q.clientId === client.id ||
+      (emailLower && String(q.clientEmail || '').toLowerCase() === emailLower)
+  );
+  const estimatesCount = linkedQuotesAll.filter(
+    (q) =>
+      q.documentType === 'Estimate' ||
+      String(q.quotationNumber || '').toUpperCase().startsWith('PE-EST') ||
+      String(q.quotationNumber || '').toUpperCase().startsWith('EST-')
+  ).length;
+  const quotationsCount = linkedQuotesAll.length - estimatesCount;
+
+  const outstandingBalance = linkedInvoices
+    .filter((i) => i.status !== 'Void' && i.status !== 'Cancelled' && i.status !== 'Draft')
+    .reduce((sum, i) => sum + (Number(i.balanceDue) || 0), 0);
+
+  const blockingReasons: string[] = [];
+  if (linkedProjects.length > 0) {
+    blockingReasons.push(`${linkedProjects.length} linked project(s)`);
+  }
+  if (linkedInvoices.length > 0) {
+    blockingReasons.push(`${linkedInvoices.length} linked invoice(s)`);
+  }
+  if (linkedPayments.length > 0) {
+    blockingReasons.push(`${linkedPayments.length} recorded payment(s)`);
+  }
+  if (quotationsCount > 0) {
+    blockingReasons.push(`${quotationsCount} quotation(s)`);
+  }
+  if (estimatesCount > 0) {
+    blockingReasons.push(`${estimatesCount} estimate(s)`);
+  }
+
+  const totalDependentCount =
+    linkedProjects.length +
+    linkedInvoices.length +
+    linkedPayments.length +
+    linkedQuotesAll.length;
+
+  return {
+    clientId: client.id,
+    clientName: client.fullName,
+    canHardDelete: totalDependentCount === 0,
+    projectsCount: linkedProjects.length,
+    invoicesCount: linkedInvoices.length,
+    quotationsCount,
+    estimatesCount,
+    paymentsCount: linkedPayments.length,
+    inquiriesCount: linkedInquiries.length,
+    totalDependentCount,
+    outstandingBalance,
+    blockingReasons,
+  };
+}
+
+export async function archiveClientAdmin(
+  client: ClientRecord,
+  nextStatus: 'deactivated' | 'active' = 'deactivated'
+): Promise<void> {
+  await saveClientAdmin(
+    {
+      ...client,
+      accountStatus: nextStatus,
+    },
+    client
+  );
+  await logAdminActivity(
+    nextStatus === 'deactivated' ? 'Archived / Deactivated Client Profile' : 'Reactivated Client Profile',
+    'client',
+    client.id,
+    `${client.fullName} (${client.email})`
+  );
+}
+
+export async function deleteClientAdmin(
+  client: ClientRecord,
+  quotationsList: Array<{ clientId?: string; clientEmail?: string; documentType?: string; quotationNumber?: string }> = []
+): Promise<void> {
+  if (!isSupabaseConfigured) throw new Error('Supabase is not configured.');
+
+  const deps = await checkClientDependenciesAdmin(client, quotationsList);
+  if (!deps.canHardDelete) {
+    throw new Error(
+      `Cannot permanently delete "${client.fullName}" because this client has ${deps.blockingReasons.join(', ')}. Please Archive / Deactivate the client instead to preserve financial and project records.`
+    );
+  }
+
+  const { error } = await supabase.from('clients').delete().eq('id', client.id);
+  if (error) handleSupabaseError(error, 'deleteClientAdmin');
+
+  await logAdminActivity(
+    'Deleted Client Profile',
+    'client',
+    client.id,
+    `${client.fullName} (${client.email})`
+  );
 }
 
 // ============================================================================
@@ -1638,6 +1792,144 @@ export async function clientRequestRevisionOrApprove(
     .eq('id', project.id);
 
   if (error) handleSupabaseError(error, 'clientRequestRevisionOrApprove');
+}
+
+export async function checkProjectDependenciesAdmin(
+  project: ProjectRecord,
+  quotationsList: Array<{ convertedProjectId?: string }> = []
+): Promise<ProjectDependencySummary> {
+  const [invoices, payments, tasks, files, messages] = await Promise.all([
+    fetchAllInvoicesAdmin().catch(() => []),
+    fetchAllPaymentsAdmin().catch(() => []),
+    fetchAllTasksAdmin().catch(() => []),
+    fetchAllFilesAdmin().catch(() => []),
+    fetchProjectMessages(project.id, true).catch(() => []),
+  ]);
+
+  const linkedInvoices = invoices.filter((i) => i.projectId === project.id);
+  const linkedInvoiceIds = new Set(linkedInvoices.map((i) => i.id));
+  const linkedPayments = payments.filter((p) => linkedInvoiceIds.has(p.invoiceId));
+  const linkedQuotations = quotationsList.filter((q) => q.convertedProjectId === project.id);
+  const linkedTasks = tasks.filter((t) => t.projectId === project.id);
+  const linkedFiles = files.filter((f) => f.projectId === project.id);
+
+  const hasFinancialRecords =
+    linkedInvoices.length > 0 || linkedPayments.length > 0 || linkedQuotations.length > 0;
+  const hasDeliverableFiles = linkedFiles.length > 0;
+
+  const blockingReasons: string[] = [];
+  if (linkedInvoices.length > 0) {
+    blockingReasons.push(`${linkedInvoices.length} linked invoice(s)`);
+  }
+  if (linkedPayments.length > 0) {
+    blockingReasons.push(`${linkedPayments.length} recorded payment(s)`);
+  }
+  if (linkedQuotations.length > 0) {
+    blockingReasons.push(`${linkedQuotations.length} converted quotation/estimate(s)`);
+  }
+  if (hasDeliverableFiles) {
+    blockingReasons.push(`${linkedFiles.length} uploaded deliverable file(s)`);
+  }
+
+  return {
+    projectId: project.id,
+    projectTitle: project.title,
+    canHardDelete: !hasFinancialRecords && !hasDeliverableFiles,
+    invoicesCount: linkedInvoices.length,
+    paymentsCount: linkedPayments.length,
+    quotationsCount: linkedQuotations.length,
+    tasksCount: linkedTasks.length,
+    filesCount: linkedFiles.length,
+    messagesCount: messages.length,
+    hasFinancialRecords,
+    blockingReasons,
+  };
+}
+
+export async function archiveProjectAdmin(
+  project: ProjectRecord,
+  targetStatus: 'Cancelled' | 'On Hold' = 'Cancelled',
+  reason?: string
+): Promise<void> {
+  const existingNote = await fetchProjectInternalNoteAdmin(project.id).catch(() => '');
+  const updatedNote = reason
+    ? `${existingNote ? `${existingNote}\n` : ''}[${targetStatus.toUpperCase()} ${new Date().toISOString().split('T')[0]}]: ${reason}`
+    : existingNote;
+
+  await saveProjectAdmin(
+    {
+      ...project,
+      status: targetStatus,
+      latestUpdate: reason || `Project marked as ${targetStatus} by studio administrator.`,
+    },
+    updatedNote,
+    project
+  );
+
+  await logAdminActivity(
+    `Archived Project (${targetStatus})`,
+    'project',
+    project.id,
+    `${project.title} — ${project.clientName}`
+  );
+}
+
+export async function deleteProjectAdmin(
+  project: ProjectRecord,
+  quotationsList: Array<{ convertedProjectId?: string }> = []
+): Promise<void> {
+  if (!isSupabaseConfigured) throw new Error('Supabase is not configured.');
+
+  const deps = await checkProjectDependenciesAdmin(project, quotationsList);
+  if (!deps.canHardDelete) {
+    throw new Error(
+      `Cannot permanently delete project "${project.title}" because it has ${deps.blockingReasons.join(', ')}. Please mark the project as Cancelled or On Hold instead to protect billing and deliverable history.`
+    );
+  }
+
+  // Clean up non-financial child records (tasks, internal notes, messages)
+  try {
+    await supabase.from('tasks').delete().eq('project_id', project.id);
+    await supabase.from('project_internal_notes').delete().eq('project_id', project.id);
+    await supabase.from('project_messages').delete().eq('project_id', project.id);
+  } catch {
+    // Continue if child tables are already clean
+  }
+
+  const { error } = await supabase.from('projects').delete().eq('id', project.id);
+  if (error) handleSupabaseError(error, 'deleteProjectAdmin');
+
+  await logAdminActivity(
+    'Deleted Project',
+    'project',
+    project.id,
+    `${project.title} (${project.clientName})`
+  );
+}
+
+export async function duplicateProjectAdmin(project: ProjectRecord): Promise<string> {
+  const notes = await fetchProjectInternalNoteAdmin(project.id).catch(() => '');
+  const today = new Date().toISOString().split('T')[0];
+  return saveProjectAdmin(
+    {
+      clientId: project.clientId,
+      clientUserId: project.clientUserId,
+      clientName: project.clientName,
+      clientEmail: project.clientEmail,
+      title: `${project.title} (Copy)`,
+      description: project.description,
+      serviceType: project.serviceType,
+      brief: project.brief,
+      budget: project.budget,
+      startDate: today,
+      deadline: project.deadline || today,
+      priority: project.priority,
+      status: 'Planned',
+      progress: 0,
+      latestUpdate: 'Duplicated from existing project template.',
+    },
+    notes
+  );
 }
 
 // ============================================================================
@@ -2295,6 +2587,46 @@ export async function saveInvoiceWithLineItemsAdmin(
     .map((li) => `${li.description} (${li.quantity} × ₹${li.unitPrice})`)
     .join(' · ');
 
+  const cleanTotal = Math.max(0, Number(invoiceData.total) || 0);
+  let verifiedAmountPaid = Math.max(0, Number(invoiceData.amountPaid) || 0);
+
+  if (existingInvoice?.id) {
+    try {
+      const { data: paymentRows } = await supabase
+        .from('payments')
+        .select('amount')
+        .eq('invoice_id', existingInvoice.id);
+      if (Array.isArray(paymentRows) && paymentRows.length > 0) {
+        const sumPayments = paymentRows.reduce(
+          (acc, row) => acc + (Number(row.amount) || 0),
+          0
+        );
+        verifiedAmountPaid = Math.max(verifiedAmountPaid, sumPayments);
+      } else if (existingInvoice.amountPaid > 0) {
+        verifiedAmountPaid = Math.max(verifiedAmountPaid, existingInvoice.amountPaid);
+      }
+    } catch {
+      verifiedAmountPaid = Math.max(verifiedAmountPaid, existingInvoice.amountPaid || 0);
+    }
+  }
+
+  const isVoidOrCancelled =
+    invoiceData.status === 'Void' || invoiceData.status === 'Cancelled';
+  const computedBalanceDue = isVoidOrCancelled
+    ? 0
+    : Math.max(0, cleanTotal - verifiedAmountPaid);
+
+  let resolvedStatus: InvoiceStatus = invoiceData.status;
+  if (!isVoidOrCancelled && invoiceData.status !== 'Draft') {
+    if (cleanTotal > 0 && computedBalanceDue === 0 && verifiedAmountPaid >= cleanTotal) {
+      resolvedStatus = 'Paid';
+    } else if (verifiedAmountPaid > 0 && computedBalanceDue > 0) {
+      resolvedStatus = 'Partially Paid';
+    } else if (resolvedStatus === 'Paid' && computedBalanceDue > 0) {
+      resolvedStatus = verifiedAmountPaid > 0 ? 'Partially Paid' : 'Sent';
+    }
+  }
+
   const payload = {
     invoice_number: truncate(invoiceData.invoiceNumber, 60),
     client_id: toNullableUuid(invoiceData.clientId),
@@ -2310,11 +2642,11 @@ export async function saveInvoiceWithLineItemsAdmin(
     discount: Math.max(0, Number(invoiceData.discount) || 0),
     tax_rate: Math.min(100, Math.max(0, Number(invoiceData.taxRate) || 0)),
     tax_amount: Math.max(0, Number(invoiceData.taxAmount) || 0),
-    total: Math.max(0, Number(invoiceData.total) || 0),
-    amount_paid: Math.max(0, Number(invoiceData.amountPaid) || 0),
-    balance_due: Math.max(0, Number(invoiceData.balanceDue) || 0),
+    total: cleanTotal,
+    amount_paid: verifiedAmountPaid,
+    balance_due: computedBalanceDue,
     currency: 'INR',
-    status: invoiceData.status,
+    status: resolvedStatus,
     payment_instructions: truncate(invoiceData.paymentInstructions, 1000),
     notes: truncate(invoiceData.notes, 1000),
     updated_at: new Date().toISOString(),
@@ -2357,20 +2689,169 @@ export async function saveInvoiceWithLineItemsAdmin(
     existingInvoice ? 'Updated Invoice' : 'Created Invoice',
     'invoice',
     invoiceId,
-    `${payload.invoice_number} — ₹${payload.total}`
+    `${payload.invoice_number} (${resolvedStatus}) — ₹${payload.total.toLocaleString('en-IN')}`
   );
 
-  if (payload.client_user_id && payload.status !== 'Draft') {
+  if (payload.client_user_id && payload.status !== 'Draft' && payload.status !== 'Void') {
     await createNotification({
       recipientUserId: payload.client_user_id,
       type: 'Invoice created',
       title: `Invoice ${payload.invoice_number} (${payload.status})`,
-      message: `Total: ₹${payload.total.toLocaleString('en-IN')} · Due: ${payload.due_date}`,
+      message: `Total: ₹${payload.total.toLocaleString('en-IN')} · Balance Due: ₹${payload.balance_due.toLocaleString('en-IN')} · Due: ${payload.due_date}`,
       link: `/portal/invoices/${invoiceId}`,
     });
   }
 
   return invoiceId;
+}
+
+export async function checkInvoiceDeleteEligibilityAdmin(
+  invoice: InvoiceRecord,
+  preloadedPayments?: PaymentRecord[]
+): Promise<InvoiceDeleteEligibility> {
+  const payments =
+    preloadedPayments || (await fetchAllPaymentsAdmin().catch(() => []));
+  const linkedPayments = payments.filter((p) => p.invoiceId === invoice.id);
+  const totalPaid = Math.max(
+    invoice.amountPaid || 0,
+    linkedPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0)
+  );
+
+  if (linkedPayments.length > 0 || totalPaid > 0) {
+    return {
+      invoiceId: invoice.id,
+      invoiceNumber: invoice.invoiceNumber,
+      canHardDelete: false,
+      status: invoice.status,
+      paymentsCount: linkedPayments.length,
+      amountPaid: totalPaid,
+      reason: `Invoice ${invoice.invoiceNumber} has ₹${totalPaid.toLocaleString('en-IN')} in recorded payments (${linkedPayments.length} payment record(s)). Permanent deletion is blocked to protect accounting integrity. You can Void / Cancel the invoice instead.`,
+    };
+  }
+
+  if (invoice.status !== 'Draft') {
+    return {
+      invoiceId: invoice.id,
+      invoiceNumber: invoice.invoiceNumber,
+      canHardDelete: false,
+      status: invoice.status,
+      paymentsCount: 0,
+      amountPaid: 0,
+      reason: `Only Draft invoices with zero payments can be permanently deleted. Because ${invoice.invoiceNumber} has status "${invoice.status}", please Void / Cancel the invoice to preserve sequential financial audit history.`,
+    };
+  }
+
+  return {
+    invoiceId: invoice.id,
+    invoiceNumber: invoice.invoiceNumber,
+    canHardDelete: true,
+    status: invoice.status,
+    paymentsCount: 0,
+    amountPaid: 0,
+    reason: `Draft invoice ${invoice.invoiceNumber} has no recorded payments and can be permanently deleted.`,
+  };
+}
+
+export async function voidInvoiceAdmin(
+  invoice: InvoiceRecord,
+  voidReason = 'Voided by studio administrator'
+): Promise<void> {
+  if (!isSupabaseConfigured) throw new Error('Supabase is not configured.');
+  const stampedNotes = `${invoice.notes ? `${invoice.notes}\n` : ''}[VOIDED ${new Date().toISOString().split('T')[0]}]: ${voidReason}`;
+
+  const { error } = await supabase
+    .from('invoices')
+    .update({
+      status: 'Void',
+      balance_due: 0,
+      notes: truncate(stampedNotes, 1000),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', invoice.id);
+
+  if (error) handleSupabaseError(error, 'voidInvoiceAdmin');
+
+  await logAdminActivity(
+    'Voided / Cancelled Invoice',
+    'invoice',
+    invoice.id,
+    `${invoice.invoiceNumber} (${invoice.clientName}) — Reason: ${voidReason}`
+  );
+}
+
+export async function deleteInvoiceAdmin(
+  invoice: InvoiceRecord,
+  preloadedPayments?: PaymentRecord[]
+): Promise<void> {
+  if (!isSupabaseConfigured) throw new Error('Supabase is not configured.');
+
+  const check = await checkInvoiceDeleteEligibilityAdmin(invoice, preloadedPayments);
+  if (!check.canHardDelete) {
+    throw new Error(check.reason);
+  }
+
+  await supabase.from('invoice_line_items').delete().eq('invoice_id', invoice.id);
+  const { error } = await supabase.from('invoices').delete().eq('id', invoice.id);
+  if (error) handleSupabaseError(error, 'deleteInvoiceAdmin');
+
+  await logAdminActivity(
+    'Deleted Draft Invoice',
+    'invoice',
+    invoice.id,
+    `${invoice.invoiceNumber} (${invoice.clientName})`
+  );
+}
+
+export async function duplicateInvoiceAdmin(invoice: InvoiceRecord): Promise<string> {
+  const existingLines = await fetchInvoiceLineItems(invoice.id).catch(() => []);
+  const today = new Date().toISOString().split('T')[0];
+  const freshNumber = `PE-INV-${new Date().getFullYear()}-${String(Math.floor(100 + Math.random() * 900))}`;
+
+  const fallbackLines =
+    existingLines.length > 0
+      ? existingLines.map((li, idx) => ({
+          description: li.description,
+          quantity: li.quantity,
+          unitPrice: li.unitPrice,
+          amount: li.amount,
+          sortOrder: idx + 1,
+        }))
+      : [
+          {
+            description: invoice.projectTitle || 'Creative Services',
+            quantity: 1,
+            unitPrice: invoice.subtotal || invoice.total || 500,
+            amount: invoice.subtotal || invoice.total || 500,
+            sortOrder: 1,
+          },
+        ];
+
+  return saveInvoiceWithLineItemsAdmin(
+    {
+      invoiceNumber: freshNumber,
+      clientId: invoice.clientId,
+      clientUserId: invoice.clientUserId,
+      clientName: invoice.clientName,
+      clientEmail: invoice.clientEmail,
+      projectId: invoice.projectId,
+      projectTitle: invoice.projectTitle,
+      issueDate: today,
+      dueDate: today,
+      itemsSummary: invoice.itemsSummary,
+      subtotal: invoice.subtotal,
+      discount: invoice.discount,
+      taxRate: invoice.taxRate,
+      taxAmount: invoice.taxAmount,
+      total: invoice.total,
+      amountPaid: 0,
+      balanceDue: invoice.total,
+      currency: 'INR',
+      status: 'Draft',
+      paymentInstructions: invoice.paymentInstructions,
+      notes: invoice.notes.replace(/\[VOIDED.*?\]/g, '').trim(),
+    },
+    fallbackLines
+  );
 }
 
 export async function recordPaymentAdmin(params: {

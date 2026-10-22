@@ -25,6 +25,9 @@ import {
   Share2,
   MessageSquare,
   ExternalLink,
+  ArrowUp,
+  ArrowDown,
+  GitBranch,
 } from 'lucide-react';
 import {
   fetchAIProviderStatus,
@@ -44,7 +47,19 @@ import {
   fetchAllQuotationsAdmin,
   saveQuotationAdmin,
   deleteQuotationAdmin,
+  checkQuotationDeleteEligibilityAdmin,
+  archiveQuotationAdmin,
+  createQuotationRevisionAdmin,
+  duplicateQuotationAdmin,
+  generateDocumentNumber,
+  inferQuotationDocumentType,
 } from '../services/aiAssistantService';
+import {
+  DependencySafeDeleteModal,
+  SafeDeleteModalConfig,
+  UnsavedChangesDialog,
+  RecordActionBar,
+} from '../components/CrudManagementModals';
 import {
   fetchAllServicesAdmin,
   fetchAllPortfolioAdmin,
@@ -74,6 +89,7 @@ import {
   PortfolioItem,
   QuotationRecord,
   QuotationStatus,
+  QuotationDocumentType,
   ClientRecord,
   InquiryRecord,
   ProjectRecord,
@@ -2316,7 +2332,7 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
 };
 
 // ============================================================================
-// 2. ADMIN QUOTATIONS & PROJECT CONVERSION PAGE (/admin/quotations)
+// 2. ADMIN QUOTATIONS & ESTIMATES MANAGEMENT PAGE (/admin/quotations & /admin/estimates)
 // ============================================================================
 const QUOTATION_STATUSES: QuotationStatus[] = [
   'Draft',
@@ -2324,9 +2340,12 @@ const QUOTATION_STATUSES: QuotationStatus[] = [
   'Accepted',
   'Rejected',
   'Expired',
+  'Archived',
 ];
 
-export const AdminQuotationsPage: React.FC = () => {
+export const AdminQuotationsPage: React.FC<{
+  defaultDocType?: 'All' | QuotationDocumentType;
+}> = ({ defaultDocType = 'All' }) => {
   const { showToast, confirmAction } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
@@ -2336,17 +2355,35 @@ export const AdminQuotationsPage: React.FC = () => {
   const [inquiries, setInquiries] = useState<InquiryRecord[]>([]);
   const [projects, setProjects] = useState<ProjectRecord[]>([]);
   const [services, setServices] = useState<ServiceItem[]>([]);
+
   const [showBuilder, setShowBuilder] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingRecord, setEditingRecord] = useState<QuotationRecord | null>(null);
+  const [formDirty, setFormDirty] = useState(false);
+  const [showUnsavedModal, setShowUnsavedModal] = useState(false);
+  const [savingDoc, setSavingDoc] = useState(false);
+
   const [printQuotation, setPrintQuotation] = useState<QuotationRecord | null>(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
+  const [docTypeFilter, setDocTypeFilter] = useState<'All' | QuotationDocumentType>(defaultDocType);
+  const [deleteModalConfig, setDeleteModalConfig] = useState<SafeDeleteModalConfig | null>(null);
+
+  useEffect(() => {
+    if (location.pathname.endsWith('/estimates')) {
+      setDocTypeFilter('Estimate');
+    } else if (defaultDocType) {
+      setDocTypeFilter(defaultDocType);
+    }
+  }, [location.pathname, defaultDocType]);
 
   const today = new Date().toISOString().split('T')[0];
   const defaultExpiry = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-  const [form, setForm] = useState({
-    quotationNumber: `PE-QTN-${new Date().getFullYear()}-${String(Math.floor(100 + Math.random() * 900))}`,
+  const createEmptyDocForm = (docType: QuotationDocumentType = 'Quotation') => ({
+    documentType: docType,
+    quotationNumber: generateDocumentNumber(docType),
+    version: 1,
     inquiryId: '',
     clientId: '',
     clientName: '',
@@ -2362,15 +2399,23 @@ export const AdminQuotationsPage: React.FC = () => {
     expiryDate: defaultExpiry,
     discount: 0,
     taxRate: 0,
-    status: 'Sent' as QuotationStatus,
+    status: 'Draft' as QuotationStatus,
+    notes: '',
     termsAndConditions:
-      '50% advance milestone to initiate production. Remaining balance upon preview approval prior to final master file release. Quotation valid until the expiry date listed.',
+      '50% advance milestone to initiate production. Remaining balance upon preview approval prior to final master file release. Valid until the expiry date listed.',
     lineItems: [{ description: 'Creative Design & Production Package', quantity: 1, unitPrice: 1500 }],
   });
+
+  const [form, setForm] = useState(() => createEmptyDocForm('Quotation'));
   const [gstMode, setGstMode] = useState<GstTaxMode>('NON_GST');
   const [clientGstin, setClientGstin] = useState('');
   const [sacCode, setSacCode] = useState('9983');
   const [aiDraftingQuote, setAiDraftingQuote] = useState(false);
+
+  const updateForm = (patch: Partial<typeof form>) => {
+    setForm((prev) => ({ ...prev, ...patch }));
+    setFormDirty(true);
+  };
 
   const loadAll = useCallback(async () => {
     const [qList, cList, iList, pList, sList] = await Promise.all([
@@ -2403,9 +2448,12 @@ export const AdminQuotationsPage: React.FC = () => {
       (c) => c.email.toLowerCase() === fromInq.email.toLowerCase()
     );
     setEditingId(null);
+    setEditingRecord(null);
     setForm((prev) => ({
       ...prev,
-      quotationNumber: `PE-QTN-${new Date().getFullYear()}-${String(Math.floor(100 + Math.random() * 900))}`,
+      documentType: 'Quotation',
+      quotationNumber: generateDocumentNumber('Quotation'),
+      version: 1,
       inquiryId: fromInq.id,
       clientId: matchedClient?.id || '',
       clientName: fromInq.fullName,
@@ -2433,8 +2481,78 @@ export const AdminQuotationsPage: React.FC = () => {
               },
             ],
     }));
+    setFormDirty(true);
     setShowBuilder(true);
   }, [location.state, clients]);
+
+  const handleOpenCreateDoc = (docType: QuotationDocumentType) => {
+    setEditingId(null);
+    setEditingRecord(null);
+    setGstMode('NON_GST');
+    setClientGstin('');
+    setSacCode('9983');
+    setForm(createEmptyDocForm(docType));
+    setFormDirty(false);
+    setShowBuilder(true);
+  };
+
+  const handleOpenEditDoc = (q: QuotationRecord) => {
+    const docType = inferQuotationDocumentType(q);
+    setEditingId(q.id);
+    setEditingRecord(q);
+    const meta = getInvoiceGstMeta(q.id);
+    setGstMode(
+      meta.gstMode !== 'NON_GST'
+        ? meta.gstMode
+        : q.taxRate === 18
+        ? 'CGST_SGST_18'
+        : q.taxRate > 0
+        ? 'CUSTOM'
+        : 'NON_GST'
+    );
+    setClientGstin(meta.clientGstin || '');
+    setSacCode(meta.sacCode || '9983');
+    setForm({
+      documentType: docType,
+      quotationNumber: q.quotationNumber,
+      version: q.version || 1,
+      inquiryId: q.inquiryId || '',
+      clientId: q.clientId,
+      clientName: q.clientName,
+      clientEmail: q.clientEmail,
+      clientUserId: q.clientUserId,
+      projectTitle: q.projectTitle,
+      serviceCategory: q.serviceCategory,
+      scopeSummary: q.scopeSummary,
+      deliverables: q.deliverables,
+      estimatedTimeline: q.estimatedTimeline,
+      issueDate: q.issueDate,
+      expiryDate: q.expiryDate,
+      discount: q.discount,
+      taxRate: q.taxRate,
+      status: q.status,
+      notes: q.notes || '',
+      termsAndConditions: q.termsAndConditions,
+      lineItems: q.lineItems.map((li) => ({
+        description: li.description,
+        quantity: li.quantity,
+        unitPrice: li.unitPrice,
+      })),
+    });
+    setFormDirty(false);
+    setShowBuilder(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleRequestCloseBuilder = () => {
+    if (formDirty) {
+      setShowUnsavedModal(true);
+      return;
+    }
+    setShowBuilder(false);
+    setEditingId(null);
+    setEditingRecord(null);
+  };
 
   const handleAIDraftFromSelectedInquiry = async () => {
     const inq = inquiries.find((i) => i.id === form.inquiryId);
@@ -2445,8 +2563,7 @@ export const AdminQuotationsPage: React.FC = () => {
     setAiDraftingQuote(true);
     try {
       const drafted = await generateAIDraftedQuotationFromInquiry(inq, services);
-      setForm((prev) => ({
-        ...prev,
+      updateForm({
         projectTitle: drafted.projectTitle,
         serviceCategory: drafted.serviceCategory,
         scopeSummary: drafted.scopeSummary,
@@ -2457,7 +2574,7 @@ export const AdminQuotationsPage: React.FC = () => {
           quantity: li.quantity,
           unitPrice: li.unitPrice,
         })),
-      }));
+      });
       showToast('success', 'AI Scope & Line Items Drafted', 'Review the itemized INR pricing below.');
     } catch (err) {
       showToast('error', 'AI Draft Failed', err instanceof Error ? err.message : '');
@@ -2485,16 +2602,15 @@ export const AdminQuotationsPage: React.FC = () => {
   const handleSelectClient = (clientId: string) => {
     const found = clients.find((c) => c.id === clientId);
     if (!found) {
-      setForm((prev) => ({ ...prev, clientId: '' }));
+      updateForm({ clientId: '' });
       return;
     }
-    setForm((prev) => ({
-      ...prev,
+    updateForm({
       clientId: found.id,
       clientName: found.fullName,
       clientEmail: found.email,
       clientUserId: found.userId || '',
-    }));
+    });
   };
 
   const handleSelectInquiry = (inqId: string) => {
@@ -2503,29 +2619,37 @@ export const AdminQuotationsPage: React.FC = () => {
     const matchedClient = clients.find(
       (c) => c.email.toLowerCase() === inq.email.toLowerCase()
     );
-    setForm((prev) => ({
-      ...prev,
+    updateForm({
       inquiryId: inq.id,
-      clientId: matchedClient?.id || prev.clientId,
+      clientId: matchedClient?.id || form.clientId,
       clientName: inq.fullName,
       clientEmail: inq.email,
-      clientUserId: matchedClient?.userId || prev.clientUserId,
+      clientUserId: matchedClient?.userId || form.clientUserId,
       projectTitle: `${inq.serviceRequired} — ${inq.companyName || inq.fullName}`,
       serviceCategory: inq.serviceRequired,
       scopeSummary: inq.description,
-    }));
+    });
   };
 
-  const handleSaveQuotation = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const performSaveDocument = async () => {
     if (!form.clientName.trim() || !form.projectTitle.trim()) {
       showToast('error', 'Missing Fields', 'Client name and project title are required.');
       return;
     }
+    if (totals.validationErrors.length > 0) {
+      showToast('error', 'Validation Error', totals.validationErrors[0]);
+      return;
+    }
+
+    setSavingDoc(true);
     try {
       const saved = await saveQuotationAdmin(
         {
-          quotationNumber: form.quotationNumber,
+          quotationNumber: form.quotationNumber.trim(),
+          documentType: form.documentType,
+          version: form.version || 1,
+          parentQuotationId: editingRecord?.parentQuotationId,
+          revisionHistory: editingRecord?.revisionHistory,
           inquiryId: form.inquiryId || undefined,
           clientId: form.clientId,
           clientUserId: form.clientUserId,
@@ -2538,11 +2662,11 @@ export const AdminQuotationsPage: React.FC = () => {
           estimatedTimeline: form.estimatedTimeline,
           issueDate: form.issueDate,
           expiryDate: form.expiryDate,
-          lineItems: form.lineItems.map((li) => ({
+          lineItems: totals.normalizedItems.map((li) => ({
             description: li.description,
-            quantity: Number(li.quantity) || 1,
-            unitPrice: Number(li.unitPrice) || 0,
-            amount: Math.round((Number(li.quantity) || 1) * (Number(li.unitPrice) || 0)),
+            quantity: li.quantity,
+            unitPrice: li.unitPrice,
+            amount: li.amount,
           })),
           subtotal: totals.subtotal,
           discount: totals.discount,
@@ -2551,7 +2675,10 @@ export const AdminQuotationsPage: React.FC = () => {
           total: totals.total,
           currency: 'INR',
           status: form.status,
+          notes: form.notes,
           termsAndConditions: form.termsAndConditions,
+          convertedProjectId: editingRecord?.convertedProjectId,
+          convertedInvoiceId: editingRecord?.convertedInvoiceId,
         },
         editingId || undefined
       );
@@ -2562,7 +2689,6 @@ export const AdminQuotationsPage: React.FC = () => {
         clientGstin: clientGstin.trim() || undefined,
       });
 
-      // If linked to an inquiry, mark inquiry as Proposal Sent
       if (form.inquiryId) {
         const linkedInq = inquiries.find((i) => i.id === form.inquiryId);
         if (linkedInq && linkedInq.status === 'New') {
@@ -2572,31 +2698,173 @@ export const AdminQuotationsPage: React.FC = () => {
 
       showToast(
         'success',
-        editingId ? 'Quotation Updated' : 'Quotation Created',
+        editingId ? `${form.documentType} Updated` : `${form.documentType} Created`,
         `${saved.quotationNumber} (${formatINR(saved.total)})`
       );
+      setFormDirty(false);
+      setShowUnsavedModal(false);
       setShowBuilder(false);
       setEditingId(null);
+      setEditingRecord(null);
       await loadAll();
     } catch (err) {
-      showToast('error', 'Failed to save quotation', err instanceof Error ? err.message : '');
+      showToast('error', `Failed to save ${form.documentType.toLowerCase()}`, err instanceof Error ? err.message : '');
+    } finally {
+      setSavingDoc(false);
     }
   };
 
+  const handleSaveQuotation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await performSaveDocument();
+  };
+
+  const handleSaveAsNewRevision = async () => {
+    if (!editingRecord) return;
+    setSavingDoc(true);
+    try {
+      const rev = await createQuotationRevisionAdmin(editingRecord, {
+        quotationNumber: editingRecord.quotationNumber,
+        documentType: form.documentType,
+        clientId: form.clientId,
+        clientUserId: form.clientUserId,
+        clientName: form.clientName.trim(),
+        clientEmail: form.clientEmail.trim(),
+        projectTitle: form.projectTitle.trim(),
+        serviceCategory: form.serviceCategory,
+        scopeSummary: form.scopeSummary,
+        deliverables: form.deliverables,
+        estimatedTimeline: form.estimatedTimeline,
+        issueDate: form.issueDate,
+        expiryDate: form.expiryDate,
+        lineItems: totals.normalizedItems.map((li) => ({
+          description: li.description,
+          quantity: li.quantity,
+          unitPrice: li.unitPrice,
+          amount: li.amount,
+        })),
+        subtotal: totals.subtotal,
+        discount: totals.discount,
+        taxRate: effectiveTaxRate,
+        taxAmount: totals.taxAmount,
+        total: totals.total,
+        currency: 'INR',
+        status: 'Sent',
+        notes: form.notes,
+        termsAndConditions: form.termsAndConditions,
+      });
+      saveInvoiceGstMeta(rev.id, {
+        gstMode,
+        sacCode: sacCode || '9983',
+        clientGstin: clientGstin.trim() || undefined,
+      });
+      await loadAll();
+      setFormDirty(false);
+      setShowBuilder(false);
+      setEditingId(null);
+      setEditingRecord(null);
+      showToast(
+        'success',
+        `Revision v${rev.version} Created`,
+        `New revision ${rev.quotationNumber} saved while preserving accepted version ${editingRecord.quotationNumber}.`
+      );
+    } catch (err) {
+      showToast('error', 'Failed to create revision', err instanceof Error ? err.message : '');
+    } finally {
+      setSavingDoc(false);
+    }
+  };
+
+  const handleDuplicateDoc = async (q: QuotationRecord, targetType?: QuotationDocumentType) => {
+    try {
+      const copy = await duplicateQuotationAdmin(q, targetType);
+      await loadAll();
+      showToast(
+        'success',
+        targetType && targetType !== inferQuotationDocumentType(q)
+          ? `Converted to ${targetType}`
+          : `${inferQuotationDocumentType(q)} Duplicated`,
+        `Created ${copy.quotationNumber} (${formatINR(copy.total)}).`
+      );
+    } catch (err) {
+      showToast('error', 'Duplicate Failed', err instanceof Error ? err.message : '');
+    }
+  };
+
+  const handleArchiveDoc = async (q: QuotationRecord) => {
+    try {
+      await archiveQuotationAdmin(q, 'Archived');
+      await loadAll();
+      showToast('success', `${inferQuotationDocumentType(q)} Archived`, `${q.quotationNumber} marked as Archived.`);
+    } catch (err) {
+      showToast('error', 'Archive Failed', err instanceof Error ? err.message : '');
+    }
+  };
+
+  const handleOpenDeleteDocModal = async (q: QuotationRecord) => {
+    const docLabel = inferQuotationDocumentType(q);
+    const eligibility = checkQuotationDeleteEligibilityAdmin(q);
+    setDeleteModalConfig({
+      isOpen: true,
+      recordType: docLabel,
+      recordTitle: q.projectTitle,
+      recordIdentifier: q.quotationNumber,
+      clientName: q.clientName,
+      monetaryTotal: q.total,
+      statusLabel: q.status,
+      canHardDelete: eligibility.canHardDelete,
+      blockingReason: eligibility.reason,
+      dependencyItems: [
+        {
+          label: `${docLabel} Status`,
+          count: q.status,
+        },
+        {
+          label: 'Conversion Status',
+          count: eligibility.isConverted ? 'Converted to Project/Invoice' : 'Not converted',
+        },
+      ],
+      requireExplicitCheckbox: true,
+      archiveActionLabel:
+        q.status !== 'Archived' ? `Archive ${docLabel} Instead (Recommended)` : undefined,
+      onConfirmArchiveOrVoid:
+        q.status !== 'Archived'
+          ? async () => {
+              await archiveQuotationAdmin(q, 'Archived');
+              await loadAll();
+              showToast('success', `${docLabel} Archived`, `${q.quotationNumber} marked as Archived.`);
+            }
+          : undefined,
+      onConfirmHardDelete: async () => {
+        await deleteQuotationAdmin(q.id);
+        if (printQuotation?.id === q.id) setPrintQuotation(null);
+        if (editingId === q.id) {
+          setShowBuilder(false);
+          setEditingId(null);
+          setEditingRecord(null);
+        }
+        await loadAll();
+        showToast('success', `Draft ${docLabel} Deleted`, `${q.quotationNumber} permanently removed.`);
+      },
+      onClose: () => setDeleteModalConfig(null),
+    });
+  };
+
   const handleConvertQuotationToProjectAndInvoice = async (q: QuotationRecord) => {
+    const docLabel = inferQuotationDocumentType(q);
     if (q.convertedProjectId) {
       showToast(
         'warning',
         'Already Converted',
-        'This quotation has already been converted into a project to prevent duplicate records.'
+        `This ${docLabel.toLowerCase()} has already been converted into a project to prevent duplicate records.`
       );
       navigate(`/admin/projects/${q.convertedProjectId}`);
       return;
     }
 
     confirmAction({
-      title: 'Convert Quotation to Project & Invoice',
-      message: `Create an active Project and INR Invoice (${formatINR(q.total)}) from quotation ${
+      title: `Convert ${docLabel} to Project & Invoice`,
+      message: `Create an active Project and INR Invoice (${formatINR(q.total)}) from ${docLabel.toLowerCase()} ${
         q.quotationNumber
       } for ${q.clientName}?`,
       onConfirm: async () => {
@@ -2617,9 +2885,9 @@ export const AdminQuotationsPage: React.FC = () => {
               priority: 'Medium',
               status: 'Planned',
               progress: 10,
-              latestUpdate: `Initialized from accepted quotation ${q.quotationNumber}.`,
+              latestUpdate: `Initialized from accepted ${docLabel.toLowerCase()} ${q.quotationNumber}.`,
             },
-            `Converted from quotation ${q.quotationNumber}`
+            `Converted from ${docLabel.toLowerCase()} ${q.quotationNumber}`
           );
 
           const invoiceNumber = `PE-INV-${new Date().getFullYear()}-${String(
@@ -2650,7 +2918,7 @@ export const AdminQuotationsPage: React.FC = () => {
               status: 'Sent',
               paymentInstructions:
                 'UPI or NEFT/IMPS bank transfer. Reference invoice number upon transfer.',
-              notes: `Converted from quotation ${q.quotationNumber}.`,
+              notes: `Converted from ${docLabel.toLowerCase()} ${q.quotationNumber}.`,
             },
             q.lineItems.map((li, idx) => ({
               description: li.description,
@@ -2686,6 +2954,8 @@ export const AdminQuotationsPage: React.FC = () => {
   };
 
   const filteredQuotations = quotations.filter((q) => {
+    const qDocType = inferQuotationDocumentType(q);
+    const matchesDocType = docTypeFilter === 'All' || qDocType === docTypeFilter;
     const matchesStatus = statusFilter === 'All' || q.status === statusFilter;
     const query = search.toLowerCase();
     const matchesSearch =
@@ -2693,47 +2963,159 @@ export const AdminQuotationsPage: React.FC = () => {
       q.quotationNumber.toLowerCase().includes(query) ||
       q.clientName.toLowerCase().includes(query) ||
       q.projectTitle.toLowerCase().includes(query);
-    return matchesStatus && matchesSearch;
+    return matchesDocType && matchesStatus && matchesSearch;
   });
+
+  const quotationsCount = quotations.filter((q) => inferQuotationDocumentType(q) === 'Quotation').length;
+  const estimatesCount = quotations.filter((q) => inferQuotationDocumentType(q) === 'Estimate').length;
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4 no-print">
         <div>
           <h1 className="font-editorial text-2xl font-semibold text-[#172333]">
-            Quotations & Project Conversion
+            Quotations, Cost Estimates & Project Conversion
           </h1>
           <p className="text-xs text-[#6E7785] mt-1">
-            Prepare itemized INR quotations for clients and inquiries, export printable PDFs, and convert accepted quotes into projects and invoices.
+            Create, edit, revise (v2/v3), duplicate, archive, or convert official Quotations (PE-QTN) and Cost Estimates (PE-EST) in INR.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            setEditingId(null);
-            setShowBuilder(!showBuilder);
-          }}
-          className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          <span>{showBuilder ? 'Close Quotation Builder' : 'New Quotation'}</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          {showBuilder ? (
+            <button
+              type="button"
+              onClick={handleRequestCloseBuilder}
+              className="px-4 py-2 text-xs font-semibold text-[#172333] bg-white border border-[#E2E4DF] hover:bg-[#F5F5F1] rounded-lg"
+            >
+              Close Document Editor
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => handleOpenCreateDoc('Quotation')}
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>New Quotation</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleOpenCreateDoc('Estimate')}
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-[#172333] bg-[#F18A45] hover:bg-[#e07934] rounded-lg"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>New Estimate</span>
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
-      {/* Quotation Builder Form */}
+      {/* Document Type Switcher Tabs */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E2E4DF] pb-3 no-print">
+        <div className="flex items-center gap-2">
+          {(
+            [
+              { id: 'All', label: `All Documents (${quotations.length})` },
+              { id: 'Quotation', label: `Quotations (${quotationsCount})` },
+              { id: 'Estimate', label: `Cost Estimates (${estimatesCount})` },
+            ] as const
+          ).map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setDocTypeFilter(tab.id)}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                docTypeFilter === tab.id
+                  ? 'bg-[#172333] text-white'
+                  : 'bg-white border border-[#E2E4DF] text-[#6E7785] hover:text-[#172333]'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Quotation / Estimate Builder Form */}
       {showBuilder && (
         <form
           onSubmit={handleSaveQuotation}
-          className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-5 no-print"
+          className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-5 no-print shadow-xs"
         >
-          <div className="flex items-center justify-between border-b border-[#E2E4DF] pb-4">
-            <h2 className="text-base font-semibold text-[#172333]">
-              {editingId ? `Edit Quotation (${form.quotationNumber})` : 'Create INR Quotation'}
-            </h2>
-            <span className="font-mono text-xs text-[#F18A45] font-semibold">
-              {form.quotationNumber}
-            </span>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E2E4DF] pb-4">
+            <div className="flex items-center gap-3">
+              <h2 className="text-base font-semibold text-[#172333]">
+                {editingId
+                  ? `Edit ${form.documentType} (${form.quotationNumber})`
+                  : `Create INR ${form.documentType}`}
+              </h2>
+              {form.version > 1 && (
+                <span className="px-2 py-0.5 text-[11px] font-mono font-semibold bg-[#F18A45]/15 text-[#F18A45] rounded">
+                  Revision v{form.version}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center bg-[#F5F5F1] p-1 rounded-lg border border-[#E2E4DF] text-xs">
+                {(['Quotation', 'Estimate'] as const).map((dt) => (
+                  <button
+                    key={dt}
+                    type="button"
+                    onClick={() => {
+                      const nextNum = !editingId
+                        ? generateDocumentNumber(dt)
+                        : dt === 'Estimate'
+                        ? form.quotationNumber.replace(/^PE-QTN-/, 'PE-EST-')
+                        : form.quotationNumber.replace(/^PE-EST-/, 'PE-QTN-');
+                      updateForm({ documentType: dt, quotationNumber: nextNum });
+                    }}
+                    className={`px-3 py-1 rounded font-medium transition-colors ${
+                      form.documentType === dt
+                        ? 'bg-[#172333] text-white font-semibold'
+                        : 'text-[#6E7785] hover:text-[#172333]'
+                    }`}
+                  >
+                    {dt}
+                  </button>
+                ))}
+              </div>
+              <input
+                type="text"
+                value={form.quotationNumber}
+                onChange={(e) => updateForm({ quotationNumber: e.target.value })}
+                className="w-44 px-3 py-1.5 text-xs font-mono font-semibold text-[#172333] bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              />
+            </div>
           </div>
+
+          {/* Revision Protection Banner for Accepted / Sent Quotations & Estimates */}
+          {editingRecord && (editingRecord.status === 'Accepted' || editingRecord.status === 'Sent') && (
+            <div className="p-3.5 bg-[#F18A45]/10 border border-[#F18A45]/30 rounded-lg flex flex-wrap items-center justify-between gap-3 text-xs">
+              <div className="flex items-start gap-2.5">
+                <GitBranch className="w-4 h-4 text-[#F18A45] shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold text-[#172333]">
+                    {editingRecord.status} {form.documentType} — Revision History Protection
+                  </p>
+                  <p className="text-[#6E7785] mt-0.5">
+                    You can save direct updates to {editingRecord.quotationNumber} or click "Save as New Revision (v
+                    {(editingRecord.version || 1) + 1})" to preserve the original snapshot.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                disabled={savingDoc}
+                onClick={handleSaveAsNewRevision}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-[#F18A45] hover:bg-[#e07934] rounded-lg shrink-0"
+              >
+                <GitBranch className="w-3.5 h-3.5" />
+                <span>Save as New Revision (v{(editingRecord.version || 1) + 1})</span>
+              </button>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
@@ -2785,11 +3167,11 @@ export const AdminQuotationsPage: React.FC = () => {
             </div>
             <div>
               <label className="block text-xs font-medium text-[#172333] mb-1">
-                Quotation Status
+                {form.documentType} Status
               </label>
               <select
                 value={form.status}
-                onChange={(e) => setForm({ ...form, status: e.target.value as QuotationStatus })}
+                onChange={(e) => updateForm({ status: e.target.value as QuotationStatus })}
                 className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
               >
                 {QUOTATION_STATUSES.map((st) => (
@@ -2810,7 +3192,7 @@ export const AdminQuotationsPage: React.FC = () => {
                 type="text"
                 required
                 value={form.clientName}
-                onChange={(e) => setForm({ ...form, clientName: e.target.value })}
+                onChange={(e) => updateForm({ clientName: e.target.value })}
                 className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
               />
             </div>
@@ -2822,7 +3204,7 @@ export const AdminQuotationsPage: React.FC = () => {
                 type="email"
                 required
                 value={form.clientEmail}
-                onChange={(e) => setForm({ ...form, clientEmail: e.target.value })}
+                onChange={(e) => updateForm({ clientEmail: e.target.value })}
                 className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
               />
             </div>
@@ -2831,7 +3213,7 @@ export const AdminQuotationsPage: React.FC = () => {
               <input
                 type="date"
                 value={form.issueDate}
-                onChange={(e) => setForm({ ...form, issueDate: e.target.value })}
+                onChange={(e) => updateForm({ issueDate: e.target.value })}
                 className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
               />
             </div>
@@ -2841,7 +3223,7 @@ export const AdminQuotationsPage: React.FC = () => {
                 type="date"
                 required
                 value={form.expiryDate}
-                onChange={(e) => setForm({ ...form, expiryDate: e.target.value })}
+                onChange={(e) => updateForm({ expiryDate: e.target.value })}
                 className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
               />
             </div>
@@ -2856,7 +3238,7 @@ export const AdminQuotationsPage: React.FC = () => {
                 type="text"
                 required
                 value={form.projectTitle}
-                onChange={(e) => setForm({ ...form, projectTitle: e.target.value })}
+                onChange={(e) => updateForm({ projectTitle: e.target.value })}
                 placeholder="e.g. Monthly YouTube Thumbnail & Reels Production Package"
                 className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
               />
@@ -2868,7 +3250,7 @@ export const AdminQuotationsPage: React.FC = () => {
               <input
                 type="text"
                 value={form.estimatedTimeline}
-                onChange={(e) => setForm({ ...form, estimatedTimeline: e.target.value })}
+                onChange={(e) => updateForm({ estimatedTimeline: e.target.value })}
                 placeholder="3–5 business days"
                 className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
               />
@@ -2883,7 +3265,7 @@ export const AdminQuotationsPage: React.FC = () => {
               <textarea
                 rows={2}
                 value={form.scopeSummary}
-                onChange={(e) => setForm({ ...form, scopeSummary: e.target.value })}
+                onChange={(e) => updateForm({ scopeSummary: e.target.value })}
                 className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
               />
             </div>
@@ -2894,16 +3276,18 @@ export const AdminQuotationsPage: React.FC = () => {
               <textarea
                 rows={2}
                 value={form.deliverables}
-                onChange={(e) => setForm({ ...form, deliverables: e.target.value })}
+                onChange={(e) => updateForm({ deliverables: e.target.value })}
                 className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
               />
             </div>
           </div>
 
-          {/* Line Items */}
+          {/* Line Items with Reordering */}
           <div className="space-y-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-xs font-semibold text-[#172333]">Quotation Line Items</span>
+              <span className="text-xs font-semibold text-[#172333]">
+                {form.documentType} Line Items (INR)
+              </span>
               <div className="flex items-center gap-2">
                 {services.length > 0 && (
                   <select
@@ -2911,17 +3295,16 @@ export const AdminQuotationsPage: React.FC = () => {
                     onChange={(e) => {
                       const srv = services.find((s) => s.id === e.target.value);
                       if (!srv) return;
-                      setForm((prev) => ({
-                        ...prev,
+                      updateForm({
                         lineItems: [
-                          ...prev.lineItems,
+                          ...form.lineItems,
                           {
                             description: `${srv.title} (${srv.category})`,
                             quantity: 1,
                             unitPrice: srv.startingPrice || 500,
                           },
                         ],
-                      }));
+                      });
                       e.target.value = '';
                     }}
                     className="px-2.5 py-1 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-md"
@@ -2937,8 +3320,7 @@ export const AdminQuotationsPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() =>
-                    setForm({
-                      ...form,
+                    updateForm({
                       lineItems: [
                         ...form.lineItems,
                         { description: 'Custom Creative Deliverable', quantity: 1, unitPrice: 500 },
@@ -2952,57 +3334,129 @@ export const AdminQuotationsPage: React.FC = () => {
               </div>
             </div>
 
-            {form.lineItems.map((item, idx) => (
-              <div key={idx} className="grid grid-cols-12 gap-2 items-center">
-                <input
-                  type="text"
-                  required
-                  value={item.description}
-                  onChange={(e) => {
-                    const next = [...form.lineItems];
-                    next[idx].description = e.target.value;
-                    setForm({ ...form, lineItems: next });
-                  }}
-                  placeholder="Service / Deliverable description"
-                  className="col-span-6 px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
-                />
-                <input
-                  type="number"
-                  min={1}
-                  value={item.quantity}
-                  onChange={(e) => {
-                    const next = [...form.lineItems];
-                    next[idx].quantity = Number(e.target.value);
-                    setForm({ ...form, lineItems: next });
-                  }}
-                  className="col-span-2 px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
-                />
-                <input
-                  type="number"
-                  min={0}
-                  value={item.unitPrice}
-                  onChange={(e) => {
-                    const next = [...form.lineItems];
-                    next[idx].unitPrice = Number(e.target.value);
-                    setForm({ ...form, lineItems: next });
-                  }}
-                  className="col-span-3 px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
-                />
-                <button
-                  type="button"
-                  disabled={form.lineItems.length <= 1}
-                  onClick={() =>
-                    setForm({
-                      ...form,
-                      lineItems: form.lineItems.filter((_, i) => i !== idx),
-                    })
-                  }
-                  className="col-span-1 text-xs text-[#B93832] disabled:opacity-30"
-                >
-                  ×
-                </button>
-              </div>
-            ))}
+            <div className="hidden sm:grid grid-cols-12 gap-2 px-1 text-[11px] font-semibold text-[#6E7785]">
+              <div className="col-span-5">Deliverable / Service Description</div>
+              <div className="col-span-2">Quantity</div>
+              <div className="col-span-2">Unit Price (₹)</div>
+              <div className="col-span-2 text-right">Line Total</div>
+              <div className="col-span-1 text-right">Order</div>
+            </div>
+
+            {form.lineItems.map((item, idx) => {
+              const lineAmount = Math.round(
+                (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0)
+              );
+              return (
+                <div key={idx} className="grid grid-cols-12 gap-2 items-center">
+                  <input
+                    type="text"
+                    required
+                    value={item.description}
+                    onChange={(e) => {
+                      const next = [...form.lineItems];
+                      next[idx] = { ...next[idx], description: e.target.value };
+                      updateForm({ lineItems: next });
+                    }}
+                    placeholder="Service / Deliverable description"
+                    className="col-span-12 sm:col-span-5 px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                  />
+                  <input
+                    type="number"
+                    min={1}
+                    step="any"
+                    value={item.quantity}
+                    onChange={(e) => {
+                      const next = [...form.lineItems];
+                      next[idx] = { ...next[idx], quantity: Number(e.target.value) };
+                      updateForm({ lineItems: next });
+                    }}
+                    className="col-span-4 sm:col-span-2 px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                  />
+                  <input
+                    type="number"
+                    min={0}
+                    step="any"
+                    value={item.unitPrice}
+                    onChange={(e) => {
+                      const next = [...form.lineItems];
+                      next[idx] = { ...next[idx], unitPrice: Number(e.target.value) };
+                      updateForm({ lineItems: next });
+                    }}
+                    className="col-span-4 sm:col-span-2 px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                  />
+                  <div className="col-span-2 sm:col-span-2 text-right font-mono text-xs font-semibold text-[#172333] tabular-nums">
+                    {formatINR(lineAmount)}
+                  </div>
+                  <div className="col-span-2 sm:col-span-1 flex items-center justify-end gap-1">
+                    <button
+                      type="button"
+                      disabled={idx === 0}
+                      onClick={() => {
+                        const next = [...form.lineItems];
+                        [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+                        updateForm({ lineItems: next });
+                      }}
+                      title="Move Up"
+                      className="p-1 text-[#6E7785] hover:text-[#172333] disabled:opacity-25"
+                    >
+                      <ArrowUp className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={idx === form.lineItems.length - 1}
+                      onClick={() => {
+                        const next = [...form.lineItems];
+                        [next[idx + 1], next[idx]] = [next[idx], next[idx + 1]];
+                        updateForm({ lineItems: next });
+                      }}
+                      title="Move Down"
+                      className="p-1 text-[#6E7785] hover:text-[#172333] disabled:opacity-25"
+                    >
+                      <ArrowDown className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={form.lineItems.length <= 1}
+                      onClick={() =>
+                        updateForm({
+                          lineItems: form.lineItems.filter((_, i) => i !== idx),
+                        })
+                      }
+                      title="Remove Item"
+                      className="p-1 text-xs font-bold text-[#B93832] disabled:opacity-30"
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-[#E2E4DF]">
+            <div>
+              <label className="block text-xs font-medium text-[#172333] mb-1">
+                Terms & Conditions
+              </label>
+              <textarea
+                rows={2}
+                value={form.termsAndConditions}
+                onChange={(e) => updateForm({ termsAndConditions: e.target.value })}
+                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-[#172333] mb-1">
+                Additional Notes / Assumptions (Optional)
+              </label>
+              <textarea
+                rows={2}
+                value={form.notes}
+                onChange={(e) => updateForm({ notes: e.target.value })}
+                placeholder="Any special assumptions, turnaround notes, or milestone details..."
+                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 pt-3 border-t border-[#E2E4DF]">
@@ -3012,7 +3466,7 @@ export const AdminQuotationsPage: React.FC = () => {
                 type="number"
                 min={0}
                 value={form.discount}
-                onChange={(e) => setForm({ ...form, discount: Number(e.target.value) })}
+                onChange={(e) => updateForm({ discount: Number(e.target.value) })}
                 className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
               />
             </div>
@@ -3025,9 +3479,10 @@ export const AdminQuotationsPage: React.FC = () => {
                 onChange={(e) => {
                   const nextMode = e.target.value as GstTaxMode;
                   setGstMode(nextMode);
-                  if (nextMode === 'NON_GST') setForm({ ...form, taxRate: 0 });
+                  setFormDirty(true);
+                  if (nextMode === 'NON_GST') updateForm({ taxRate: 0 });
                   else if (nextMode === 'CGST_SGST_18' || nextMode === 'IGST_18')
-                    setForm({ ...form, taxRate: 18 });
+                    updateForm({ taxRate: 18 });
                 }}
                 className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
               >
@@ -3046,7 +3501,7 @@ export const AdminQuotationsPage: React.FC = () => {
                     min={0}
                     max={100}
                     value={form.taxRate}
-                    onChange={(e) => setForm({ ...form, taxRate: Number(e.target.value) })}
+                    onChange={(e) => updateForm({ taxRate: Number(e.target.value) })}
                     className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
                   />
                 </>
@@ -3059,14 +3514,20 @@ export const AdminQuotationsPage: React.FC = () => {
                     <input
                       type="text"
                       value={clientGstin}
-                      onChange={(e) => setClientGstin(e.target.value.toUpperCase())}
+                      onChange={(e) => {
+                        setClientGstin(e.target.value.toUpperCase());
+                        setFormDirty(true);
+                      }}
                       placeholder="Client GSTIN"
                       className="w-2/3 px-2.5 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
                     />
                     <input
                       type="text"
                       value={sacCode}
-                      onChange={(e) => setSacCode(e.target.value)}
+                      onChange={(e) => {
+                        setSacCode(e.target.value);
+                        setFormDirty(true);
+                      }}
                       placeholder="SAC 9983"
                       className="w-1/3 px-2 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
                     />
@@ -3087,19 +3548,32 @@ export const AdminQuotationsPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <button
               type="submit"
-              className="px-5 py-2.5 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg"
+              disabled={savingDoc}
+              className="px-5 py-2.5 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg disabled:opacity-50"
             >
-              {editingId ? 'Save Quotation Changes' : 'Save Quotation'}
+              {savingDoc
+                ? 'Saving...'
+                : editingId
+                ? `Save ${form.documentType} Changes`
+                : `Save ${form.documentType}`}
             </button>
+            {editingRecord && (
+              <button
+                type="button"
+                disabled={savingDoc}
+                onClick={handleSaveAsNewRevision}
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold text-[#172333] bg-[#F5F5F1] hover:bg-[#E2E4DF] rounded-lg"
+              >
+                <GitBranch className="w-3.5 h-3.5 text-[#F18A45]" />
+                <span>Save as New Revision (v{(editingRecord.version || 1) + 1})</span>
+              </button>
+            )}
             <button
               type="button"
-              onClick={() => {
-                setShowBuilder(false);
-                setEditingId(null);
-              }}
+              onClick={handleRequestCloseBuilder}
               className="px-4 py-2 text-xs font-medium text-[#6E7785] hover:text-[#172333]"
             >
               Cancel
@@ -3108,12 +3582,16 @@ export const AdminQuotationsPage: React.FC = () => {
         </form>
       )}
 
-      {/* Printable Quotation View */}
+      {/* Printable Quotation / Estimate View */}
       {printQuotation && (
         <div className="bg-white border border-[#172333] rounded-lg p-8 space-y-6">
           <div className="flex items-start justify-between border-b border-[#E2E4DF] pb-6">
             <div>
-              <p className="text-xs font-semibold text-[#F18A45]">OFFICIAL PROJECT QUOTATION</p>
+              <p className="text-xs font-semibold text-[#F18A45]">
+                {inferQuotationDocumentType(printQuotation) === 'Estimate'
+                  ? 'PROJECT COST ESTIMATE · SAC 9983'
+                  : 'OFFICIAL PROJECT QUOTATION · SAC 9983'}
+              </p>
               <h2 className="font-editorial text-2xl font-semibold text-[#172333] mt-0.5">
                 Prithvi Editify
               </h2>
@@ -3122,9 +3600,16 @@ export const AdminQuotationsPage: React.FC = () => {
               </p>
             </div>
             <div className="text-right">
-              <p className="font-mono text-lg font-semibold text-[#172333]">
-                {printQuotation.quotationNumber}
-              </p>
+              <div className="flex items-center justify-end gap-2">
+                <p className="font-mono text-lg font-semibold text-[#172333]">
+                  {printQuotation.quotationNumber}
+                </p>
+                {(printQuotation.version || 1) > 1 && (
+                  <span className="px-2 py-0.5 text-[10px] font-mono font-semibold bg-[#F18A45]/15 text-[#F18A45] rounded">
+                    v{printQuotation.version}
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-[#6E7785]">
                 Issued: {printQuotation.issueDate} · Valid Until: {printQuotation.expiryDate}
               </p>
@@ -3212,9 +3697,14 @@ export const AdminQuotationsPage: React.FC = () => {
                     clientName={printQuotation.clientName}
                     compact
                   />
-                  <div className="text-xs text-[#6E7785]">
+                  <div className="text-xs text-[#6E7785] space-y-1">
                     <p className="font-semibold text-[#172333]">Terms & Conditions:</p>
-                    <p className="mt-1">{printQuotation.termsAndConditions}</p>
+                    <p>{printQuotation.termsAndConditions}</p>
+                    {printQuotation.notes && (
+                      <p className="text-[#172333] mt-1">
+                        <span className="font-semibold">Notes:</span> {printQuotation.notes}
+                      </p>
+                    )}
                     <p className="mt-1 text-[11px]">
                       Public One-Tap Approval Link:{' '}
                       <a
@@ -3279,7 +3769,7 @@ export const AdminQuotationsPage: React.FC = () => {
                       </div>
                     )}
                     <div className="flex justify-between pt-2 border-t border-[#E2E4DF] font-semibold text-sm text-[#172333]">
-                      <span>Total Quoted (INR):</span>
+                      <span>Total {inferQuotationDocumentType(printQuotation)} (INR):</span>
                       <span className="font-mono tabular-nums">
                         {formatINR(printQuotation.total)}
                       </span>
@@ -3296,6 +3786,28 @@ export const AdminQuotationsPage: React.FC = () => {
             );
           })()}
 
+          {/* Revision History Trail if available */}
+          {printQuotation.revisionHistory && printQuotation.revisionHistory.length > 0 && (
+            <div className="p-4 bg-[#F5F5F1] rounded-lg space-y-2 text-xs no-print">
+              <p className="font-semibold text-[#172333]">
+                Prior Revision Snapshots ({printQuotation.revisionHistory.length})
+              </p>
+              <div className="divide-y divide-[#E2E4DF]">
+                {printQuotation.revisionHistory.map((rev, idx) => (
+                  <div key={idx} className="py-1.5 flex items-center justify-between text-[#6E7785]">
+                    <span>
+                      v{rev.version} · {rev.quotationNumber} ({rev.status}) · Saved{' '}
+                      {rev.updatedAt?.split('T')[0]}
+                    </span>
+                    <span className="font-mono font-semibold text-[#172333]">
+                      {formatINR(rev.total)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-wrap items-center gap-3 no-print">
             <button
               type="button"
@@ -3303,14 +3815,29 @@ export const AdminQuotationsPage: React.FC = () => {
               className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-[#172333] rounded-lg"
             >
               <Printer className="w-3.5 h-3.5" />
-              <span>Print / Export Quotation PDF</span>
+              <span>Print / Export PDF</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const target = printQuotation;
+                setPrintQuotation(null);
+                handleOpenEditDoc(target);
+              }}
+              className="px-4 py-2 text-xs font-semibold text-[#172333] bg-[#F5F5F1] hover:bg-[#E2E4DF] rounded-lg"
+            >
+              Edit {inferQuotationDocumentType(printQuotation)}
             </button>
             <button
               type="button"
               onClick={() => {
                 const url = buildPublicQuotationShareUrl(printQuotation);
                 navigator.clipboard?.writeText(url);
-                showToast('success', 'Approval Link Copied', 'Public quotation approval link copied to clipboard.');
+                showToast(
+                  'success',
+                  'Approval Link Copied',
+                  'Public approval link copied to clipboard.'
+                );
               }}
               className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-[#172333] bg-[#F5F5F1] hover:bg-[#E2E4DF] rounded-lg"
             >
@@ -3345,7 +3872,7 @@ export const AdminQuotationsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Search & Filter Bar */}
+      {/* Search & Status Filter Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 no-print">
         <div className="flex flex-wrap items-center gap-1 p-1 bg-[#E2E4DF]/60 rounded-lg w-fit">
           {['All', ...QUOTATION_STATUSES].map((st) => (
@@ -3368,172 +3895,145 @@ export const AdminQuotationsPage: React.FC = () => {
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search quote #, client, project..."
+          placeholder="Search quote/estimate #, client, project..."
           className="px-3.5 py-2 text-xs bg-white border border-[#E2E4DF] rounded-lg w-full sm:w-72"
         />
       </div>
 
-      {/* Quotations Table */}
+      {/* Quotations & Estimates Table */}
       <div className="bg-white border border-[#E2E4DF] rounded-lg overflow-x-auto no-print">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-[#E2E4DF] text-[11px] font-semibold text-[#6E7785]">
-              <th className="py-3 px-4">Quotation #</th>
+              <th className="py-3 px-4">Document #</th>
+              <th className="py-3 px-4">Type</th>
               <th className="py-3 px-4">Client & Project</th>
               <th className="py-3 px-4">Valid Until</th>
               <th className="py-3 px-4">Status</th>
-              <th className="py-3 px-4 text-right">Quoted Total</th>
+              <th className="py-3 px-4 text-right">Total (INR)</th>
               <th className="py-3 px-4 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#E2E4DF] text-xs">
             {filteredQuotations.length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-10 text-center text-[#6E7785]">
-                  No quotations match the current filter. Click "+ New Quotation" above to create one.
+                <td colSpan={7} className="py-10 text-center text-[#6E7785]">
+                  No quotations or estimates match the current filter. Use "+ New Quotation" or "+ New Estimate" above.
                 </td>
               </tr>
             ) : (
-              filteredQuotations.map((q) => (
-                <tr key={q.id} className="hover:bg-[#F5F5F1]/50">
-                  <td className="py-3.5 px-4 font-mono font-semibold text-[#172333]">
-                    {q.quotationNumber}
-                  </td>
-                  <td className="py-3.5 px-4">
-                    <p className="font-semibold text-[#172333]">{q.projectTitle}</p>
-                    <p className="text-[11px] text-[#6E7785]">
-                      {q.clientName} ({q.clientEmail})
-                    </p>
-                  </td>
-                  <td className="py-3.5 px-4 font-mono text-[#6E7785]">{q.expiryDate}</td>
-                  <td className="py-3.5 px-4">
-                    <span
-                      className={`font-semibold ${
-                        q.status === 'Accepted'
-                          ? 'text-[#26734D]'
-                          : q.status === 'Rejected' || q.status === 'Expired'
-                          ? 'text-[#B93832]'
-                          : 'text-[#172333]'
-                      }`}
-                    >
-                      {q.status}
-                    </span>
-                    {q.convertedProjectId && (
-                      <span className="block text-[10px] text-[#26734D]">Converted to Project</span>
-                    )}
-                  </td>
-                  <td className="py-3.5 px-4 text-right font-mono font-semibold text-[#172333] tabular-nums">
-                    {formatINR(q.total)}
-                  </td>
-                  <td className="py-3.5 px-4 text-right space-x-2.5 whitespace-nowrap">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const url = buildPublicQuotationShareUrl(q);
-                        navigator.clipboard?.writeText(url);
-                        showToast(
-                          'success',
-                          'Share Link Copied',
-                          `Public approval link for ${q.quotationNumber} copied.`
-                        );
-                      }}
-                      title="Copy Public One-Tap Approval Link (/quote/:quoteId)"
-                      className="font-semibold text-[#F18A45] hover:underline"
-                    >
-                      Share Link
-                    </button>
-                    <a
-                      href={buildWhatsAppQuotationShareUrl(q)}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="font-semibold text-[#26734D] hover:underline"
-                    >
-                      WhatsApp
-                    </a>
-                    <button
-                      type="button"
-                      onClick={() => setPrintQuotation(q)}
-                      className="font-semibold text-[#172333] hover:text-[#F18A45]"
-                    >
-                      Print/QR
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleConvertQuotationToProjectAndInvoice(q)}
-                      className="font-semibold text-[#26734D] hover:underline"
-                    >
-                      {q.convertedProjectId ? 'View Project' : 'Convert'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditingId(q.id);
-                        const meta = getInvoiceGstMeta(q.id);
-                        setGstMode(
-                          meta.gstMode !== 'NON_GST'
-                            ? meta.gstMode
-                            : q.taxRate === 18
-                            ? 'CGST_SGST_18'
-                            : q.taxRate > 0
-                            ? 'CUSTOM'
-                            : 'NON_GST'
-                        );
-                        setClientGstin(meta.clientGstin || '');
-                        setSacCode(meta.sacCode || '9983');
-                        setForm({
-                          quotationNumber: q.quotationNumber,
-                          inquiryId: q.inquiryId || '',
-                          clientId: q.clientId,
-                          clientName: q.clientName,
-                          clientEmail: q.clientEmail,
-                          clientUserId: q.clientUserId,
-                          projectTitle: q.projectTitle,
-                          serviceCategory: q.serviceCategory,
-                          scopeSummary: q.scopeSummary,
-                          deliverables: q.deliverables,
-                          estimatedTimeline: q.estimatedTimeline,
-                          issueDate: q.issueDate,
-                          expiryDate: q.expiryDate,
-                          discount: q.discount,
-                          taxRate: q.taxRate,
-                          status: q.status,
-                          termsAndConditions: q.termsAndConditions,
-                          lineItems: q.lineItems.map((li) => ({
-                            description: li.description,
-                            quantity: li.quantity,
-                            unitPrice: li.unitPrice,
-                          })),
-                        });
-                        setShowBuilder(true);
-                      }}
-                      className="font-semibold text-[#172333] hover:text-[#F18A45]"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        confirmAction({
-                          title: 'Delete Quotation',
-                          message: `Delete quotation ${q.quotationNumber}?`,
-                          onConfirm: async () => {
-                            await deleteQuotationAdmin(q.id);
-                            await loadAll();
-                            showToast('success', 'Quotation Deleted');
-                          },
-                        })
-                      }
-                      className="text-[#B93832] hover:underline"
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))
+              filteredQuotations.map((q) => {
+                const docType = inferQuotationDocumentType(q);
+                return (
+                  <tr key={q.id} className="hover:bg-[#F5F5F1]/50">
+                    <td className="py-3.5 px-4 font-mono font-semibold text-[#172333]">
+                      <div className="flex items-center gap-1.5">
+                        <span>{q.quotationNumber}</span>
+                        {(q.version || 1) > 1 && (
+                          <span className="px-1.5 py-0.5 text-[10px] bg-[#F18A45]/15 text-[#F18A45] rounded">
+                            v{q.version}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <span
+                        className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
+                          docType === 'Estimate'
+                            ? 'bg-[#F18A45]/15 text-[#B85D19]'
+                            : 'bg-[#172333]/10 text-[#172333]'
+                        }`}
+                      >
+                        {docType}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <p className="font-semibold text-[#172333]">{q.projectTitle}</p>
+                      <p className="text-[11px] text-[#6E7785]">
+                        {q.clientName} ({q.clientEmail})
+                      </p>
+                    </td>
+                    <td className="py-3.5 px-4 font-mono text-[#6E7785]">{q.expiryDate}</td>
+                    <td className="py-3.5 px-4">
+                      <span
+                        className={`font-semibold ${
+                          q.status === 'Accepted'
+                            ? 'text-[#26734D]'
+                            : q.status === 'Rejected' || q.status === 'Expired'
+                            ? 'text-[#B93832]'
+                            : q.status === 'Archived'
+                            ? 'text-[#6E7785]'
+                            : 'text-[#172333]'
+                        }`}
+                      >
+                        {q.status}
+                      </span>
+                      {q.convertedProjectId && (
+                        <span className="block text-[10px] text-[#26734D]">Converted to Project</span>
+                      )}
+                    </td>
+                    <td className="py-3.5 px-4 text-right font-mono font-semibold text-[#172333] tabular-nums">
+                      {formatINR(q.total)}
+                    </td>
+                    <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                      <div className="inline-flex items-center justify-end gap-2 flex-wrap">
+                        {docType === 'Estimate' && (
+                          <button
+                            type="button"
+                            onClick={() => handleDuplicateDoc(q, 'Quotation')}
+                            className="px-2 py-1 text-[11px] font-semibold text-[#172333] bg-[#F18A45]/20 hover:bg-[#F18A45]/30 rounded-md"
+                            title="Convert Estimate into an Official Quotation"
+                          >
+                            → To Quote
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleConvertQuotationToProjectAndInvoice(q)}
+                          className="px-2 py-1 text-[11px] font-semibold text-[#26734D] bg-[#26734D]/10 hover:bg-[#26734D]/20 rounded-md"
+                        >
+                          {q.convertedProjectId ? 'View Project' : 'Convert to Project'}
+                        </button>
+                        <RecordActionBar
+                          onView={() => setPrintQuotation(q)}
+                          viewLabel="View / PDF"
+                          onEdit={() => handleOpenEditDoc(q)}
+                          onDuplicate={() => handleDuplicateDoc(q)}
+                          onArchiveOrVoid={
+                            q.status !== 'Archived' && q.status !== 'Draft'
+                              ? () => handleArchiveDoc(q)
+                              : undefined
+                          }
+                          archiveLabel="Archive"
+                          onDelete={() => handleOpenDeleteDocModal(q)}
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
       </div>
+
+      {/* Unsaved Changes Protection Modal */}
+      <UnsavedChangesDialog
+        isOpen={showUnsavedModal}
+        recordLabel={editingRecord ? `${form.documentType} ${editingRecord.quotationNumber}` : `this ${form.documentType.toLowerCase()}`}
+        onContinueEditing={() => setShowUnsavedModal(false)}
+        onDiscardChanges={() => {
+          setShowUnsavedModal(false);
+          setFormDirty(false);
+          setShowBuilder(false);
+          setEditingId(null);
+          setEditingRecord(null);
+        }}
+        onSaveAndClose={performSaveDocument}
+      />
+
+      {/* Dependency-Safe Delete / Archive Modal */}
+      {deleteModalConfig && <DependencySafeDeleteModal {...deleteModalConfig} />}
     </div>
   );
 };

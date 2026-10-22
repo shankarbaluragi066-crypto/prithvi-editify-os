@@ -43,7 +43,7 @@ export function slugify(text: string): string {
 }
 
 export interface InvoiceCalculationInput {
-  items: { quantity: number; unitPrice: number }[];
+  items: { description?: string; quantity: number; unitPrice: number }[];
   discount: number;
   taxRate: number;
   amountPaid: number;
@@ -57,20 +57,59 @@ export interface InvoiceCalculationResult {
   total: number;
   amountPaid: number;
   balanceDue: number;
+  normalizedItems: { description: string; quantity: number; unitPrice: number; amount: number }[];
+  validationErrors: string[];
 }
 
 export function calculateInvoiceTotals(input: InvoiceCalculationInput): InvoiceCalculationResult {
-  const subtotal = input.items.reduce((sum, item) => {
-    const qty = Math.max(0, Number(item.quantity) || 0);
-    const price = Math.max(0, Number(item.unitPrice) || 0);
-    return sum + Math.round(qty * price);
-  }, 0);
+  const validationErrors: string[] = [];
 
-  const discount = Math.min(subtotal, Math.max(0, Math.round(Number(input.discount) || 0)));
+  if (!Array.isArray(input.items) || input.items.length === 0) {
+    validationErrors.push('At least one line item is required.');
+  }
+
+  const normalizedItems = (input.items || []).map((item, idx) => {
+    const rawQty = Number(item.quantity);
+    const rawPrice = Number(item.unitPrice);
+    if (Number.isNaN(rawQty) || rawQty <= 0) {
+      validationErrors.push(`Line item #${idx + 1} quantity must be greater than zero.`);
+    }
+    if (Number.isNaN(rawPrice) || rawPrice < 0) {
+      validationErrors.push(`Line item #${idx + 1} unit price cannot be negative.`);
+    }
+    if (item.description !== undefined && !String(item.description).trim()) {
+      validationErrors.push(`Line item #${idx + 1} requires a description.`);
+    }
+    const qty = Math.max(0.01, Number.isNaN(rawQty) ? 1 : rawQty);
+    const price = Math.max(0, Number.isNaN(rawPrice) ? 0 : rawPrice);
+    const amount = Math.round(qty * price);
+    return {
+      description: String(item.description || '').trim(),
+      quantity: qty,
+      unitPrice: price,
+      amount,
+    };
+  });
+
+  const subtotal = normalizedItems.reduce((sum, item) => sum + item.amount, 0);
+
+  const rawDiscount = Number(input.discount) || 0;
+  if (rawDiscount < 0) {
+    validationErrors.push('Discount cannot be negative.');
+  }
+  if (rawDiscount > subtotal && subtotal > 0) {
+    validationErrors.push('Discount cannot exceed the subtotal.');
+  }
+
+  const discount = Math.min(subtotal, Math.max(0, Math.round(rawDiscount)));
   const taxableAmount = Math.max(0, subtotal - discount);
-  const safeTaxRate = Math.min(100, Math.max(0, Number(input.taxRate) || 0));
+  const rawTaxRate = Number(input.taxRate) || 0;
+  if (rawTaxRate < 0 || rawTaxRate > 100) {
+    validationErrors.push('Tax rate must be between 0% and 100%.');
+  }
+  const safeTaxRate = Math.min(100, Math.max(0, rawTaxRate));
   const taxAmount = Math.round((taxableAmount * safeTaxRate) / 100);
-  const total = taxableAmount + taxAmount;
+  const total = Math.max(0, taxableAmount + taxAmount);
   const amountPaid = Math.max(0, Math.round(Number(input.amountPaid) || 0));
   const balanceDue = Math.max(0, total - amountPaid);
 
@@ -82,6 +121,8 @@ export function calculateInvoiceTotals(input: InvoiceCalculationInput): InvoiceC
     total,
     amountPaid,
     balanceDue,
+    normalizedItems,
+    validationErrors,
   };
 }
 

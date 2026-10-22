@@ -1,5 +1,5 @@
-import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
-import { uploadMediaAssetAdmin } from './crmService';
+import { supabase, isSupabaseConfigured, isMissingSchemaError } from '../lib/supabaseClient';
+import { uploadMediaAssetAdmin, logAdminActivity } from './crmService';
 import {
   AIBrandProfile,
   AIUsageHistoryEntry,
@@ -7,6 +7,9 @@ import {
   GeneratedPortfolioAIContent,
   QuotationRecord,
   QuotationStatus,
+  QuotationDocumentType,
+  QuotationDeleteEligibility,
+  QuotationRevisionSnapshot,
   MediaAsset,
 } from '../types/crm';
 
@@ -466,8 +469,28 @@ export async function saveGeneratedImageToMediaLibrary(params: {
 }
 
 // ============================================================================
-// QUOTATIONS & PROJECT CONVERSION STORAGE LAYER (SUPABASE + LOCAL FALLBACK)
+// QUOTATIONS & ESTIMATES STORAGE LAYER (SUPABASE + LOCAL FALLBACK)
 // ============================================================================
+export function inferQuotationDocumentType(
+  record: Pick<QuotationRecord, 'documentType' | 'quotationNumber'>
+): QuotationDocumentType {
+  if (record.documentType === 'Estimate' || record.documentType === 'Quotation') {
+    return record.documentType;
+  }
+  const num = String(record.quotationNumber || '').toUpperCase();
+  if (num.startsWith('PE-EST') || num.startsWith('EST-')) {
+    return 'Estimate';
+  }
+  return 'Quotation';
+}
+
+export function generateDocumentNumber(docType: QuotationDocumentType, version = 1): string {
+  const prefix = docType === 'Estimate' ? 'PE-EST' : 'PE-QTN';
+  const year = new Date().getFullYear();
+  const seq = String(Math.floor(100 + Math.random() * 900));
+  return version > 1 ? `${prefix}-${year}-${seq}-v${version}` : `${prefix}-${year}-${seq}`;
+}
+
 function getLocalQuotations(): QuotationRecord[] {
   try {
     const raw = localStorage.getItem(QUOTATIONS_STORAGE_KEY);
@@ -501,12 +524,86 @@ function computeEffectiveQuotationStatus(q: QuotationRecord): QuotationStatus {
   return q.status;
 }
 
+function mapSupabaseQuotationRow(row: Record<string, any>): QuotationRecord {
+  const quotationNumber = String(row.quotation_number || '');
+  const documentType = inferQuotationDocumentType({
+    documentType: row.document_type,
+    quotationNumber,
+  });
+  return {
+    id: String(row.id),
+    quotationNumber,
+    documentType,
+    version: Number(row.version) || 1,
+    parentQuotationId: row.parent_quotation_id ? String(row.parent_quotation_id) : undefined,
+    revisionHistory: Array.isArray(row.revision_history) ? row.revision_history : undefined,
+    inquiryId: row.inquiry_id ? String(row.inquiry_id) : undefined,
+    clientId: String(row.client_id || ''),
+    clientUserId: String(row.client_user_id || ''),
+    clientName: String(row.client_name || ''),
+    clientEmail: String(row.client_email || ''),
+    projectTitle: String(row.project_title || ''),
+    serviceCategory: String(row.service_category || 'Graphic Design'),
+    scopeSummary: String(row.scope_summary || ''),
+    deliverables: String(row.deliverables || ''),
+    estimatedTimeline: String(row.estimated_timeline || ''),
+    issueDate: String(row.issue_date || ''),
+    expiryDate: String(row.expiry_date || ''),
+    lineItems: Array.isArray(row.line_items) ? row.line_items : [],
+    subtotal: Number(row.subtotal) || 0,
+    discount: Number(row.discount) || 0,
+    taxRate: Number(row.tax_rate) || 0,
+    taxAmount: Number(row.tax_amount) || 0,
+    total: Number(row.total) || 0,
+    currency: 'INR',
+    status: (row.status || 'Draft') as QuotationStatus,
+    termsAndConditions: String(row.terms_and_conditions || ''),
+    notes: row.notes ? String(row.notes) : undefined,
+    convertedProjectId: row.converted_project_id ? String(row.converted_project_id) : undefined,
+    convertedInvoiceId: row.converted_invoice_id ? String(row.converted_invoice_id) : undefined,
+    clientDecisionAt: row.client_decision_at ? String(row.client_decision_at) : undefined,
+    clientDecisionBy: row.client_decision_by ? String(row.client_decision_by) : undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
 export async function fetchAllQuotationsAdmin(): Promise<QuotationRecord[]> {
-  const local = getLocalQuotations().map((q) => ({
-    ...q,
-    status: computeEffectiveQuotationStatus(q),
-  }));
-  return local.sort(
+  const localList = getLocalQuotations();
+  const mergedMap = new Map<string, QuotationRecord>();
+
+  for (const item of localList) {
+    mergedMap.set(item.id, {
+      ...item,
+      documentType: inferQuotationDocumentType(item),
+      version: item.version || 1,
+      status: computeEffectiveQuotationStatus(item),
+    });
+  }
+
+  if (isSupabaseConfigured) {
+    try {
+      const { data, error } = await supabase
+        .from('quotations')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!error && Array.isArray(data)) {
+        for (const row of data) {
+          const mapped = mapSupabaseQuotationRow(row);
+          mergedMap.set(mapped.id, {
+            ...mapped,
+            status: computeEffectiveQuotationStatus(mapped),
+          });
+        }
+        setLocalQuotations(Array.from(mergedMap.values()));
+      }
+    } catch {
+      // Fallback to local records if table is not yet migrated
+    }
+  }
+
+  return Array.from(mergedMap.values()).sort(
     (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
   );
 }
@@ -518,11 +615,55 @@ export async function fetchClientQuotations(
   const all = await fetchAllQuotationsAdmin();
   const emailLower = (clientEmail || '').toLowerCase();
   return all.filter((q) => {
-    if (q.status === 'Draft') return false;
+    if (q.status === 'Draft' || q.status === 'Archived') return false;
     if (clientUserId && q.clientUserId && q.clientUserId === clientUserId) return true;
     if (emailLower && q.clientEmail && q.clientEmail.toLowerCase() === emailLower) return true;
     return false;
   });
+}
+
+async function trySyncQuotationToSupabase(record: QuotationRecord): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  try {
+    const payload: Record<string, any> = {
+      id: record.id,
+      quotation_number: record.quotationNumber,
+      document_type: inferQuotationDocumentType(record),
+      version: record.version || 1,
+      parent_quotation_id: record.parentQuotationId || null,
+      revision_history: record.revisionHistory || [],
+      inquiry_id: record.inquiryId || null,
+      client_id: record.clientId || null,
+      client_user_id: record.clientUserId || null,
+      client_name: record.clientName,
+      client_email: record.clientEmail,
+      project_title: record.projectTitle,
+      service_category: record.serviceCategory,
+      scope_summary: record.scopeSummary,
+      deliverables: record.deliverables,
+      estimated_timeline: record.estimatedTimeline,
+      issue_date: record.issueDate,
+      expiry_date: record.expiryDate,
+      line_items: record.lineItems,
+      subtotal: record.subtotal,
+      discount: record.discount,
+      tax_rate: record.taxRate,
+      tax_amount: record.taxAmount,
+      total: record.total,
+      currency: 'INR',
+      status: record.status,
+      terms_and_conditions: record.termsAndConditions,
+      notes: record.notes || '',
+      converted_project_id: record.convertedProjectId || null,
+      converted_invoice_id: record.convertedInvoiceId || null,
+      client_decision_at: record.clientDecisionAt || null,
+      client_decision_by: record.clientDecisionBy || null,
+      updated_at: record.updatedAt || new Date().toISOString(),
+    };
+    await supabase.from('quotations').upsert(payload);
+  } catch {
+    // Non-fatal if quotations table is not yet created in Supabase
+  }
 }
 
 export async function saveQuotationAdmin(
@@ -531,12 +672,15 @@ export async function saveQuotationAdmin(
 ): Promise<QuotationRecord> {
   const list = getLocalQuotations();
   const now = new Date().toISOString();
+  const docType = inferQuotationDocumentType(record);
 
   if (existingId) {
     const idx = list.findIndex((q) => q.id === existingId);
     const updatedRecord: QuotationRecord = {
       ...(idx >= 0 ? list[idx] : {}),
       ...record,
+      documentType: docType,
+      version: record.version || (idx >= 0 ? list[idx].version || 1 : 1),
       id: existingId,
       createdAt: idx >= 0 ? list[idx].createdAt : now,
       updatedAt: now,
@@ -547,22 +691,223 @@ export async function saveQuotationAdmin(
       list.unshift(updatedRecord);
     }
     setLocalQuotations(list);
+    await trySyncQuotationToSupabase(updatedRecord);
+    await logAdminActivity(
+      `Updated ${docType}`,
+      docType.toLowerCase(),
+      updatedRecord.id,
+      `${updatedRecord.quotationNumber} (${updatedRecord.status}) — ₹${updatedRecord.total.toLocaleString('en-IN')}`
+    );
     return updatedRecord;
   }
 
   const newRecord: QuotationRecord = {
     ...record,
+    documentType: docType,
+    version: record.version || 1,
     id: `quo_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     createdAt: now,
     updatedAt: now,
   };
   setLocalQuotations([newRecord, ...list]);
+  await trySyncQuotationToSupabase(newRecord);
+  await logAdminActivity(
+    `Created ${docType}`,
+    docType.toLowerCase(),
+    newRecord.id,
+    `${newRecord.quotationNumber} (${newRecord.status}) — ₹${newRecord.total.toLocaleString('en-IN')}`
+  );
   return newRecord;
 }
 
+export function checkQuotationDeleteEligibilityAdmin(
+  quote: QuotationRecord
+): QuotationDeleteEligibility {
+  const docType = inferQuotationDocumentType(quote);
+  const isConverted = Boolean(quote.convertedProjectId || quote.convertedInvoiceId);
+
+  if (isConverted) {
+    return {
+      quotationId: quote.id,
+      quotationNumber: quote.quotationNumber,
+      documentType: docType,
+      canHardDelete: false,
+      status: quote.status,
+      isConverted: true,
+      reason: `This ${docType.toLowerCase()} has already been converted into an active Project or Invoice. Permanent deletion is blocked to preserve financial and project audit history. You can Archive it instead.`,
+    };
+  }
+
+  if (quote.status !== 'Draft') {
+    return {
+      quotationId: quote.id,
+      quotationNumber: quote.quotationNumber,
+      documentType: docType,
+      canHardDelete: false,
+      status: quote.status,
+      isConverted: false,
+      reason: `Only Draft ${docType.toLowerCase()}s can be permanently deleted. Because this ${docType.toLowerCase()} is currently marked "${quote.status}", please Archive it or mark it as Expired/Rejected to preserve client proposal records.`,
+    };
+  }
+
+  return {
+    quotationId: quote.id,
+    quotationNumber: quote.quotationNumber,
+    documentType: docType,
+    canHardDelete: true,
+    status: quote.status,
+    isConverted: false,
+    reason: `This ${docType.toLowerCase()} is an unconverted Draft and can be permanently deleted.`,
+  };
+}
+
 export async function deleteQuotationAdmin(id: string): Promise<void> {
-  const list = getLocalQuotations().filter((q) => q.id !== id);
-  setLocalQuotations(list);
+  const list = getLocalQuotations();
+  const target = list.find((q) => q.id === id);
+  if (target) {
+    const check = checkQuotationDeleteEligibilityAdmin(target);
+    if (!check.canHardDelete) {
+      throw new Error(check.reason);
+    }
+  }
+
+  const nextList = list.filter((q) => q.id !== id);
+  setLocalQuotations(nextList);
+
+  if (isSupabaseConfigured) {
+    try {
+      const { error } = await supabase.from('quotations').delete().eq('id', id);
+      if (error && !isMissingSchemaError(error)) {
+        // Ignore if table not created yet
+      }
+    } catch {
+      // Non-fatal
+    }
+  }
+
+  if (target) {
+    const docType = inferQuotationDocumentType(target);
+    await logAdminActivity(
+      `Deleted Draft ${docType}`,
+      docType.toLowerCase(),
+      id,
+      `${target.quotationNumber} (${target.clientName})`
+    );
+  }
+}
+
+export async function archiveQuotationAdmin(
+  quote: QuotationRecord,
+  targetStatus: 'Archived' | 'Expired' | 'Rejected' = 'Archived',
+  reason?: string
+): Promise<QuotationRecord> {
+  const docType = inferQuotationDocumentType(quote);
+  const updatedNotes = reason
+    ? `${quote.notes ? `${quote.notes}\n` : ''}[${targetStatus.toUpperCase()} ${new Date().toISOString().split('T')[0]}]: ${reason}`
+    : quote.notes;
+
+  const saved = await saveQuotationAdmin(
+    {
+      ...quote,
+      documentType: docType,
+      status: targetStatus,
+      notes: updatedNotes,
+    },
+    quote.id
+  );
+
+  await logAdminActivity(
+    `Marked ${docType} as ${targetStatus}`,
+    docType.toLowerCase(),
+    quote.id,
+    `${quote.quotationNumber} — ${quote.clientName}${reason ? ` (${reason})` : ''}`
+  );
+
+  return saved;
+}
+
+export async function createQuotationRevisionAdmin(
+  existingQuote: QuotationRecord,
+  updatedFields: Omit<QuotationRecord, 'id' | 'createdAt' | 'updatedAt'>,
+  revisionSummary = 'Updated scope and pricing revision'
+): Promise<QuotationRecord> {
+  const docType = inferQuotationDocumentType(updatedFields);
+  const currentVersion = existingQuote.version || 1;
+  const nextVersion = currentVersion + 1;
+
+  const snapshot: QuotationRevisionSnapshot = {
+    version: currentVersion,
+    quotationNumber: existingQuote.quotationNumber,
+    total: existingQuote.total,
+    status: existingQuote.status,
+    updatedAt: existingQuote.updatedAt || new Date().toISOString(),
+    summary: revisionSummary,
+  };
+
+  const baseNumber = existingQuote.quotationNumber.replace(/-v\d+$/i, '');
+  const nextQuotationNumber = `${baseNumber}-v${nextVersion}`;
+  const priorHistory = Array.isArray(existingQuote.revisionHistory)
+    ? existingQuote.revisionHistory
+    : [];
+
+  const saved = await saveQuotationAdmin(
+    {
+      ...updatedFields,
+      documentType: docType,
+      quotationNumber: nextQuotationNumber,
+      version: nextVersion,
+      parentQuotationId: existingQuote.parentQuotationId || existingQuote.id,
+      revisionHistory: [...priorHistory, snapshot],
+    },
+    existingQuote.id
+  );
+
+  await logAdminActivity(
+    `Created ${docType} Revision v${nextVersion}`,
+    docType.toLowerCase(),
+    saved.id,
+    `${nextQuotationNumber} (from ${existingQuote.quotationNumber}) — ₹${saved.total.toLocaleString('en-IN')}`
+  );
+
+  return saved;
+}
+
+export async function duplicateQuotationAdmin(
+  source: QuotationRecord,
+  targetDocType?: QuotationDocumentType
+): Promise<QuotationRecord> {
+  const docType = targetDocType || inferQuotationDocumentType(source);
+  const today = new Date().toISOString().split('T')[0];
+  const expiry = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const freshNumber = generateDocumentNumber(docType, 1);
+
+  return saveQuotationAdmin({
+    quotationNumber: freshNumber,
+    documentType: docType,
+    version: 1,
+    inquiryId: source.inquiryId,
+    clientId: source.clientId,
+    clientUserId: source.clientUserId,
+    clientName: source.clientName,
+    clientEmail: source.clientEmail,
+    projectTitle: `${source.projectTitle}${targetDocType && targetDocType !== inferQuotationDocumentType(source) ? '' : ' (Copy)'}`,
+    serviceCategory: source.serviceCategory,
+    scopeSummary: source.scopeSummary,
+    deliverables: source.deliverables,
+    estimatedTimeline: source.estimatedTimeline,
+    issueDate: today,
+    expiryDate: expiry,
+    lineItems: source.lineItems.map((li) => ({ ...li })),
+    subtotal: source.subtotal,
+    discount: source.discount,
+    taxRate: source.taxRate,
+    taxAmount: source.taxAmount,
+    total: source.total,
+    currency: 'INR',
+    status: 'Draft',
+    termsAndConditions: source.termsAndConditions,
+    notes: source.notes,
+  });
 }
 
 export async function clientRespondToQuotation(params: {
@@ -596,5 +941,7 @@ export async function clientRespondToQuotation(params: {
   };
   list[idx] = updated;
   setLocalQuotations(list);
+  await trySyncQuotationToSupabase(updated);
   return updated;
 }
+
