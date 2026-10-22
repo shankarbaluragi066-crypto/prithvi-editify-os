@@ -12,6 +12,7 @@ import {
   RegisterFormValues,
 } from '../schemas/validation';
 import { STUDIO_OWNER_EMAIL } from '../lib/supabaseClient';
+import { DEFAULT_STUDIO_LOGO_URL } from '../utils/seedData';
 
 export const LoginPage: React.FC = () => {
   const { user, profile, isAdmin, loading, loginWithGoogle, loginWithEmail, registerClientWithEmail } = useAuth();
@@ -89,6 +90,11 @@ export const LoginPage: React.FC = () => {
     <div className="max-w-md mx-auto px-6 py-16">
       <div className="bg-white border border-[#E2E4DF] rounded-lg p-8 space-y-6">
         <div>
+          <img
+            src={DEFAULT_STUDIO_LOGO_URL}
+            alt="Prithvi Editify"
+            className="h-12 w-auto rounded-md bg-white p-1 object-contain border border-[#E2E4DF] mb-3"
+          />
           <p className="text-xs font-semibold text-[#6E7785]">Prithvi Editify Client Workspace</p>
           <h1 className="font-editorial text-2xl font-semibold text-[#172333] mt-1">
             {mode === 'login' ? 'Sign in to Client Portal' : 'Create Client Portal Account'}
@@ -370,6 +376,11 @@ export const AdminLoginPage: React.FC = () => {
 
         <div className="bg-white border border-[#E2E4DF] rounded-lg p-8 space-y-6 shadow-xl">
           <div>
+            <img
+              src={DEFAULT_STUDIO_LOGO_URL}
+              alt="Prithvi Editify"
+              className="h-12 w-auto rounded-md bg-white p-1 object-contain border border-[#E2E4DF] mb-3"
+            />
             <p className="text-xs font-semibold text-[#F18A45] uppercase tracking-wider">
               Prithvi Editify · Restricted Gateway
             </p>

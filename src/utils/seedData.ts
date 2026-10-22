@@ -70,8 +70,10 @@ export function createStudioArtworkDataUri(
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
+export const DEFAULT_STUDIO_LOGO_URL = '/assets/aistudio/image_82a12d7d.png';
+
 export const DEFAULT_SITE_CUSTOMIZATION: SiteCustomization = {
-  logoUrl: '',
+  logoUrl: DEFAULT_STUDIO_LOGO_URL,
   primaryColor: '#172333',
   secondaryColor: '#24364A',
   accentColor: '#F18A45',
@@ -279,6 +281,10 @@ export function mergeSiteCustomization(
   const merged: SiteCustomization = {
     ...DEFAULT_SITE_CUSTOMIZATION,
     ...raw,
+    logoUrl:
+      raw.logoUrl && String(raw.logoUrl).trim()
+        ? String(raw.logoUrl).trim()
+        : DEFAULT_SITE_CUSTOMIZATION.logoUrl,
     servicesPageTitle:
       !raw.servicesPageTitle ||
       raw.servicesPageTitle === 'Transparent starting prices for creative production'

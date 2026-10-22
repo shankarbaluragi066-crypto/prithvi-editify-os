@@ -1,4 +1,4 @@
-import { supabase, isSupabaseConfigured, isMissingSchemaError } from '../lib/supabaseClient';
+import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 import { uploadMediaAssetAdmin, logAdminActivity } from './crmService';
 import {
   AIBrandProfile,
@@ -16,6 +16,7 @@ import {
 const BRAND_PROFILE_STORAGE_KEY = 'pe_admin_ai_brand_profile_v1';
 const AI_USAGE_HISTORY_STORAGE_KEY = 'pe_admin_ai_usage_history_v1';
 const QUOTATIONS_STORAGE_KEY = 'pe_crm_quotations_v1';
+export const QUOTATIONS_REGISTRY_FILENAME = '__quotations_registry_json__';
 
 export const DEFAULT_AI_BRAND_PROFILE: AIBrandProfile = {
   brandName: 'Prithvi Editify',
@@ -524,48 +525,102 @@ function computeEffectiveQuotationStatus(q: QuotationRecord): QuotationStatus {
   return q.status;
 }
 
-function mapSupabaseQuotationRow(row: Record<string, any>): QuotationRecord {
-  const quotationNumber = String(row.quotation_number || '');
+function normalizeQuotationRecord(raw: Partial<QuotationRecord> & Record<string, any>): QuotationRecord {
+  const quotationNumber = String(raw.quotationNumber || raw.quotation_number || '');
   const documentType = inferQuotationDocumentType({
-    documentType: row.document_type,
+    documentType: raw.documentType || raw.document_type,
     quotationNumber,
   });
-  return {
-    id: String(row.id),
+  const base: QuotationRecord = {
+    id: String(raw.id || `quo_${Date.now()}`),
     quotationNumber,
     documentType,
-    version: Number(row.version) || 1,
-    parentQuotationId: row.parent_quotation_id ? String(row.parent_quotation_id) : undefined,
-    revisionHistory: Array.isArray(row.revision_history) ? row.revision_history : undefined,
-    inquiryId: row.inquiry_id ? String(row.inquiry_id) : undefined,
-    clientId: String(row.client_id || ''),
-    clientUserId: String(row.client_user_id || ''),
-    clientName: String(row.client_name || ''),
-    clientEmail: String(row.client_email || ''),
-    projectTitle: String(row.project_title || ''),
-    serviceCategory: String(row.service_category || 'Graphic Design'),
-    scopeSummary: String(row.scope_summary || ''),
-    deliverables: String(row.deliverables || ''),
-    estimatedTimeline: String(row.estimated_timeline || ''),
-    issueDate: String(row.issue_date || ''),
-    expiryDate: String(row.expiry_date || ''),
-    lineItems: Array.isArray(row.line_items) ? row.line_items : [],
-    subtotal: Number(row.subtotal) || 0,
-    discount: Number(row.discount) || 0,
-    taxRate: Number(row.tax_rate) || 0,
-    taxAmount: Number(row.tax_amount) || 0,
-    total: Number(row.total) || 0,
+    version: Number(raw.version) || 1,
+    parentQuotationId: raw.parentQuotationId || raw.parent_quotation_id || undefined,
+    revisionHistory: Array.isArray(raw.revisionHistory)
+      ? raw.revisionHistory
+      : Array.isArray(raw.revision_history)
+      ? raw.revision_history
+      : undefined,
+    inquiryId: raw.inquiryId || raw.inquiry_id || undefined,
+    clientId: String(raw.clientId ?? raw.client_id ?? ''),
+    clientUserId: String(raw.clientUserId ?? raw.client_user_id ?? ''),
+    clientName: String(raw.clientName ?? raw.client_name ?? ''),
+    clientEmail: String(raw.clientEmail ?? raw.client_email ?? ''),
+    projectTitle: String(raw.projectTitle ?? raw.project_title ?? ''),
+    serviceCategory: String(raw.serviceCategory ?? raw.service_category ?? 'Graphic Design'),
+    scopeSummary: String(raw.scopeSummary ?? raw.scope_summary ?? ''),
+    deliverables: String(raw.deliverables ?? ''),
+    estimatedTimeline: String(raw.estimatedTimeline ?? raw.estimated_timeline ?? ''),
+    issueDate: String(raw.issueDate ?? raw.issue_date ?? ''),
+    expiryDate: String(raw.expiryDate ?? raw.expiry_date ?? ''),
+    lineItems: Array.isArray(raw.lineItems)
+      ? raw.lineItems
+      : Array.isArray(raw.line_items)
+      ? raw.line_items
+      : [],
+    subtotal: Number(raw.subtotal) || 0,
+    discount: Number(raw.discount) || 0,
+    taxRate: Number(raw.taxRate ?? raw.tax_rate) || 0,
+    taxAmount: Number(raw.taxAmount ?? raw.tax_amount) || 0,
+    total: Number(raw.total) || 0,
     currency: 'INR',
-    status: (row.status || 'Draft') as QuotationStatus,
-    termsAndConditions: String(row.terms_and_conditions || ''),
-    notes: row.notes ? String(row.notes) : undefined,
-    convertedProjectId: row.converted_project_id ? String(row.converted_project_id) : undefined,
-    convertedInvoiceId: row.converted_invoice_id ? String(row.converted_invoice_id) : undefined,
-    clientDecisionAt: row.client_decision_at ? String(row.client_decision_at) : undefined,
-    clientDecisionBy: row.client_decision_by ? String(row.client_decision_by) : undefined,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    status: (raw.status || 'Draft') as QuotationStatus,
+    termsAndConditions: String(raw.termsAndConditions ?? raw.terms_and_conditions ?? ''),
+    notes: raw.notes ? String(raw.notes) : undefined,
+    convertedProjectId: raw.convertedProjectId || raw.converted_project_id || undefined,
+    convertedInvoiceId: raw.convertedInvoiceId || raw.converted_invoice_id || undefined,
+    clientDecisionAt: raw.clientDecisionAt || raw.client_decision_at || undefined,
+    clientDecisionBy: raw.clientDecisionBy || raw.client_decision_by || undefined,
+    createdAt: raw.createdAt || raw.created_at,
+    updatedAt: raw.updatedAt || raw.updated_at,
   };
+  return {
+    ...base,
+    status: computeEffectiveQuotationStatus(base),
+  };
+}
+
+async function syncQuotationsRegistryToSupabase(list: QuotationRecord[]): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  try {
+    const serialized = JSON.stringify(list);
+    const { data: existingRow } = await supabase
+      .from('media_assets')
+      .select('id')
+      .eq('original_filename', QUOTATIONS_REGISTRY_FILENAME)
+      .maybeSingle();
+
+    if (existingRow?.id) {
+      await supabase
+        .from('media_assets')
+        .update({
+          description: serialized,
+          file_size: serialized.length,
+          is_public: true,
+          storage_bucket: 'public-assets',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existingRow.id);
+    } else {
+      await supabase.from('media_assets').insert({
+        title: 'Studio Quotations & Cost Estimates Registry',
+        original_filename: QUOTATIONS_REGISTRY_FILENAME,
+        storage_bucket: 'public-assets',
+        storage_path: 'config/quotations_registry.json',
+        public_url: '',
+        mime_type: 'application/json',
+        file_extension: 'json',
+        media_category: 'document',
+        file_size: serialized.length,
+        description: serialized,
+        tags: ['system-config'],
+        is_public: true,
+      });
+    }
+  } catch {
+    // Non-fatal fallback if unauthenticated client cannot write to media_assets
+  }
 }
 
 export async function fetchAllQuotationsAdmin(): Promise<QuotationRecord[]> {
@@ -573,33 +628,39 @@ export async function fetchAllQuotationsAdmin(): Promise<QuotationRecord[]> {
   const mergedMap = new Map<string, QuotationRecord>();
 
   for (const item of localList) {
-    mergedMap.set(item.id, {
-      ...item,
-      documentType: inferQuotationDocumentType(item),
-      version: item.version || 1,
-      status: computeEffectiveQuotationStatus(item),
-    });
+    const normalized = normalizeQuotationRecord(item);
+    mergedMap.set(normalized.id, normalized);
   }
 
   if (isSupabaseConfigured) {
     try {
       const { data, error } = await supabase
-        .from('quotations')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .from('media_assets')
+        .select('description, updated_at')
+        .eq('original_filename', QUOTATIONS_REGISTRY_FILENAME)
+        .maybeSingle();
 
-      if (!error && Array.isArray(data)) {
-        for (const row of data) {
-          const mapped = mapSupabaseQuotationRow(row);
-          mergedMap.set(mapped.id, {
-            ...mapped,
-            status: computeEffectiveQuotationStatus(mapped),
-          });
+      if (!error && data?.description) {
+        const parsed = JSON.parse(data.description);
+        if (Array.isArray(parsed)) {
+          for (const rawItem of parsed) {
+            if (rawItem && typeof rawItem === 'object' && rawItem.id) {
+              const cloudItem = normalizeQuotationRecord(rawItem);
+              const existingLocal = mergedMap.get(cloudItem.id);
+              if (
+                !existingLocal ||
+                new Date(cloudItem.updatedAt || 0).getTime() >=
+                  new Date(existingLocal.updatedAt || 0).getTime()
+              ) {
+                mergedMap.set(cloudItem.id, cloudItem);
+              }
+            }
+          }
+          setLocalQuotations(Array.from(mergedMap.values()));
         }
-        setLocalQuotations(Array.from(mergedMap.values()));
       }
     } catch {
-      // Fallback to local records if table is not yet migrated
+      // Fallback to local records
     }
   }
 
@@ -622,55 +683,11 @@ export async function fetchClientQuotations(
   });
 }
 
-async function trySyncQuotationToSupabase(record: QuotationRecord): Promise<void> {
-  if (!isSupabaseConfigured) return;
-  try {
-    const payload: Record<string, any> = {
-      id: record.id,
-      quotation_number: record.quotationNumber,
-      document_type: inferQuotationDocumentType(record),
-      version: record.version || 1,
-      parent_quotation_id: record.parentQuotationId || null,
-      revision_history: record.revisionHistory || [],
-      inquiry_id: record.inquiryId || null,
-      client_id: record.clientId || null,
-      client_user_id: record.clientUserId || null,
-      client_name: record.clientName,
-      client_email: record.clientEmail,
-      project_title: record.projectTitle,
-      service_category: record.serviceCategory,
-      scope_summary: record.scopeSummary,
-      deliverables: record.deliverables,
-      estimated_timeline: record.estimatedTimeline,
-      issue_date: record.issueDate,
-      expiry_date: record.expiryDate,
-      line_items: record.lineItems,
-      subtotal: record.subtotal,
-      discount: record.discount,
-      tax_rate: record.taxRate,
-      tax_amount: record.taxAmount,
-      total: record.total,
-      currency: 'INR',
-      status: record.status,
-      terms_and_conditions: record.termsAndConditions,
-      notes: record.notes || '',
-      converted_project_id: record.convertedProjectId || null,
-      converted_invoice_id: record.convertedInvoiceId || null,
-      client_decision_at: record.clientDecisionAt || null,
-      client_decision_by: record.clientDecisionBy || null,
-      updated_at: record.updatedAt || new Date().toISOString(),
-    };
-    await supabase.from('quotations').upsert(payload);
-  } catch {
-    // Non-fatal if quotations table is not yet created in Supabase
-  }
-}
-
 export async function saveQuotationAdmin(
   record: Omit<QuotationRecord, 'id' | 'createdAt' | 'updatedAt'>,
   existingId?: string
 ): Promise<QuotationRecord> {
-  const list = getLocalQuotations();
+  const list = await fetchAllQuotationsAdmin();
   const now = new Date().toISOString();
   const docType = inferQuotationDocumentType(record);
 
@@ -691,7 +708,7 @@ export async function saveQuotationAdmin(
       list.unshift(updatedRecord);
     }
     setLocalQuotations(list);
-    await trySyncQuotationToSupabase(updatedRecord);
+    await syncQuotationsRegistryToSupabase(list);
     await logAdminActivity(
       `Updated ${docType}`,
       docType.toLowerCase(),
@@ -709,8 +726,9 @@ export async function saveQuotationAdmin(
     createdAt: now,
     updatedAt: now,
   };
-  setLocalQuotations([newRecord, ...list]);
-  await trySyncQuotationToSupabase(newRecord);
+  const nextList = [newRecord, ...list];
+  setLocalQuotations(nextList);
+  await syncQuotationsRegistryToSupabase(nextList);
   await logAdminActivity(
     `Created ${docType}`,
     docType.toLowerCase(),
@@ -762,7 +780,7 @@ export function checkQuotationDeleteEligibilityAdmin(
 }
 
 export async function deleteQuotationAdmin(id: string): Promise<void> {
-  const list = getLocalQuotations();
+  const list = await fetchAllQuotationsAdmin();
   const target = list.find((q) => q.id === id);
   if (target) {
     const check = checkQuotationDeleteEligibilityAdmin(target);
@@ -773,17 +791,7 @@ export async function deleteQuotationAdmin(id: string): Promise<void> {
 
   const nextList = list.filter((q) => q.id !== id);
   setLocalQuotations(nextList);
-
-  if (isSupabaseConfigured) {
-    try {
-      const { error } = await supabase.from('quotations').delete().eq('id', id);
-      if (error && !isMissingSchemaError(error)) {
-        // Ignore if table not created yet
-      }
-    } catch {
-      // Non-fatal
-    }
-  }
+  await syncQuotationsRegistryToSupabase(nextList);
 
   if (target) {
     const docType = inferQuotationDocumentType(target);
@@ -916,7 +924,7 @@ export async function clientRespondToQuotation(params: {
   clientEmail: string;
   clientUserId: string;
 }): Promise<QuotationRecord> {
-  const list = getLocalQuotations();
+  const list = await fetchAllQuotationsAdmin();
   const idx = list.findIndex((q) => q.id === params.quotationId);
   if (idx < 0) {
     throw new Error('Quotation record not found.');
@@ -941,7 +949,7 @@ export async function clientRespondToQuotation(params: {
   };
   list[idx] = updated;
   setLocalQuotations(list);
-  await trySyncQuotationToSupabase(updated);
+  await syncQuotationsRegistryToSupabase(list);
   return updated;
 }
 

@@ -43,7 +43,7 @@ function githubPagesSpaPlugin(): Plugin {
           .replace(/<link\s+id="gh-pages-css"[^>]*>\s*/g, '')
           .replace(
             /<script\s+id="gh-pages-entry"[^>]*><\/script>/g,
-            '<script type="module" src="./src/main.tsx"></script>'
+            '<script type="module" src="/src/main.tsx"></script>'
           );
       },
     },
@@ -62,7 +62,7 @@ function githubPagesSpaPlugin(): Plugin {
 
 export default defineConfig(() => {
   return {
-    base: './',
+    base: '/',
     plugins: [githubPagesSpaPlugin(), react(), tailwindcss()],
     resolve: {
       alias: {

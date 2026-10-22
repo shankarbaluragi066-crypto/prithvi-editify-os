@@ -25,6 +25,7 @@ import {
   FileCheck,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { DEFAULT_STUDIO_LOGO_URL } from '../utils/seedData';
 
 const ADMIN_NAV_ITEMS = [
   { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
@@ -72,13 +73,20 @@ export const AdminLayout: React.FC = () => {
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="px-6 py-5 border-b border-[#24364A] flex items-center justify-between">
-          <div>
-            <Link to="/admin" className="font-editorial text-lg font-semibold text-white block">
-              Prithvi Editify
-            </Link>
-            <p className="text-xs text-[#9BA3B0] mt-0.5">Studio Admin CRM</p>
-          </div>
+        <div className="px-5 py-4 border-b border-[#24364A] flex items-center justify-between gap-2">
+          <Link to="/admin" className="flex items-center gap-2.5 min-w-0">
+            <img
+              src={DEFAULT_STUDIO_LOGO_URL}
+              alt="Prithvi Editify"
+              className="h-9 w-auto rounded-md bg-white px-1.5 py-0.5 object-contain border border-white/15 shrink-0"
+            />
+            <div className="min-w-0">
+              <span className="font-editorial text-base font-semibold text-white block truncate">
+                Prithvi Editify
+              </span>
+              <p className="text-[11px] text-[#9BA3B0] truncate">Studio Admin CRM</p>
+            </div>
+          </Link>
           <button
             type="button"
             onClick={() => setSidebarOpen(false)}

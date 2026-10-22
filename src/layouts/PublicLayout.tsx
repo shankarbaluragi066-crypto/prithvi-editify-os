@@ -6,6 +6,7 @@ import { fetchPublicSettings } from '../services/crmService';
 import {
   DEFAULT_PUBLIC_SETTINGS,
   DEFAULT_SITE_CUSTOMIZATION,
+  DEFAULT_STUDIO_LOGO_URL,
   mergeSiteCustomization,
 } from '../utils/seedData';
 import { PublicSettings } from '../types/crm';
@@ -104,19 +105,17 @@ export const PublicLayout: React.FC = () => {
         style={{ backgroundColor: `${pageBg}F2` }}
       >
         <div className="max-w-[1200px] mx-auto flex items-center justify-between gap-8 px-6 py-4">
-          {/* Zone 1: Brand Wordmark & Optional Logo */}
+          {/* Zone 1: Brand Wordmark & Studio Logo */}
           <Link
             to="/"
-            className="inline-flex items-center gap-2.5 font-editorial text-xl font-semibold tracking-tight text-[#172333] whitespace-nowrap shrink-0"
+            className="inline-flex items-center gap-3 font-editorial text-xl font-semibold tracking-tight text-[#172333] whitespace-nowrap shrink-0"
           >
-            {custom.logoUrl && (
-              <img
-                src={custom.logoUrl}
-                alt={settings.businessName || 'Prithvi Editify'}
-                referrerPolicy="no-referrer"
-                className="w-7 h-7 rounded object-cover border border-[#E2E4DF]"
-              />
-            )}
+            <img
+              src={custom.logoUrl || DEFAULT_STUDIO_LOGO_URL}
+              alt={settings.businessName || 'Prithvi Editify'}
+              referrerPolicy="no-referrer"
+              className="h-9 sm:h-10 w-auto rounded-md bg-white px-1.5 py-0.5 object-contain border border-[#E2E4DF] shadow-2xs"
+            />
             <span>{settings.businessName || 'Prithvi Editify'}</span>
           </Link>
 
@@ -261,15 +260,13 @@ export const PublicLayout: React.FC = () => {
             style={{ borderColor: secondaryBg }}
           >
             <div className="md:col-span-5 space-y-3">
-              <div className="flex items-center gap-2.5">
-                {custom.logoUrl && (
-                  <img
-                    src={custom.logoUrl}
-                    alt={settings.businessName || 'Prithvi Editify'}
-                    referrerPolicy="no-referrer"
-                    className="w-7 h-7 rounded object-cover border border-white/15"
-                  />
-                )}
+              <div className="flex items-center gap-3">
+                <img
+                  src={custom.logoUrl || DEFAULT_STUDIO_LOGO_URL}
+                  alt={settings.businessName || 'Prithvi Editify'}
+                  referrerPolicy="no-referrer"
+                  className="h-11 w-auto rounded-md bg-white px-2 py-1 object-contain border border-white/15 shadow-xs"
+                />
                 <p className="font-editorial text-2xl font-semibold text-white">
                   {settings.businessName || 'Prithvi Editify'}
                 </p>

@@ -965,18 +965,10 @@ export async function savePublicSettings(data: Omit<PublicSettings, 'updatedAt'>
     updated_at: new Date().toISOString(),
   };
 
-  // Attempt 1: Upsert with site_customization JSONB column
-  const { error: firstErr } = await supabase.from('public_settings').upsert({
-    ...basePayload,
-    site_customization: mergedCustomization,
-  });
-
-  if (firstErr) {
-    // Attempt 2: If site_customization column doesn't exist yet on public_settings, upsert base columns
-    const { error: secondErr } = await supabase.from('public_settings').upsert(basePayload);
-    if (secondErr && !isMissingSchemaError(secondErr)) {
-      handleSupabaseError(secondErr, 'savePublicSettings');
-    }
+  // Upsert the 12 core columns on public_settings directly (site_customization is stored in media_assets below)
+  const { error: settingsErr } = await supabase.from('public_settings').upsert(basePayload);
+  if (settingsErr && !isMissingSchemaError(settingsErr)) {
+    handleSupabaseError(settingsErr, 'savePublicSettings');
   }
 
   // Also persist serialized siteCustomization in media_assets fallback row so any visitor loads it even before running SQL migration
@@ -2252,7 +2244,8 @@ export async function fetchMediaAssetsAdmin(
   let query = supabase
     .from('media_assets')
     .select('*')
-    .neq('original_filename', SITE_CONFIG_FILENAME);
+    .neq('original_filename', SITE_CONFIG_FILENAME)
+    .neq('original_filename', '__quotations_registry_json__');
 
   // 1. Filter by exact MIME type (.eq('mime_type', ...)) or media category
   if (filters?.mimeType && filters.mimeType !== 'all') {
