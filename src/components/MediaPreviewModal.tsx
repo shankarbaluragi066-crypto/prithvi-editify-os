@@ -196,24 +196,24 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
       role="dialog"
       aria-modal="true"
       aria-label={`Preview ${item.title}`}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[#172333]/85 p-3 sm:p-6 backdrop-blur-xs"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#040D1A]/85 p-3 sm:p-6 backdrop-blur-xs"
       onClick={onClose}
     >
       <div
-        className="bg-white border border-[#E2E4DF] rounded-lg max-w-5xl w-full max-h-[92vh] flex flex-col overflow-hidden shadow-2xl"
+        className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg max-w-5xl w-full max-h-[92vh] flex flex-col overflow-hidden shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top Control Bar */}
-        <div className="px-5 py-3.5 bg-[#172333] text-[#F5F5F1] flex flex-wrap items-center justify-between gap-3 border-b border-[#24364A]">
+        <div className="px-5 py-3.5 bg-[#040D1A] text-[#132A4A] flex flex-wrap items-center justify-between gap-3 border-b border-[#132A4A]">
           <div className="flex items-center gap-2.5 min-w-0">
-            {mediaCategory === 'image' && <ImageIcon className="w-4 h-4 text-[#F18A45] shrink-0" />}
-            {mediaCategory === 'video' && <Film className="w-4 h-4 text-[#F18A45] shrink-0" />}
-            {mediaCategory === 'pdf' && <FileText className="w-4 h-4 text-[#F18A45] shrink-0" />}
-            {mediaCategory === 'document' && <FileArchive className="w-4 h-4 text-[#F18A45] shrink-0" />}
+            {mediaCategory === 'image' && <ImageIcon className="w-4 h-4 text-[#10B981] shrink-0" />}
+            {mediaCategory === 'video' && <Film className="w-4 h-4 text-[#10B981] shrink-0" />}
+            {mediaCategory === 'pdf' && <FileText className="w-4 h-4 text-[#10B981] shrink-0" />}
+            {mediaCategory === 'document' && <FileArchive className="w-4 h-4 text-[#10B981] shrink-0" />}
             <div className="min-w-0">
               <h2 className="text-sm font-semibold text-white truncate">{item.title}</h2>
-              <div className="flex flex-wrap items-center gap-2 text-[11px] text-[#9BA3B0]">
-                <span className="font-mono uppercase text-[#F18A45]">{extension}</span>
+              <div className="flex flex-wrap items-center gap-2 text-[11px] text-[#94A3B8]">
+                <span className="font-mono uppercase text-[#10B981]">{extension}</span>
                 {item.fileSize ? (
                   <>
                     <span>·</span>
@@ -233,9 +233,9 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                     <span>·</span>
                     <span className="inline-flex items-center gap-1">
                       {item.storageBucket === 'private-project-files' ? (
-                        <Lock className="w-3 h-3 text-[#F18A45]" />
+                        <Lock className="w-3 h-3 text-[#10B981]" />
                       ) : (
-                        <Globe className="w-3 h-3 text-[#26734D]" />
+                        <Globe className="w-3 h-3 text-[#16A34A]" />
                       )}
                       <span className="font-mono">{item.storageBucket}</span>
                     </span>
@@ -252,7 +252,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setZoom((z) => Math.max(0.5, Number((z - 0.25).toFixed(2))))}
-                  className="p-1.5 text-xs text-[#D0D5DD] hover:text-white hover:bg-[#24364A] rounded-md"
+                  className="p-1.5 text-xs text-[#94A3B8] hover:text-white hover:bg-[#132A4A] rounded-md"
                   title="Zoom Out"
                 >
                   <ZoomOut className="w-4 h-4" />
@@ -260,7 +260,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setZoom(1)}
-                  className="px-2 py-1 text-[11px] font-mono text-[#D0D5DD] hover:text-white hover:bg-[#24364A] rounded-md"
+                  className="px-2 py-1 text-[11px] font-mono text-[#94A3B8] hover:text-white hover:bg-[#132A4A] rounded-md"
                   title="Reset Zoom"
                 >
                   {Math.round(zoom * 100)}%
@@ -268,7 +268,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setZoom((z) => Math.min(3, Number((z + 0.25).toFixed(2))))}
-                  className="p-1.5 text-xs text-[#D0D5DD] hover:text-white hover:bg-[#24364A] rounded-md"
+                  className="p-1.5 text-xs text-[#94A3B8] hover:text-white hover:bg-[#132A4A] rounded-md"
                   title="Zoom In"
                 >
                   <ZoomIn className="w-4 h-4" />
@@ -276,7 +276,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setRotation((r) => (r + 90) % 360)}
-                  className="p-1.5 text-xs text-[#D0D5DD] hover:text-white hover:bg-[#24364A] rounded-md"
+                  className="p-1.5 text-xs text-[#94A3B8] hover:text-white hover:bg-[#132A4A] rounded-md"
                   title="Rotate 90°"
                 >
                   <RotateCw className="w-4 h-4" />
@@ -285,8 +285,8 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
             )}
 
             {mediaCategory === 'video' && (
-              <div className="flex items-center gap-1 bg-[#24364A] px-2 py-1 rounded-md text-[11px]">
-                <span className="text-[#9BA3B0]">Speed:</span>
+              <div className="flex items-center gap-1 bg-[#132A4A] px-2 py-1 rounded-md text-[11px]">
+                <span className="text-[#94A3B8]">Speed:</span>
                 {[0.75, 1, 1.25, 1.5, 2].map((rate) => (
                   <button
                     key={rate}
@@ -294,8 +294,8 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                     onClick={() => handleSpeedChange(rate)}
                     className={`px-1.5 py-0.5 font-mono rounded ${
                       playbackRate === rate
-                        ? 'bg-[#F18A45] text-[#172333] font-semibold'
-                        : 'text-[#D0D5DD] hover:text-white'
+                        ? 'bg-[#10B981] text-white font-semibold'
+                        : 'text-[#94A3B8] hover:text-white'
                     }`}
                   >
                     {rate}x
@@ -313,8 +313,8 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                 }}
                 className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-md transition-colors ${
                   pinModeActive
-                    ? 'bg-[#F18A45] text-[#172333]'
-                    : 'bg-[#24364A] text-[#D0D5DD] hover:text-white'
+                    ? 'bg-[#10B981] text-white'
+                    : 'bg-[#132A4A] text-[#94A3B8] hover:text-white'
                 }`}
               >
                 <span>{pinModeActive ? `Proofing Pins (${pins.length})` : 'Enable Pin Proofing'}</span>
@@ -325,9 +325,9 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
               <button
                 type="button"
                 onClick={handleCopyLink}
-                className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-[#D0D5DD] hover:text-white bg-[#24364A] rounded-md"
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-[#94A3B8] hover:text-white bg-[#132A4A] rounded-md"
               >
-                {copiedUrl ? <Check className="w-3.5 h-3.5 text-[#F18A45]" /> : <Copy className="w-3.5 h-3.5" />}
+                {copiedUrl ? <Check className="w-3.5 h-3.5 text-[#10B981]" /> : <Copy className="w-3.5 h-3.5" />}
                 <span>{copiedUrl ? 'Copied' : 'Copy URL'}</span>
               </button>
             )}
@@ -338,7 +338,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                 target="_blank"
                 rel="noopener noreferrer"
                 download={item.title}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#172333] bg-[#F18A45] hover:bg-[#e07934] rounded-md"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-md"
               >
                 <Download className="w-3.5 h-3.5" />
                 <span>Download Master</span>
@@ -346,7 +346,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
             ) : item.masterDownloadLocked ? (
               <span
                 title="High-resolution unwatermarked master unlocks automatically when invoice balance is ₹0"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-[#F18A45] bg-[#24364A] border border-[#F18A45]/40 rounded-md"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-[#10B981] bg-[#132A4A] border border-[#10B981]/40 rounded-md"
               >
                 <Lock className="w-3.5 h-3.5" />
                 <span>Watermarked Proof (Settle Invoice to Unlock)</span>
@@ -356,7 +356,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 text-[#9BA3B0] hover:text-white hover:bg-[#24364A] rounded-md ml-1"
+              className="p-1.5 text-[#94A3B8] hover:text-white hover:bg-[#132A4A] rounded-md ml-1"
               aria-label="Close preview"
             >
               <X className="w-5 h-5" />
@@ -365,9 +365,9 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
         </div>
 
         {/* Main Viewport Stage */}
-        <div className="relative flex-1 bg-[#0F1722] min-h-[340px] max-h-[66vh] flex items-center justify-center overflow-auto p-4">
+        <div className="relative flex-1 bg-[#040D1A] min-h-[340px] max-h-[66vh] flex items-center justify-center overflow-auto p-4">
           {resolving ? (
-            <div className="text-xs text-[#9BA3B0] font-mono">
+            <div className="text-xs text-[#94A3B8] font-mono">
               Generating authenticated Supabase Storage preview URL...
             </div>
           ) : mediaCategory === 'image' ? (
@@ -408,7 +408,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                     {[-1, 0, 1].map((row) => (
                       <div
                         key={row}
-                        className="-rotate-24 whitespace-nowrap font-mono text-xs sm:text-sm font-bold tracking-[0.22em] text-white bg-[#172333]/60 px-4 py-1 rounded border border-white/20 shadow"
+                        className="-rotate-24 whitespace-nowrap font-mono text-xs sm:text-sm font-bold tracking-[0.22em] text-white bg-[#040D1A]/60 px-4 py-1 rounded border border-white/20 shadow"
                       >
                         {item.watermarkText}
                       </div>
@@ -429,8 +429,8 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                       }}
                       className={`absolute -translate-x-1/2 -translate-y-1/2 z-20 w-6 h-6 rounded-full text-[11px] font-mono font-bold flex items-center justify-center shadow-lg border-2 border-white ${
                         pin.resolved
-                          ? 'bg-[#26734D] text-white'
-                          : 'bg-[#F18A45] text-[#172333]'
+                          ? 'bg-[#16A34A] text-white'
+                          : 'bg-[#10B981] text-white'
                       }`}
                     >
                       {idx + 1}
@@ -444,7 +444,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                       left: `${draftPinCoords.xPercent}%`,
                       top: `${draftPinCoords.yPercent}%`,
                     }}
-                    className="absolute -translate-x-1/2 -translate-y-1/2 z-30 w-7 h-7 rounded-full bg-[#B93832] text-white text-xs font-bold flex items-center justify-center border-2 border-white animate-pulse"
+                    className="absolute -translate-x-1/2 -translate-y-1/2 z-30 w-7 h-7 rounded-full bg-[#DC2626] text-white text-xs font-bold flex items-center justify-center border-2 border-white animate-pulse"
                   >
                     +
                   </div>
@@ -473,7 +473,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                     aria-hidden="true"
                     className="pointer-events-none absolute inset-x-0 top-6 flex justify-center select-none opacity-45"
                   >
-                    <div className="whitespace-nowrap font-mono text-xs font-bold tracking-[0.2em] text-white bg-[#172333]/75 px-3.5 py-1 rounded border border-white/20">
+                    <div className="whitespace-nowrap font-mono text-xs font-bold tracking-[0.2em] text-white bg-[#040D1A]/75 px-3.5 py-1 rounded border border-white/20">
                       {item.watermarkText}
                     </div>
                   </div>
@@ -495,7 +495,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                         timestampSeconds: currentSec,
                       });
                     }}
-                    className="px-3 py-1.5 text-xs font-semibold text-[#172333] bg-[#F18A45] hover:bg-[#e07934] rounded-md"
+                    className="px-3 py-1.5 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-md"
                   >
                     + Pin Revision Note at Current Timestamp
                   </button>
@@ -503,7 +503,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
               )}
             </div>
           ) : mediaCategory === 'pdf' ? (
-            <div className="w-full h-[58vh] flex flex-col bg-white rounded overflow-hidden">
+            <div className="w-full h-[58vh] flex flex-col bg-[#0D1F38] rounded overflow-hidden">
               <iframe
                 src={activeUrl}
                 title={item.title}
@@ -511,20 +511,20 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
               />
             </div>
           ) : (
-            <div className="bg-[#172333] border border-[#24364A] rounded-lg p-8 max-w-md w-full text-center space-y-4">
-              <div className="w-14 h-14 mx-auto rounded-lg bg-[#24364A] flex items-center justify-center text-[#F18A45]">
+            <div className="bg-[#040D1A] border border-[#132A4A] rounded-lg p-8 max-w-md w-full text-center space-y-4">
+              <div className="w-14 h-14 mx-auto rounded-lg bg-[#132A4A] flex items-center justify-center text-[#10B981]">
                 <FileArchive className="w-7 h-7" />
               </div>
               <div className="space-y-1">
-                <span className="font-mono text-xs text-[#F18A45] uppercase">
+                <span className="font-mono text-xs text-[#10B981] uppercase">
                   {extension} Project Document
                 </span>
                 <h3 className="text-base font-semibold text-white break-words">{item.title}</h3>
                 {item.fileSize ? (
-                  <p className="text-xs text-[#9BA3B0] font-mono">{formatFileSize(item.fileSize)}</p>
+                  <p className="text-xs text-[#94A3B8] font-mono">{formatFileSize(item.fileSize)}</p>
                 ) : null}
               </div>
-              <p className="text-xs text-[#D0D5DD] leading-relaxed">
+              <p className="text-xs text-[#94A3B8] leading-relaxed">
                 This project file format ({extension}) is stored in Supabase Storage and can be downloaded directly for inspection in its native application.
               </p>
               {activeUrl && !item.masterDownloadLocked && (
@@ -534,7 +534,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                     target="_blank"
                     rel="noopener noreferrer"
                     download={item.title}
-                    className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-[#172333] bg-[#F18A45] hover:bg-[#e07934] rounded-lg"
+                    className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg"
                   >
                     <Download className="w-4 h-4" />
                     <span>Download {extension} File</span>
@@ -549,7 +549,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
             <button
               type="button"
               onClick={() => onSelectItem(items[currentIndex - 1])}
-              className="absolute left-3 top-1/2 -translate-y-1/2 p-2 rounded-lg bg-[#172333]/90 text-white hover:bg-[#F18A45] hover:text-[#172333] border border-white/10 transition-colors"
+              className="absolute left-3 top-1/2 -translate-y-1/2 p-2 rounded-lg bg-[#040D1A]/90 text-white hover:bg-[#10B981] hover:text-[#F8FAFC] border border-white/10 transition-colors"
               aria-label="Previous media"
             >
               <ChevronLeft className="w-5 h-5" />
@@ -559,7 +559,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
             <button
               type="button"
               onClick={() => onSelectItem(items[currentIndex + 1])}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-lg bg-[#172333]/90 text-white hover:bg-[#F18A45] hover:text-[#172333] border border-white/10 transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-lg bg-[#040D1A]/90 text-white hover:bg-[#10B981] hover:text-[#F8FAFC] border border-white/10 transition-colors"
               aria-label="Next media"
             >
               <ChevronRight className="w-5 h-5" />
@@ -569,11 +569,11 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
 
         {/* Interactive Proofing Pin Composer & Pin List Drawer */}
         {proofingContext && pinModeActive && (
-          <div className="px-6 py-3.5 bg-[#F5F5F1] border-t border-[#E2E4DF] space-y-3 max-h-48 overflow-y-auto">
+          <div className="px-6 py-3.5 bg-[#132A4A] border-t border-[#1E3A5F] space-y-3 max-h-48 overflow-y-auto">
             <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-              <span className="font-semibold text-[#172333]">
+              <span className="font-semibold text-[#F8FAFC]">
                 Visual Proofing Annotations ({pins.length}) —{' '}
-                <span className="font-normal text-[#6E7785]">
+                <span className="font-normal text-[#94A3B8]">
                   {mediaCategory === 'image'
                     ? 'Click anywhere on the image above to drop a coordinate pin.'
                     : 'Use the button under the video player to pin the exact timestamp.'}
@@ -610,9 +610,9 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                   setDraftPinCoords(null);
                   setDraftPinComment('');
                 }}
-                className="flex flex-wrap items-center gap-2 bg-white p-2.5 rounded-lg border border-[#172333]"
+                className="flex flex-wrap items-center gap-2 bg-[#0D1F38] p-2.5 rounded-lg border border-[#040D1A]"
               >
-                <span className="px-2 py-1 text-[11px] font-mono font-semibold bg-[#F18A45]/20 text-[#B85D1D] rounded">
+                <span className="px-2 py-1 text-[11px] font-mono font-semibold bg-[#10B981]/20 text-[#0EA5E9] rounded">
                   {mediaCategory === 'video'
                     ? `Timestamp ${formatVideoTimestamp(draftPinCoords.timestampSeconds)}`
                     : `Pin (${draftPinCoords.xPercent}%, ${draftPinCoords.yPercent}%)`}
@@ -624,18 +624,18 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                   value={draftPinComment}
                   onChange={(e) => setDraftPinComment(e.target.value)}
                   placeholder="Describe the exact revision needed here..."
-                  className="flex-1 min-w-[200px] px-3 py-1.5 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-md"
+                  className="flex-1 min-w-[200px] px-3 py-1.5 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-md"
                 />
                 <button
                   type="submit"
-                  className="px-3 py-1.5 text-xs font-semibold text-white bg-[#172333] rounded-md"
+                  className="px-3 py-1.5 text-xs font-semibold text-white bg-[#040D1A] rounded-md"
                 >
                   Save Pin Note
                 </button>
                 <button
                   type="button"
                   onClick={() => setDraftPinCoords(null)}
-                  className="px-2.5 py-1.5 text-xs text-[#6E7785] hover:text-[#172333]"
+                  className="px-2.5 py-1.5 text-xs text-[#94A3B8] hover:text-[#F8FAFC]"
                 >
                   Cancel
                 </button>
@@ -649,8 +649,8 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                     key={pin.id}
                     className={`p-2.5 rounded-lg border text-xs flex items-start justify-between gap-2 ${
                       pin.resolved
-                        ? 'bg-white/60 border-[#E2E4DF] text-[#6E7785]'
-                        : 'bg-white border-[#E2E4DF] text-[#172333]'
+                        ? 'bg-white/60 border-[#1E3A5F] text-[#94A3B8]'
+                        : 'bg-[#0D1F38] border-[#1E3A5F] text-[#F8FAFC]'
                     }`}
                   >
                     <div className="space-y-0.5">
@@ -658,8 +658,8 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                         <span
                           className={`px-1.5 py-0.2 rounded font-mono text-[10px] font-bold ${
                             pin.resolved
-                              ? 'bg-[#26734D] text-white'
-                              : 'bg-[#F18A45] text-[#172333]'
+                              ? 'bg-[#16A34A] text-white'
+                              : 'bg-[#10B981] text-white'
                           }`}
                         >
                           #{idx + 1}
@@ -672,12 +672,12 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                                 videoRef.current.currentTime = pin.timestampSeconds;
                               }
                             }}
-                            className="font-mono text-[11px] font-semibold text-[#F18A45] hover:underline"
+                            className="font-mono text-[11px] font-semibold text-[#10B981] hover:underline"
                           >
                             Jump to {formatVideoTimestamp(pin.timestampSeconds)}
                           </button>
                         ) : (
-                          <span className="font-mono text-[10px] text-[#6E7785]">
+                          <span className="font-mono text-[10px] text-[#94A3B8]">
                             ({pin.xPercent}%, {pin.yPercent}%)
                           </span>
                         )}
@@ -692,7 +692,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                           toggleProofingPinResolved(pin.id);
                           setPins(getProofingPins(proofingContext.projectId, item.id));
                         }}
-                        className="text-[11px] font-semibold text-[#26734D] hover:underline"
+                        className="text-[11px] font-semibold text-[#16A34A] hover:underline"
                       >
                         {pin.resolved ? 'Reopen' : 'Resolve'}
                       </button>
@@ -702,7 +702,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                           deleteProofingPin(pin.id);
                           setPins(getProofingPins(proofingContext.projectId, item.id));
                         }}
-                        className="text-[11px] text-[#B93832] hover:underline"
+                        className="text-[11px] text-[#DC2626] hover:underline"
                       >
                         ×
                       </button>
@@ -715,11 +715,11 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
         )}
 
         {/* Bottom Metadata & Context Bar */}
-        <div className="px-6 py-4 bg-white border-t border-[#E2E4DF] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="px-6 py-4 bg-[#0D1F38] border-t border-[#1E3A5F] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1.5 min-w-0">
-            <div className="flex flex-wrap items-center gap-2 text-xs text-[#6E7785]">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-[#94A3B8]">
               {item.categoryLabel && (
-                <span className="font-semibold text-[#172333]">{item.categoryLabel}</span>
+                <span className="font-semibold text-[#F8FAFC]">{item.categoryLabel}</span>
               )}
               {item.createdAt && (
                 <>
@@ -736,7 +736,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
               {item.storagePath && (
                 <>
                   <span>·</span>
-                  <span className="inline-flex items-center gap-1 font-mono text-[11px] text-[#6E7785] truncate max-w-xs">
+                  <span className="inline-flex items-center gap-1 font-mono text-[11px] text-[#94A3B8] truncate max-w-xs">
                     <HardDrive className="w-3 h-3 shrink-0" />
                     {item.storagePath}
                   </span>
@@ -745,7 +745,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
             </div>
 
             {item.description && (
-              <p className="text-xs text-[#6E7785] leading-relaxed max-w-3xl">{item.description}</p>
+              <p className="text-xs text-[#94A3B8] leading-relaxed max-w-3xl">{item.description}</p>
             )}
 
             {item.tags && item.tags.length > 0 && (
@@ -753,7 +753,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                 {item.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="px-2 py-0.5 text-[11px] font-mono bg-[#F5F5F1] border border-[#E2E4DF] text-[#172333] rounded"
+                    className="px-2 py-0.5 text-[11px] font-mono bg-[#132A4A] border border-[#1E3A5F] text-[#F8FAFC] rounded"
                   >
                     #{tag}
                   </span>
@@ -768,7 +768,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                 href={activeUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-[#172333] bg-[#F5F5F1] hover:bg-[#E2E4DF] rounded-lg transition-colors whitespace-nowrap"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-[#F8FAFC] bg-[#132A4A] hover:bg-[#1E3A5F] rounded-lg transition-colors whitespace-nowrap"
               >
                 <span>Open Original</span>
                 <ExternalLink className="w-3.5 h-3.5" />
@@ -778,7 +778,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
               <button
                 type="button"
                 onClick={item.actionButton.onClick}
-                className="px-4 py-2 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg transition-colors whitespace-nowrap"
+                className="px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-colors whitespace-nowrap"
               >
                 {item.actionButton.label}
               </button>

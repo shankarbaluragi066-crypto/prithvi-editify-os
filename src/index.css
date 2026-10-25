@@ -3,50 +3,408 @@
 @layer base {
   :root {
     --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-    --font-serif: 'Fraunces', Georgia, serif;
+    --font-serif: 'Plus Jakarta Sans', 'Fraunces', -apple-system, BlinkMacSystemFont, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
+
+    /* Prithvi Editify Logo-Matched Sapphire, Cyan-Teal & Emerald Design Tokens */
+    --pe-bg-primary: #040D1A;
+    --pe-bg-secondary: #081629;
+    --pe-bg-card: #0D1F38;
+    --pe-bg-elevated: #132A4A;
+    --pe-accent-primary: #10B981;
+    --pe-accent-secondary: #2DD4BF;
+    --pe-accent-blue: #0EA5E9;
+    --pe-text-main: #F8FAFC;
+    --pe-text-muted: #94A3B8;
+    --pe-border: #1E3A5F;
+    --pe-success: #22C55E;
+    --pe-warning: #F59E0B;
+    --pe-error: #EF4444;
+
+    /* Fluid & Modular Typography Scale Tokens */
+    --pe-fs-2xs: 0.6875rem;                                    /* 11px */
+    --pe-fs-xs: 0.75rem;                                       /* 12px */
+    --pe-fs-sm: clamp(0.84375rem, 0.82rem + 0.12vw, 0.875rem); /* 13.5px -> 14px */
+    --pe-fs-base: clamp(0.9375rem, 0.91rem + 0.14vw, 1rem);    /* 15px -> 16px */
+    --pe-fs-lg: clamp(1.0625rem, 1.01rem + 0.22vw, 1.125rem);  /* 17px -> 18px */
+    --pe-fs-xl: clamp(1.1875rem, 1.12rem + 0.3vw, 1.25rem);    /* 19px -> 20px */
+    --pe-fs-2xl: clamp(1.35rem, 1.22rem + 0.55vw, 1.5rem);     /* 21.6px -> 24px */
+    --pe-fs-3xl: clamp(1.625rem, 1.42rem + 0.9vw, 1.875rem);   /* 26px -> 30px */
+    --pe-fs-4xl: clamp(1.95rem, 1.65rem + 1.35vw, 2.375rem);   /* 31.2px -> 38px */
+    --pe-fs-5xl: clamp(2.25rem, 1.85rem + 1.8vw, 3rem);        /* 36px -> 48px */
+    --pe-fs-display: clamp(2.5rem, 2rem + 2.25vw, 3.5rem);     /* 40px -> 56px */
+
+    /* Line-Height Rhythm Tokens */
+    --pe-lh-none: 1;
+    --pe-lh-display: 1.08;
+    --pe-lh-tight: 1.16;
+    --pe-lh-snug: 1.28;
+    --pe-lh-normal: 1.5;
+    --pe-lh-relaxed: 1.65;
+    --pe-lh-loose: 1.75;
+
+    /* Letter-Spacing Tokens */
+    --pe-tracking-display: -0.032em;
+    --pe-tracking-tight: -0.024em;
+    --pe-tracking-snug: -0.015em;
+    --pe-tracking-normal: -0.004em;
+    --pe-tracking-wide: 0.04em;
+    --pe-tracking-kicker: 0.1em;
   }
 
   html {
+    font-size: 16px;
     scroll-behavior: smooth;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    -webkit-text-size-adjust: 100%;
+    color-scheme: dark;
   }
 
   body {
     font-family: var(--font-sans);
-    background-color: #F5F5F1;
-    color: #172333;
+    font-size: var(--pe-fs-base);
+    line-height: var(--pe-lh-relaxed);
+    letter-spacing: var(--pe-tracking-normal);
+    background-color: #040D1A;
+    color: #F8FAFC;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    overflow-x: hidden;
   }
 
   ::selection {
-    background-color: rgba(241, 138, 69, 0.22);
-    color: #172333;
+    background-color: rgba(16, 185, 129, 0.32);
+    color: #F8FAFC;
   }
 
+  /* Semantic Heading Hierarchy with Balanced Wrapping */
   h1, .font-editorial {
-    font-family: var(--font-serif);
-    letter-spacing: -0.015em;
+    font-family: var(--font-sans);
+    font-size: var(--pe-fs-4xl);
+    line-height: var(--pe-lh-tight);
+    letter-spacing: var(--pe-tracking-display);
+    font-weight: 700;
+    text-wrap: balance;
   }
 
-  h2, h3 {
+  h2 {
+    font-family: var(--font-sans);
+    font-size: var(--pe-fs-3xl);
+    line-height: 1.18;
+    letter-spacing: var(--pe-tracking-tight);
+    font-weight: 700;
+    text-wrap: balance;
+  }
+
+  h3 {
+    font-family: var(--font-sans);
+    font-size: var(--pe-fs-xl);
+    line-height: var(--pe-lh-snug);
+    letter-spacing: var(--pe-tracking-snug);
+    font-weight: 600;
+    text-wrap: balance;
+  }
+
+  h4 {
+    font-family: var(--font-sans);
+    font-size: var(--pe-fs-lg);
+    line-height: 1.35;
+    letter-spacing: var(--pe-tracking-snug);
+    font-weight: 600;
+  }
+
+  h5, h6 {
+    font-family: var(--font-sans);
+    font-size: var(--pe-fs-base);
+    line-height: 1.4;
     letter-spacing: -0.01em;
+    font-weight: 600;
   }
 
-  .font-mono, .tabular-nums {
+  p {
+    line-height: var(--pe-lh-relaxed);
+    text-wrap: pretty;
+  }
+
+  small {
+    font-size: var(--pe-fs-xs);
+    line-height: 1.45;
+  }
+
+  label {
+    line-height: 1.4;
+    letter-spacing: -0.005em;
+  }
+
+  .font-mono, .tabular-nums, code, pre {
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
   }
 
+  /* Sapphire & Emerald Studio Form Controls & Tables */
+  table {
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: var(--pe-fs-sm);
+    line-height: 1.45;
+  }
+
+  th {
+    font-weight: 600;
+    font-size: var(--pe-fs-xs);
+    line-height: 1.35;
+    letter-spacing: 0.04em;
+  }
+
+  td {
+    line-height: 1.5;
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+  select,
+  textarea {
+    color: #F8FAFC;
+    font-size: var(--pe-fs-sm);
+    line-height: 1.5;
+    transition: border-color 200ms cubic-bezier(0.16, 1, 0.3, 1),
+      box-shadow 200ms cubic-bezier(0.16, 1, 0.3, 1),
+      background-color 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: #64748B;
+  }
+
+  select option,
+  select optgroup {
+    background-color: #0D1F38;
+    color: #F8FAFC;
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):focus,
+  select:focus,
+  textarea:focus {
+    border-color: #10B981 !important;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.22);
+    outline: none;
+  }
+
   a:focus-visible,
-  button:focus-visible,
-  input:focus-visible,
-  select:focus-visible,
-  textarea:focus-visible {
-    outline: 2px solid #F18A45;
+  button:focus-visible {
+    outline: 2px solid #10B981;
     outline-offset: 2px;
+  }
+}
+
+/* Calibrated Font-Size & Line-Height Utility Scale for Cross-Viewport Readability */
+@layer utilities {
+  .text-2xs {
+    font-size: var(--pe-fs-2xs);
+    line-height: 1.4;
+  }
+
+  .text-xs {
+    font-size: var(--pe-fs-xs);
+    line-height: 1.45;
+  }
+
+  .text-sm {
+    font-size: var(--pe-fs-sm);
+    line-height: 1.55;
+  }
+
+  .text-base {
+    font-size: var(--pe-fs-base);
+    line-height: var(--pe-lh-relaxed);
+  }
+
+  .text-lg {
+    font-size: var(--pe-fs-lg);
+    line-height: 1.55;
+    letter-spacing: -0.01em;
+  }
+
+  .text-xl {
+    font-size: var(--pe-fs-xl);
+    line-height: 1.4;
+    letter-spacing: var(--pe-tracking-snug);
+  }
+
+  .text-2xl {
+    font-size: var(--pe-fs-2xl);
+    line-height: 1.28;
+    letter-spacing: -0.02em;
+  }
+
+  .text-3xl {
+    font-size: var(--pe-fs-3xl);
+    line-height: 1.2;
+    letter-spacing: var(--pe-tracking-tight);
+  }
+
+  .text-4xl {
+    font-size: var(--pe-fs-4xl);
+    line-height: var(--pe-lh-tight);
+    letter-spacing: var(--pe-tracking-display);
+  }
+
+  .text-5xl {
+    font-size: var(--pe-fs-5xl);
+    line-height: 1.1;
+    letter-spacing: var(--pe-tracking-display);
+  }
+
+  .text-6xl {
+    font-size: var(--pe-fs-display);
+    line-height: var(--pe-lh-display);
+    letter-spacing: -0.035em;
+  }
+
+  /* Explicit Line-Height Utilities */
+  .leading-none {
+    line-height: var(--pe-lh-none);
+  }
+
+  .leading-tight {
+    line-height: var(--pe-lh-tight);
+  }
+
+  .leading-snug {
+    line-height: var(--pe-lh-snug);
+  }
+
+  .leading-normal {
+    line-height: var(--pe-lh-normal);
+  }
+
+  .leading-relaxed {
+    line-height: var(--pe-lh-relaxed);
+  }
+
+  .leading-loose {
+    line-height: var(--pe-lh-loose);
+  }
+
+  /* Semantic Studio Typography Classes */
+  .pe-text-display {
+    font-size: var(--pe-fs-display);
+    line-height: var(--pe-lh-display);
+    letter-spacing: var(--pe-tracking-display);
+    font-weight: 700;
+    text-wrap: balance;
+  }
+
+  .pe-text-h1 {
+    font-size: var(--pe-fs-4xl);
+    line-height: var(--pe-lh-tight);
+    letter-spacing: var(--pe-tracking-display);
+    font-weight: 700;
+    text-wrap: balance;
+  }
+
+  .pe-text-h2 {
+    font-size: var(--pe-fs-3xl);
+    line-height: 1.18;
+    letter-spacing: var(--pe-tracking-tight);
+    font-weight: 700;
+    text-wrap: balance;
+  }
+
+  .pe-text-h3 {
+    font-size: var(--pe-fs-xl);
+    line-height: var(--pe-lh-snug);
+    letter-spacing: var(--pe-tracking-snug);
+    font-weight: 600;
+  }
+
+  .pe-text-body {
+    font-size: var(--pe-fs-base);
+    line-height: var(--pe-lh-relaxed);
+    letter-spacing: var(--pe-tracking-normal);
+    text-wrap: pretty;
+  }
+
+  .pe-text-body-sm {
+    font-size: var(--pe-fs-sm);
+    line-height: 1.55;
+    text-wrap: pretty;
+  }
+
+  .pe-text-kicker {
+    font-size: var(--pe-fs-xs);
+    line-height: 1.35;
+    letter-spacing: var(--pe-tracking-kicker);
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .pe-measure {
+    max-width: 65ch;
+  }
+}
+
+/* Lightweight, Accessible Animations & Interactive Utilities */
+@keyframes peFadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.pe-page-enter {
+  animation: peFadeInUp 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.pe-card-interactive {
+  transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 260ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform, box-shadow, border-color;
+}
+
+.pe-card-interactive:hover {
+  transform: translateY(-4px);
+  border-color: rgba(20, 184, 166, 0.58);
+  box-shadow: 0 18px 38px -12px rgba(4, 13, 26, 0.85),
+    0 0 26px -6px rgba(16, 185, 129, 0.25),
+    0 0 0 1px rgba(14, 165, 233, 0.24);
+}
+
+.pe-card-interactive:active {
+  transform: translateY(-1px);
+}
+
+.pe-btn-gradient {
+  background-image: linear-gradient(135deg, #0EA5E9 0%, #10B981 100%);
+  color: #F8FAFC;
+  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.pe-btn-gradient:hover {
+  filter: brightness(1.08);
+  box-shadow: 0 8px 24px -6px rgba(16, 185, 129, 0.48);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .pe-card-interactive:hover {
+    transform: none;
   }
 }
 
@@ -54,7 +412,11 @@
   .no-print {
     display: none !important;
   }
+  html {
+    color-scheme: light !important;
+  }
   body {
     background: #FFFFFF !important;
+    color: #0F172A !important;
   }
 }

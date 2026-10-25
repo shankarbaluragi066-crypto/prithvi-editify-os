@@ -253,7 +253,7 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
     visualStyle: 'Editorial',
     aspectRatio: '16:9' as '1:1' | '16:9' | '4:3' | '3:4' | '9:16',
     imageSize: '1K' as '1K' | '2K' | '4K',
-    brandColors: 'Midnight Slate (#172333), Warm Alabaster (#F5F5F1), Terracotta (#F18A45)',
+    brandColors: 'Midnight Slate (#040D1A), Warm Alabaster (#132A4A), Terracotta (#10B981)',
     textToInclude: '',
     referenceImageBase64: '',
     referenceImageMimeType: 'image/png',
@@ -328,11 +328,11 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
 
   if (!isAdmin) {
     return (
-      <div className="bg-white border border-[#E2E4DF] rounded-lg p-8 text-center space-y-3">
-        <h1 className="font-editorial text-xl font-semibold text-[#172333]">
+      <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-8 text-center space-y-3">
+        <h1 className="font-editorial text-xl font-semibold text-[#F8FAFC]">
           Administrator Access Required
         </h1>
-        <p className="text-xs text-[#6E7785]">
+        <p className="text-xs text-[#94A3B8]">
           The Prithvi Editify AI Creative Assistant is restricted exclusively to authorized studio administrators.
         </p>
       </div>
@@ -686,29 +686,29 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Top Studio AI Header & Provider Telemetry */}
-      <div className="bg-white border border-[#E2E4DF] rounded-lg p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-xs text-[#6E7785]">
-            <Sparkles className="w-3.5 h-3.5 text-[#F18A45]" />
-            <span className="font-semibold text-[#172333]">Admin-Only Studio Workspace</span>
+          <div className="flex items-center gap-2 text-xs text-[#94A3B8]">
+            <Sparkles className="w-3.5 h-3.5 text-[#10B981]" />
+            <span className="font-semibold text-[#F8FAFC]">Admin-Only Studio Workspace</span>
             <span>·</span>
             <span>Protected Server-Side Gemini Integration</span>
           </div>
-          <h1 className="font-editorial text-2xl sm:text-3xl font-semibold text-[#172333] mt-1">
+          <h1 className="font-editorial text-2xl sm:text-3xl font-semibold text-[#F8FAFC] mt-1">
             Prithvi Editify AI Creative Assistant
           </h1>
-          <p className="text-xs text-[#6E7785] mt-1 max-w-2xl">
+          <p className="text-xs text-[#94A3B8] mt-1 max-w-2xl">
             Draft and refine service listings, portfolio case studies, promotional copy, and original studio artwork. Nothing is published or saved until you explicitly review and approve it.
           </p>
         </div>
 
         {/* Provider Status Box */}
-        <div className="bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg px-4 py-3 text-xs shrink-0 space-y-1">
+        <div className="bg-[#132A4A] border border-[#1E3A5F] rounded-lg px-4 py-3 text-xs shrink-0 space-y-1">
           <div className="flex items-center justify-between gap-4">
-            <span className="text-[#6E7785]">Server AI Key Status:</span>
+            <span className="text-[#94A3B8]">Server AI Key Status:</span>
             <span
               className={`font-semibold ${
-                providerStatus?.configured ? 'text-[#26734D]' : 'text-[#A96518]'
+                providerStatus?.configured ? 'text-[#16A34A]' : 'text-[#D97706]'
               }`}
             >
               {providerStatus
@@ -721,8 +721,8 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
             </span>
           </div>
           <div className="flex items-center justify-between gap-4">
-            <span className="text-[#6E7785]">Text / Image Models:</span>
-            <span className="font-mono text-[11px] text-[#172333]">
+            <span className="text-[#94A3B8]">Text / Image Models:</span>
+            <span className="font-mono text-[11px] text-[#F8FAFC]">
               {providerStatus?.textModel || 'gemini-3.8-flash'} ·{' '}
               {providerStatus?.imageModel || 'gemini-3.1-flash-lite-image'}
             </span>
@@ -733,8 +733,8 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
       {/* Main 3-Zone Workspace Grid: Left Sub-Nav (3 cols) + Center Workspace (6 cols) + Right Context Panel (3 cols) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* LEFT PANEL: Tool Selector */}
-        <aside className="lg:col-span-3 bg-white border border-[#E2E4DF] rounded-lg p-3 space-y-1">
-          <p className="px-3 py-2 text-[11px] font-semibold text-[#6E7785]">
+        <aside className="lg:col-span-3 bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-3 space-y-1">
+          <p className="px-3 py-2 text-[11px] font-semibold text-[#94A3B8]">
             Creative Assistant Tools
           </p>
           {[
@@ -784,20 +784,20 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                 onClick={() => setActiveTab(item.id)}
                 className={`w-full text-left px-3 py-2.5 rounded-lg transition-colors flex items-start gap-3 ${
                   active
-                    ? 'bg-[#172333] text-white'
-                    : 'text-[#172333] hover:bg-[#F5F5F1]'
+                    ? 'bg-[#132A4A] text-[#F8FAFC]'
+                    : 'text-[#F8FAFC] hover:bg-[#132A4A]'
                 }`}
               >
                 <Icon
                   className={`w-4 h-4 mt-0.5 shrink-0 ${
-                    active ? 'text-[#F18A45]' : 'text-[#6E7785]'
+                    active ? 'text-[#10B981]' : 'text-[#94A3B8]'
                   }`}
                 />
                 <div className="min-w-0">
                   <p className="text-xs font-semibold truncate">{item.label}</p>
                   <p
                     className={`text-[11px] truncate mt-0.5 ${
-                      active ? 'text-[#D0D5DD]' : 'text-[#6E7785]'
+                      active ? 'text-[#94A3B8]' : 'text-[#94A3B8]'
                     }`}
                   >
                     {item.desc}
@@ -814,18 +814,18 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
           {/* TAB 1: 18-TASK AI WRITING ASSISTANT                              */}
           {/* ================================================================ */}
           {activeTab === 'writing' && (
-            <div className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-5">
-              <div className="border-b border-[#E2E4DF] pb-4">
-                <h2 className="text-base font-semibold text-[#172333]">
+            <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 space-y-5">
+              <div className="border-b border-[#1E3A5F] pb-4">
+                <h2 className="text-base font-semibold text-[#F8FAFC]">
                   AI Writing & Content Improvement Workspace
                 </h2>
-                <p className="text-xs text-[#6E7785] mt-0.5">
+                <p className="text-xs text-[#94A3B8] mt-0.5">
                   Select any of the 18 creative writing tasks, enter your topic or draft, and refine the result before copying or applying.
                 </p>
               </div>
 
               {writeError && (
-                <div className="p-3.5 bg-[#B93832]/10 border border-[#B93832]/30 rounded-lg flex items-start gap-2.5 text-xs text-[#B93832]">
+                <div className="p-3.5 bg-[#DC2626]/10 border border-[#DC2626]/30 rounded-lg flex items-start gap-2.5 text-xs text-[#DC2626]">
                   <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                   <span>{writeError}</span>
                 </div>
@@ -833,13 +833,13 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-[#172333] mb-1">
+                  <label className="block text-xs font-semibold text-[#F8FAFC] mb-1">
                     Content Type / Writing Task *
                   </label>
                   <select
                     value={writeForm.task}
                     onChange={(e) => setWriteForm({ ...writeForm, task: e.target.value })}
-                    className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg focus:outline-none focus:border-[#172333]"
+                    className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg focus:outline-none focus:border-[#10B981]"
                   >
                     {WRITING_ASSISTANT_TASKS.map((t) => (
                       <option key={t} value={t}>
@@ -850,7 +850,7 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-[#172333] mb-1">
+                  <label className="block text-xs font-semibold text-[#F8FAFC] mb-1">
                     Topic or Existing Text *
                   </label>
                   <textarea
@@ -858,13 +858,13 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                     value={writeForm.topicOrText}
                     onChange={(e) => setWriteForm({ ...writeForm, topicOrText: e.target.value })}
                     placeholder="Enter your service topic, rough draft, client inquiry message, or project notes..."
-                    className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg focus:outline-none focus:border-[#172333]"
+                    className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg focus:outline-none focus:border-[#10B981]"
                   />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-[#172333] mb-1">
+                    <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                       Target Audience
                     </label>
                     <input
@@ -874,17 +874,17 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                         setWriteForm({ ...writeForm, targetAudience: e.target.value })
                       }
                       placeholder="e.g. YouTube creators, D2C brands"
-                      className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                      className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-[#172333] mb-1">
+                    <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                       Tone of Voice
                     </label>
                     <select
                       value={writeForm.tone}
                       onChange={(e) => setWriteForm({ ...writeForm, tone: e.target.value })}
-                      className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                      className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                     >
                       {TONE_OPTIONS.map((t) => (
                         <option key={t} value={t}>
@@ -897,7 +897,7 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-[#172333] mb-1">
+                    <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                       Desired Length
                     </label>
                     <select
@@ -905,7 +905,7 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                       onChange={(e) =>
                         setWriteForm({ ...writeForm, desiredLength: e.target.value })
                       }
-                      className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                      className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                     >
                       {LENGTH_OPTIONS.map((l) => (
                         <option key={l} value={l}>
@@ -915,7 +915,7 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-[#172333] mb-1">
+                    <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                       Keywords (Optional)
                     </label>
                     <input
@@ -923,11 +923,11 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                       value={writeForm.keywords}
                       onChange={(e) => setWriteForm({ ...writeForm, keywords: e.target.value })}
                       placeholder="thumbnail design, high CTR..."
-                      className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                      className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-[#172333] mb-1">
+                    <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                       Language
                     </label>
                     <input
@@ -935,13 +935,13 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                       value={writeForm.language}
                       onChange={(e) => setWriteForm({ ...writeForm, language: e.target.value })}
                       placeholder="English"
-                      className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                      className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-[#172333] mb-1">
+                  <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                     Additional Instructions (Optional)
                   </label>
                   <input
@@ -951,7 +951,7 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                       setWriteForm({ ...writeForm, additionalInstructions: e.target.value })
                     }
                     placeholder="e.g. Include a call to action for WhatsApp inquiry; keep pricing as ₹500/design"
-                    className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                    className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                   />
                 </div>
 
@@ -961,9 +961,9 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                     type="button"
                     disabled={writeLoading}
                     onClick={() => handleRunWritingAction('generate')}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] disabled:opacity-50 rounded-lg transition-colors"
+                    className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 disabled:opacity-50 rounded-lg transition-colors"
                   >
-                    <Sparkles className="w-3.5 h-3.5 text-[#F18A45]" />
+                    <Sparkles className="w-3.5 h-3.5 text-[#10B981]" />
                     <span>{writeLoading ? 'Generating...' : 'Generate'}</span>
                   </button>
 
@@ -971,7 +971,7 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                     type="button"
                     disabled={writeLoading}
                     onClick={() => handleRunWritingAction('regenerate')}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-[#172333] bg-[#F5F5F1] hover:bg-[#E2E4DF] disabled:opacity-50 rounded-lg transition-colors"
+                    className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-[#F8FAFC] bg-[#132A4A] hover:bg-[#1E3A5F] disabled:opacity-50 rounded-lg transition-colors"
                   >
                     <RefreshCw className="w-3.5 h-3.5" />
                     <span>Regenerate</span>
@@ -990,7 +990,7 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                       setWriteOutput('');
                       setWriteError('');
                     }}
-                    className="px-3 py-2 text-xs font-medium text-[#6E7785] hover:text-[#B93832] transition-colors"
+                    className="px-3 py-2 text-xs font-medium text-[#94A3B8] hover:text-[#DC2626] transition-colors"
                   >
                     Clear Workspace
                   </button>
@@ -998,9 +998,9 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
               </div>
 
               {/* Editable Result Area & Refinement Actions */}
-              <div className="pt-4 border-t border-[#E2E4DF] space-y-3">
+              <div className="pt-4 border-t border-[#1E3A5F] space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <label className="text-xs font-semibold text-[#172333]">
+                  <label className="text-xs font-semibold text-[#F8FAFC]">
                     Generated Result (Editable Before Using)
                   </label>
                   <div className="flex items-center gap-2">
@@ -1008,10 +1008,10 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                       type="button"
                       disabled={!writeOutput}
                       onClick={() => handleCopyText(writeOutput, 'write_output')}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#172333] bg-[#F5F5F1] hover:bg-[#E2E4DF] disabled:opacity-40 rounded-md"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#F8FAFC] bg-[#132A4A] hover:bg-[#1E3A5F] disabled:opacity-40 rounded-md"
                     >
                       {copiedKey === 'write_output' ? (
-                        <Check className="w-3.5 h-3.5 text-[#26734D]" />
+                        <Check className="w-3.5 h-3.5 text-[#16A34A]" />
                       ) : (
                         <Copy className="w-3.5 h-3.5" />
                       )}
@@ -1025,12 +1025,12 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                   value={writeOutput}
                   onChange={(e) => setWriteOutput(e.target.value)}
                   placeholder="Generated content will appear here. You can freely edit the text or run refinement actions below..."
-                  className="w-full px-3.5 py-3 text-xs leading-relaxed bg-[#F5F5F1]/70 border border-[#E2E4DF] rounded-lg focus:outline-none focus:border-[#172333]"
+                  className="w-full px-3.5 py-3 text-xs leading-relaxed bg-[#132A4A]/70 border border-[#1E3A5F] rounded-lg focus:outline-none focus:border-[#10B981]"
                 />
 
                 {/* Quick Refinement Actions */}
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-[11px] font-semibold text-[#6E7785] mr-1">
+                  <span className="text-[11px] font-semibold text-[#94A3B8] mr-1">
                     Refine Result:
                   </span>
                   {[
@@ -1045,7 +1045,7 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                       type="button"
                       disabled={writeLoading || (!writeOutput.trim() && !writeForm.topicOrText.trim())}
                       onClick={() => handleRunWritingAction(act.key)}
-                      className="px-2.5 py-1.5 text-[11px] font-semibold text-[#172333] bg-white border border-[#E2E4DF] hover:border-[#172333] disabled:opacity-40 rounded-md transition-colors"
+                      className="px-2.5 py-1.5 text-[11px] font-semibold text-[#F8FAFC] bg-[#0D1F38] border border-[#1E3A5F] hover:border-[#10B981] disabled:opacity-40 rounded-md transition-colors"
                     >
                       {act.label}
                     </button>
@@ -1059,31 +1059,31 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
           {/* TAB 2: SERVICE CONTENT GENERATOR                                 */}
           {/* ================================================================ */}
           {activeTab === 'service' && (
-            <div className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-5">
-              <div className="border-b border-[#E2E4DF] pb-4">
-                <h2 className="text-base font-semibold text-[#172333]">
+            <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 space-y-5">
+              <div className="border-b border-[#1E3A5F] pb-4">
+                <h2 className="text-base font-semibold text-[#F8FAFC]">
                   Generate Service Content
                 </h2>
-                <p className="text-xs text-[#6E7785] mt-0.5">
+                <p className="text-xs text-[#94A3B8] mt-0.5">
                   Prepare complete, honest service listings for your Services catalog. Never invents prices, turnaround times, or guarantees.
                 </p>
               </div>
 
               {srvError && (
-                <div className="p-3.5 bg-[#B93832]/10 border border-[#B93832]/30 rounded-lg text-xs text-[#B93832]">
+                <div className="p-3.5 bg-[#DC2626]/10 border border-[#DC2626]/30 rounded-lg text-xs text-[#DC2626]">
                   {srvError}
                 </div>
               )}
 
               <form onSubmit={handleGenerateServiceContent} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-medium text-[#172333] mb-1">
+                  <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                     Load Context from Existing Service (Optional)
                   </label>
                   <select
                     value={selectedServiceId}
                     onChange={(e) => handleSelectExistingService(e.target.value)}
-                    className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                    className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                   >
                     <option value="">— Start New Service Draft —</option>
                     {existingServices.map((s) => (
@@ -1096,7 +1096,7 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-[#172333] mb-1">
+                    <label className="block text-xs font-semibold text-[#F8FAFC] mb-1">
                       Service Category *
                     </label>
                     <input
@@ -1105,11 +1105,11 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                       value={srvForm.category}
                       onChange={(e) => setSrvForm({ ...srvForm, category: e.target.value })}
                       placeholder="e.g. YouTube Thumbnail Design"
-                      className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                      className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-[#172333] mb-1">
+                    <label className="block text-xs font-semibold text-[#F8FAFC] mb-1">
                       Service Name or Topic *
                     </label>
                     <input
@@ -1118,56 +1118,56 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                       value={srvForm.serviceName}
                       onChange={(e) => setSrvForm({ ...srvForm, serviceName: e.target.value })}
                       placeholder="e.g. High-Impact YouTube Thumbnail Design"
-                      className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                      className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-[#172333] mb-1">
+                    <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                       Target Audience
                     </label>
                     <input
                       type="text"
                       value={srvForm.targetAudience}
                       onChange={(e) => setSrvForm({ ...srvForm, targetAudience: e.target.value })}
-                      className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                      className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-[#172333] mb-1">
+                    <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                       Main Client Benefit
                     </label>
                     <input
                       type="text"
                       value={srvForm.mainBenefit}
                       onChange={(e) => setSrvForm({ ...srvForm, mainBenefit: e.target.value })}
-                      className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                      className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-[#172333] mb-1">
+                    <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                       Keywords
                     </label>
                     <input
                       type="text"
                       value={srvForm.keywords}
                       onChange={(e) => setSrvForm({ ...srvForm, keywords: e.target.value })}
-                      className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                      className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-[#172333] mb-1">
+                    <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                       Tone of Voice
                     </label>
                     <select
                       value={srvForm.tone}
                       onChange={(e) => setSrvForm({ ...srvForm, tone: e.target.value })}
-                      className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                      className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                     >
                       {TONE_OPTIONS.map((t) => (
                         <option key={t} value={t}>
@@ -1180,7 +1180,7 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-[#172333] mb-1">
+                    <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                       Existing Price Details (Optional — Never Invented)
                     </label>
                     <input
@@ -1188,11 +1188,11 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                       value={srvForm.priceDetails}
                       onChange={(e) => setSrvForm({ ...srvForm, priceDetails: e.target.value })}
                       placeholder="e.g. ₹400/thumbnail"
-                      className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                      className="w-full px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-[#172333] mb-1">
+                    <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                       Delivery & Revision Details (Optional)
                     </label>
                     <input
@@ -1200,13 +1200,13 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                       value={srvForm.deliveryDetails}
                       onChange={(e) => setSrvForm({ ...srvForm, deliveryDetails: e.target.value })}
                       placeholder="e.g. 24 hours · 2 Revisions"
-                      className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                      className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-[#172333] mb-1">
+                  <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                     Optional Rough Description / Notes
                   </label>
                   <textarea
@@ -1214,30 +1214,30 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                     value={srvForm.roughDescription}
                     onChange={(e) => setSrvForm({ ...srvForm, roughDescription: e.target.value })}
                     placeholder="Any specific deliverables, file formats, or notes..."
-                    className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                    className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                   />
                 </div>
 
                 <button
                   type="submit"
                   disabled={srvLoading}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] disabled:opacity-50 rounded-lg"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 disabled:opacity-50 rounded-lg"
                 >
-                  <Sparkles className="w-3.5 h-3.5 text-[#F18A45]" />
+                  <Sparkles className="w-3.5 h-3.5 text-[#10B981]" />
                   <span>{srvLoading ? 'Generating Service Package...' : 'Generate Service Content'}</span>
                 </button>
               </form>
 
               {srvResult && (
-                <div className="pt-5 border-t border-[#E2E4DF] space-y-4">
+                <div className="pt-5 border-t border-[#1E3A5F] space-y-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h3 className="text-sm font-semibold text-[#172333]">
+                    <h3 className="text-sm font-semibold text-[#F8FAFC]">
                       Generated Service Content (Editable Before Using)
                     </h3>
                     <button
                       type="button"
                       onClick={handleApplyServiceContentToForm}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-[#172333] bg-[#F18A45] hover:bg-[#e07934] rounded-lg transition-colors"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-colors"
                     >
                       <span>Use Generated Content in Service Form</span>
                       <ArrowRight className="w-3.5 h-3.5" />
@@ -1245,19 +1245,19 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-[#6E7785] mb-1">
+                    <label className="block text-[11px] font-semibold text-[#94A3B8] mb-1">
                       Professional Service Title
                     </label>
                     <input
                       type="text"
                       value={srvResult.title}
                       onChange={(e) => setSrvResult({ ...srvResult, title: e.target.value })}
-                      className="w-full px-3 py-2 text-xs font-semibold bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                      className="w-full px-3 py-2 text-xs font-semibold bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-[#6E7785] mb-1">
+                    <label className="block text-[11px] font-semibold text-[#94A3B8] mb-1">
                       Short Description
                     </label>
                     <textarea
@@ -1266,12 +1266,12 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                       onChange={(e) =>
                         setSrvResult({ ...srvResult, shortDescription: e.target.value })
                       }
-                      className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                      className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-[#6E7785] mb-1">
+                    <label className="block text-[11px] font-semibold text-[#94A3B8] mb-1">
                       Full Service Description
                     </label>
                     <textarea
@@ -1280,36 +1280,36 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                       onChange={(e) =>
                         setSrvResult({ ...srvResult, fullDescription: e.target.value })
                       }
-                      className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                      className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-[#6E7785] mb-1">
+                    <label className="block text-[11px] font-semibold text-[#94A3B8] mb-1">
                       Deliverables (Comma-Separated)
                     </label>
                     <textarea
                       rows={2}
                       value={srvResult.deliverables}
                       onChange={(e) => setSrvResult({ ...srvResult, deliverables: e.target.value })}
-                      className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                      className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                     />
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="p-3 bg-[#F5F5F1] rounded-lg space-y-1.5">
-                      <p className="text-[11px] font-semibold text-[#172333]">Key Benefits</p>
-                      <ul className="text-xs text-[#6E7785] space-y-1 list-disc pl-4">
+                    <div className="p-3 bg-[#132A4A] rounded-lg space-y-1.5">
+                      <p className="text-[11px] font-semibold text-[#F8FAFC]">Key Benefits</p>
+                      <ul className="text-xs text-[#94A3B8] space-y-1 list-disc pl-4">
                         {(srvResult.keyBenefits || []).map((b, i) => (
                           <li key={i}>{b}</li>
                         ))}
                       </ul>
                     </div>
-                    <div className="p-3 bg-[#F5F5F1] rounded-lg space-y-1.5">
-                      <p className="text-[11px] font-semibold text-[#172333]">
+                    <div className="p-3 bg-[#132A4A] rounded-lg space-y-1.5">
+                      <p className="text-[11px] font-semibold text-[#F8FAFC]">
                         Client Requirements
                       </p>
-                      <ul className="text-xs text-[#6E7785] space-y-1 list-disc pl-4">
+                      <ul className="text-xs text-[#94A3B8] space-y-1 list-disc pl-4">
                         {(srvResult.clientRequirements || []).map((r, i) => (
                           <li key={i}>{r}</li>
                         ))}
@@ -1317,45 +1317,45 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="p-3 bg-[#F5F5F1] rounded-lg space-y-2">
-                    <p className="text-[11px] font-semibold text-[#172333]">
+                  <div className="p-3 bg-[#132A4A] rounded-lg space-y-2">
+                    <p className="text-[11px] font-semibold text-[#F8FAFC]">
                       Frequently Asked Questions
                     </p>
                     {(srvResult.faqs || []).map((faq, idx) => (
-                      <div key={idx} className="text-xs border-t border-[#E2E4DF] pt-2 first:border-0 first:pt-0">
-                        <p className="font-semibold text-[#172333]">Q: {faq.question}</p>
-                        <p className="text-[#6E7785] mt-0.5">A: {faq.answer}</p>
+                      <div key={idx} className="text-xs border-t border-[#1E3A5F] pt-2 first:border-0 first:pt-0">
+                        <p className="font-semibold text-[#F8FAFC]">Q: {faq.question}</p>
+                        <p className="text-[#94A3B8] mt-0.5">A: {faq.answer}</p>
                       </div>
                     ))}
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-[11px] font-semibold text-[#6E7785] mb-1">
+                      <label className="block text-[11px] font-semibold text-[#94A3B8] mb-1">
                         SEO Title
                       </label>
                       <input
                         type="text"
                         value={srvResult.seoTitle}
                         onChange={(e) => setSrvResult({ ...srvResult, seoTitle: e.target.value })}
-                        className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                        className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-semibold text-[#6E7785] mb-1">
+                      <label className="block text-[11px] font-semibold text-[#94A3B8] mb-1">
                         Call-to-Action Text
                       </label>
                       <input
                         type="text"
                         value={srvResult.ctaText}
                         onChange={(e) => setSrvResult({ ...srvResult, ctaText: e.target.value })}
-                        className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                        className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-[#6E7785] mb-1">
+                    <label className="block text-[11px] font-semibold text-[#94A3B8] mb-1">
                       SEO Meta Description
                     </label>
                     <input
@@ -1364,7 +1364,7 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                       onChange={(e) =>
                         setSrvResult({ ...srvResult, seoMetaDescription: e.target.value })
                       }
-                      className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                      className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                     />
                   </div>
                 </div>
@@ -1376,31 +1376,31 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
           {/* TAB 3: PORTFOLIO CONTENT GENERATOR                               */}
           {/* ================================================================ */}
           {activeTab === 'portfolio' && (
-            <div className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-5">
-              <div className="border-b border-[#E2E4DF] pb-4">
-                <h2 className="text-base font-semibold text-[#172333]">
+            <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 space-y-5">
+              <div className="border-b border-[#1E3A5F] pb-4">
+                <h2 className="text-base font-semibold text-[#F8FAFC]">
                   Portfolio Content Generator
                 </h2>
-                <p className="text-xs text-[#6E7785] mt-0.5">
+                <p className="text-xs text-[#94A3B8] mt-0.5">
                   Craft project titles, case study descriptions, creative briefs, and tags using only factual details you supply.
                 </p>
               </div>
 
               {portError && (
-                <div className="p-3.5 bg-[#B93832]/10 border border-[#B93832]/30 rounded-lg text-xs text-[#B93832]">
+                <div className="p-3.5 bg-[#DC2626]/10 border border-[#DC2626]/30 rounded-lg text-xs text-[#DC2626]">
                   {portError}
                 </div>
               )}
 
               <form onSubmit={handleGeneratePortfolioContent} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-medium text-[#172333] mb-1">
+                  <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                     Load Context from Existing Portfolio Item (Optional)
                   </label>
                   <select
                     value={selectedPortfolioId}
                     onChange={(e) => handleSelectExistingPortfolio(e.target.value)}
-                    className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                    className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                   >
                     <option value="">— Start New Portfolio Case Study —</option>
                     {existingPortfolio.map((p) => (
@@ -1413,7 +1413,7 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-[#172333] mb-1">
+                    <label className="block text-xs font-semibold text-[#F8FAFC] mb-1">
                       Project Title or Working Name *
                     </label>
                     <input
@@ -1422,17 +1422,17 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                       value={portForm.projectTitle}
                       onChange={(e) => setPortForm({ ...portForm, projectTitle: e.target.value })}
                       placeholder="e.g. Tech Documentary YouTube Thumbnail Series"
-                      className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                      className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-[#172333] mb-1">
+                    <label className="block text-xs font-semibold text-[#F8FAFC] mb-1">
                       Project Category *
                     </label>
                     <select
                       value={portForm.category}
                       onChange={(e) => setPortForm({ ...portForm, category: e.target.value })}
-                      className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                      className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                     >
                       {[
                         'Graphic Design',
@@ -1453,7 +1453,7 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-[#172333] mb-1">
+                  <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                     Project Objective
                   </label>
                   <input
@@ -1461,13 +1461,13 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                     value={portForm.objective}
                     onChange={(e) => setPortForm({ ...portForm, objective: e.target.value })}
                     placeholder="What visual problem or creative brief did this project solve?"
-                    className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                    className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                   />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-[#172333] mb-1">
+                    <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                       Client or Industry (Optional)
                     </label>
                     <input
@@ -1477,36 +1477,36 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                         setPortForm({ ...portForm, clientOrIndustry: e.target.value })
                       }
                       placeholder="e.g. FinTech Education Channel"
-                      className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                      className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-[#172333] mb-1">
+                    <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                       Design Style
                     </label>
                     <input
                       type="text"
                       value={portForm.designStyle}
                       onChange={(e) => setPortForm({ ...portForm, designStyle: e.target.value })}
-                      className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                      className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-[#172333] mb-1">
+                    <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                       Tools Used (Optional)
                     </label>
                     <input
                       type="text"
                       value={portForm.toolsUsed}
                       onChange={(e) => setPortForm({ ...portForm, toolsUsed: e.target.value })}
-                      className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                      className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-[#172333] mb-1">
+                    <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                       Keywords (Optional)
                     </label>
                     <input
@@ -1514,13 +1514,13 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                       value={portForm.keywords}
                       onChange={(e) => setPortForm({ ...portForm, keywords: e.target.value })}
                       placeholder="thumbnail, youtube, color grading"
-                      className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                      className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-[#172333] mb-1">
+                  <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                     Existing Notes or Rough Draft
                   </label>
                   <textarea
@@ -1528,30 +1528,30 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                     value={portForm.existingNotes}
                     onChange={(e) => setPortForm({ ...portForm, existingNotes: e.target.value })}
                     placeholder="Add any factual project notes or deliverables..."
-                    className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                    className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                   />
                 </div>
 
                 <button
                   type="submit"
                   disabled={portLoading}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] disabled:opacity-50 rounded-lg"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 disabled:opacity-50 rounded-lg"
                 >
-                  <Sparkles className="w-3.5 h-3.5 text-[#F18A45]" />
+                  <Sparkles className="w-3.5 h-3.5 text-[#10B981]" />
                   <span>{portLoading ? 'Generating Case Study...' : 'Generate Portfolio Content'}</span>
                 </button>
               </form>
 
               {portResult && (
-                <div className="pt-5 border-t border-[#E2E4DF] space-y-4">
+                <div className="pt-5 border-t border-[#1E3A5F] space-y-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h3 className="text-sm font-semibold text-[#172333]">
+                    <h3 className="text-sm font-semibold text-[#F8FAFC]">
                       Generated Portfolio Content (Editable Before Using)
                     </h3>
                     <button
                       type="button"
                       onClick={handleApplyPortfolioContentToForm}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-[#172333] bg-[#F18A45] hover:bg-[#e07934] rounded-lg transition-colors"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-colors"
                     >
                       <span>Use Generated Content in Portfolio Form</span>
                       <ArrowRight className="w-3.5 h-3.5" />
@@ -1559,19 +1559,19 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-[#6E7785] mb-1">
+                    <label className="block text-[11px] font-semibold text-[#94A3B8] mb-1">
                       Professional Project Title
                     </label>
                     <input
                       type="text"
                       value={portResult.title}
                       onChange={(e) => setPortResult({ ...portResult, title: e.target.value })}
-                      className="w-full px-3 py-2 text-xs font-semibold bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                      className="w-full px-3 py-2 text-xs font-semibold bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-[#6E7785] mb-1">
+                    <label className="block text-[11px] font-semibold text-[#94A3B8] mb-1">
                       Short Project Summary
                     </label>
                     <textarea
@@ -1580,12 +1580,12 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                       onChange={(e) =>
                         setPortResult({ ...portResult, shortSummary: e.target.value })
                       }
-                      className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                      className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-[#6E7785] mb-1">
+                    <label className="block text-[11px] font-semibold text-[#94A3B8] mb-1">
                       Detailed Project Description
                     </label>
                     <textarea
@@ -1594,13 +1594,13 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                       onChange={(e) =>
                         setPortResult({ ...portResult, detailedDescription: e.target.value })
                       }
-                      className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                      className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                     />
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-[11px] font-semibold text-[#6E7785] mb-1">
+                      <label className="block text-[11px] font-semibold text-[#94A3B8] mb-1">
                         Creative Brief
                       </label>
                       <textarea
@@ -1609,11 +1609,11 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                         onChange={(e) =>
                           setPortResult({ ...portResult, creativeBrief: e.target.value })
                         }
-                        className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                        className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-semibold text-[#6E7785] mb-1">
+                      <label className="block text-[11px] font-semibold text-[#94A3B8] mb-1">
                         Design Approach
                       </label>
                       <textarea
@@ -1622,14 +1622,14 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                         onChange={(e) =>
                           setPortResult({ ...portResult, designApproach: e.target.value })
                         }
-                        className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                        className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-[11px] font-semibold text-[#6E7785] mb-1">
+                      <label className="block text-[11px] font-semibold text-[#94A3B8] mb-1">
                         Deliverables Specification
                       </label>
                       <input
@@ -1641,11 +1641,11 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                             deliverablesDescription: e.target.value,
                           })
                         }
-                        className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                        className="w-full px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-semibold text-[#6E7785] mb-1">
+                      <label className="block text-[11px] font-semibold text-[#94A3B8] mb-1">
                         Portfolio Caption
                       </label>
                       <input
@@ -1654,7 +1654,7 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                         onChange={(e) =>
                           setPortResult({ ...portResult, portfolioCaption: e.target.value })
                         }
-                        className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                        className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                       />
                     </div>
                   </div>
@@ -1667,18 +1667,18 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
           {/* TAB 4: AI IMAGE STUDIO                                           */}
           {/* ================================================================ */}
           {activeTab === 'image' && (
-            <div className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-5">
-              <div className="border-b border-[#E2E4DF] pb-4">
-                <h2 className="text-base font-semibold text-[#172333]">
+            <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 space-y-5">
+              <div className="border-b border-[#1E3A5F] pb-4">
+                <h2 className="text-base font-semibold text-[#F8FAFC]">
                   AI Image Studio
                 </h2>
-                <p className="text-xs text-[#6E7785] mt-0.5">
+                <p className="text-xs text-[#94A3B8] mt-0.5">
                   Generate original visual assets for service covers, portfolio concepts, thumbnails, and promotional creatives via the server-side Gemini image provider.
                 </p>
               </div>
 
               {imgError && (
-                <div className="p-4 bg-[#B93832]/10 border border-[#B93832]/30 rounded-lg flex items-start gap-2.5 text-xs text-[#B93832]">
+                <div className="p-4 bg-[#DC2626]/10 border border-[#DC2626]/30 rounded-lg flex items-start gap-2.5 text-xs text-[#DC2626]">
                   <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                   <div className="space-y-1">
                     <p className="font-semibold">Image Provider Notice</p>
@@ -1690,14 +1690,14 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
               <div className="space-y-4">
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="text-xs font-semibold text-[#172333]">
+                    <label className="text-xs font-semibold text-[#F8FAFC]">
                       Image Description or Prompt *
                     </label>
                     <button
                       type="button"
                       disabled={refiningPrompt || !imgForm.prompt.trim()}
                       onClick={handleRefinePrompt}
-                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#F18A45] hover:underline disabled:opacity-40"
+                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#10B981] hover:underline disabled:opacity-40"
                     >
                       <Wand2 className="w-3 h-3" />
                       <span>{refiningPrompt ? 'Refining Prompt...' : 'Refine Prompt with AI'}</span>
@@ -1708,19 +1708,19 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                     value={imgForm.prompt}
                     onChange={(e) => setImgForm({ ...imgForm, prompt: e.target.value })}
                     placeholder="Describe the subject, composition, lighting, and studio mood (e.g., Modern creative desk setup with glowing dual monitors showing video editing timelines and color wheels, warm terracotta rim lighting)..."
-                    className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg focus:outline-none focus:border-[#172333]"
+                    className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg focus:outline-none focus:border-[#10B981]"
                   />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-[#172333] mb-1">
+                    <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                       Image Type
                     </label>
                     <select
                       value={imgForm.imageType}
                       onChange={(e) => setImgForm({ ...imgForm, imageType: e.target.value })}
-                      className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                      className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                     >
                       {IMAGE_TYPES.map((t) => (
                         <option key={t} value={t}>
@@ -1730,13 +1730,13 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-[#172333] mb-1">
+                    <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                       Visual Style
                     </label>
                     <select
                       value={imgForm.visualStyle}
                       onChange={(e) => setImgForm({ ...imgForm, visualStyle: e.target.value })}
-                      className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                      className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                     >
                       {VISUAL_STYLES.map((s) => (
                         <option key={s} value={s}>
@@ -1749,7 +1749,7 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-[#172333] mb-1">
+                    <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                       Aspect Ratio
                     </label>
                     <select
@@ -1760,7 +1760,7 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                           aspectRatio: e.target.value as typeof imgForm.aspectRatio,
                         })
                       }
-                      className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                      className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                     >
                       {ASPECT_RATIOS.map((ar) => (
                         <option key={ar.value} value={ar.value}>
@@ -1771,7 +1771,7 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-[#172333] mb-1">
+                    <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                       Resolution / Quality
                     </label>
                     <select
@@ -1782,7 +1782,7 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                           imageSize: e.target.value as '1K' | '2K' | '4K',
                         })
                       }
-                      className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                      className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                     >
                       <option value="1K">1K Standard (gemini-3.1-flash-lite-image)</option>
                       <option value="2K">2K High-Resolution (gemini-nano-banana-2.1)</option>
@@ -1793,18 +1793,18 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-[#172333] mb-1">
+                    <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                       Brand Colors (Optional)
                     </label>
                     <input
                       type="text"
                       value={imgForm.brandColors}
                       onChange={(e) => setImgForm({ ...imgForm, brandColors: e.target.value })}
-                      className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                      className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-[#172333] mb-1">
+                    <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                       Optional Text to Include in Image
                     </label>
                     <input
@@ -1812,25 +1812,25 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                       value={imgForm.textToInclude}
                       onChange={(e) => setImgForm({ ...imgForm, textToInclude: e.target.value })}
                       placeholder="Leave blank for clean visual without text"
-                      className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                      className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                     />
                   </div>
                 </div>
 
                 {/* Optional Reference Image Upload */}
-                <div className="p-3.5 bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg flex flex-wrap items-center justify-between gap-3">
+                <div className="p-3.5 bg-[#132A4A] border border-[#1E3A5F] rounded-lg flex flex-wrap items-center justify-between gap-3">
                   <div className="text-xs">
-                    <p className="font-semibold text-[#172333]">
+                    <p className="font-semibold text-[#F8FAFC]">
                       Reference Image for Editing / Style Guidance (Optional)
                     </p>
-                    <p className="text-[11px] text-[#6E7785]">
+                    <p className="text-[11px] text-[#94A3B8]">
                       {imgForm.referenceImageName
                         ? `Attached: ${imgForm.referenceImageName}`
                         : 'Upload a PNG/JPG under 4 MB to guide or edit an existing visual.'}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#172333] bg-white border border-[#E2E4DF] hover:border-[#172333] rounded-md">
+                    <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#F8FAFC] bg-[#0D1F38] border border-[#1E3A5F] hover:border-[#10B981] rounded-md">
                       <Upload className="w-3.5 h-3.5" />
                       <span>Upload Reference</span>
                       <input
@@ -1850,7 +1850,7 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                             referenceImageName: '',
                           }))
                         }
-                        className="text-xs text-[#B93832] hover:underline"
+                        className="text-xs text-[#DC2626] hover:underline"
                       >
                         Remove
                       </button>
@@ -1864,9 +1864,9 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                     type="button"
                     disabled={imgLoading}
                     onClick={handleRequestImageGeneration}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] disabled:opacity-50 rounded-lg transition-colors"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 disabled:opacity-50 rounded-lg transition-colors"
                   >
-                    <ImageIcon className="w-3.5 h-3.5 text-[#F18A45]" />
+                    <ImageIcon className="w-3.5 h-3.5 text-[#10B981]" />
                     <span>{imgLoading ? 'Generating Image...' : 'Generate Image'}</span>
                   </button>
 
@@ -1875,7 +1875,7 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                       type="button"
                       disabled={imgLoading}
                       onClick={handleRequestImageGeneration}
-                      className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-[#172333] bg-[#F5F5F1] hover:bg-[#E2E4DF] rounded-lg"
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-[#F8FAFC] bg-[#132A4A] hover:bg-[#1E3A5F] rounded-lg"
                     >
                       <RefreshCw className="w-3.5 h-3.5" />
                       <span>Generate Another Version</span>
@@ -1886,7 +1886,7 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                     type="button"
                     disabled={!imgForm.prompt}
                     onClick={() => handleCopyText(imgForm.prompt, 'img_prompt')}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-[#172333] bg-white border border-[#E2E4DF] hover:border-[#172333] disabled:opacity-40 rounded-lg"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-[#F8FAFC] bg-[#0D1F38] border border-[#1E3A5F] hover:border-[#10B981] disabled:opacity-40 rounded-lg"
                   >
                     <Copy className="w-3.5 h-3.5" />
                     <span>{copiedKey === 'img_prompt' ? 'Prompt Copied' : 'Copy Prompt'}</span>
@@ -1896,17 +1896,17 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
 
               {/* Generated Image Preview & Actions */}
               {imgResult && (
-                <div className="pt-5 border-t border-[#E2E4DF] space-y-4">
+                <div className="pt-5 border-t border-[#1E3A5F] space-y-4">
                   <div className="flex items-center justify-between">
-                    <p className="text-xs font-semibold text-[#172333]">
+                    <p className="text-xs font-semibold text-[#F8FAFC]">
                       Generated Studio Visual ({imgResult.model} · {imgResult.aspectRatio})
                     </p>
-                    <span className="font-mono text-[11px] text-[#26734D]">
+                    <span className="font-mono text-[11px] text-[#16A34A]">
                       Ready for Review
                     </span>
                   </div>
 
-                  <div className="bg-[#0F1722] border border-[#E2E4DF] rounded-lg overflow-hidden p-4 flex items-center justify-center">
+                  <div className="bg-[#040D1A] border border-[#1E3A5F] rounded-lg overflow-hidden p-4 flex items-center justify-center">
                     <img
                       src={imgResult.imageDataUrl}
                       alt={imgForm.prompt}
@@ -1927,7 +1927,7 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                           categoryLabel: `${imgResult.model} · ${imgResult.aspectRatio}`,
                         })
                       }
-                      className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-[#172333] bg-[#F5F5F1] hover:bg-[#E2E4DF] rounded-lg"
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-[#F8FAFC] bg-[#132A4A] hover:bg-[#1E3A5F] rounded-lg"
                     >
                       <Eye className="w-3.5 h-3.5" />
                       <span>Preview Image</span>
@@ -1936,7 +1936,7 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={handleDownloadGeneratedImage}
-                      className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-[#172333] bg-[#F5F5F1] hover:bg-[#E2E4DF] rounded-lg"
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-[#F8FAFC] bg-[#132A4A] hover:bg-[#1E3A5F] rounded-lg"
                     >
                       <Download className="w-3.5 h-3.5" />
                       <span>Download Generated Image</span>
@@ -1946,9 +1946,9 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                       type="button"
                       disabled={savingToLibrary}
                       onClick={() => handleSaveImageToBucket('service-media', 'service')}
-                      className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg"
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg"
                     >
-                      <Layers className="w-3.5 h-3.5 text-[#F18A45]" />
+                      <Layers className="w-3.5 h-3.5 text-[#10B981]" />
                       <span>Use as Service Cover</span>
                     </button>
 
@@ -1956,7 +1956,7 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                       type="button"
                       disabled={savingToLibrary}
                       onClick={() => handleSaveImageToBucket('portfolio-media', 'portfolio')}
-                      className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-[#172333] bg-[#F18A45] hover:bg-[#e07934] rounded-lg"
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg"
                     >
                       <Briefcase className="w-3.5 h-3.5" />
                       <span>Use in Portfolio</span>
@@ -1971,12 +1971,12 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
           {/* TAB 5: BRAND PROFILE CONTEXT                                     */}
           {/* ================================================================ */}
           {activeTab === 'brand' && (
-            <div className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-5">
-              <div className="border-b border-[#E2E4DF] pb-4">
-                <h2 className="text-base font-semibold text-[#172333]">
+            <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 space-y-5">
+              <div className="border-b border-[#1E3A5F] pb-4">
+                <h2 className="text-base font-semibold text-[#F8FAFC]">
                   Studio Brand Profile Context
                 </h2>
-                <p className="text-xs text-[#6E7785] mt-0.5">
+                <p className="text-xs text-[#94A3B8] mt-0.5">
                   Configure the brand identity and guardrails sent with your AI writing requests. Private CRM client records are never sent to the AI provider.
                 </p>
               </div>
@@ -1984,7 +1984,7 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-[#172333] mb-1">
+                    <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                       Brand Name
                     </label>
                     <input
@@ -1993,11 +1993,11 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                       onChange={(e) =>
                         setBrandProfile({ ...brandProfile, brandName: e.target.value })
                       }
-                      className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                      className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-[#172333] mb-1">
+                    <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                       Studio Owner / Lead Creative
                     </label>
                     <input
@@ -2006,13 +2006,13 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                       onChange={(e) =>
                         setBrandProfile({ ...brandProfile, ownerName: e.target.value })
                       }
-                      className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                      className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-[#172333] mb-1">
+                  <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                     Business Type
                   </label>
                   <input
@@ -2021,12 +2021,12 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                     onChange={(e) =>
                       setBrandProfile({ ...brandProfile, businessType: e.target.value })
                     }
-                    className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                    className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-[#172333] mb-1">
+                  <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                     Brand Voice
                   </label>
                   <input
@@ -2035,12 +2035,12 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                     onChange={(e) =>
                       setBrandProfile({ ...brandProfile, brandVoice: e.target.value })
                     }
-                    className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                    className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-[#172333] mb-1">
+                  <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                     Target Customers
                   </label>
                   <input
@@ -2049,12 +2049,12 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                     onChange={(e) =>
                       setBrandProfile({ ...brandProfile, targetCustomers: e.target.value })
                     }
-                    className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                    className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-[#172333] mb-1">
+                  <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                     Preferred Writing Style
                   </label>
                   <input
@@ -2063,12 +2063,12 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                     onChange={(e) =>
                       setBrandProfile({ ...brandProfile, preferredWritingStyle: e.target.value })
                     }
-                    className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                    className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-[#172333] mb-1">
+                  <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                     Services Offered
                   </label>
                   <textarea
@@ -2077,12 +2077,12 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                     onChange={(e) =>
                       setBrandProfile({ ...brandProfile, servicesOffered: e.target.value })
                     }
-                    className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                    className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-[#172333] mb-1">
+                  <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                     Words or Claims to Strictly Avoid
                   </label>
                   <textarea
@@ -2091,7 +2091,7 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                     onChange={(e) =>
                       setBrandProfile({ ...brandProfile, wordsToAvoid: e.target.value })
                     }
-                    className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                    className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                   />
                 </div>
 
@@ -2103,7 +2103,7 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                       setBrandProfile(saved);
                       showToast('success', 'Brand Profile Saved');
                     }}
-                    className="px-4 py-2 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg"
+                    className="px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg"
                   >
                     Save Brand Profile
                   </button>
@@ -2114,7 +2114,7 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                       setBrandProfile(reset);
                       showToast('info', 'Reset to Prithvi Editify Defaults');
                     }}
-                    className="px-4 py-2 text-xs font-semibold text-[#172333] bg-[#F5F5F1] hover:bg-[#E2E4DF] rounded-lg"
+                    className="px-4 py-2 text-xs font-semibold text-[#F8FAFC] bg-[#132A4A] hover:bg-[#1E3A5F] rounded-lg"
                   >
                     Reset Defaults
                   </button>
@@ -2127,13 +2127,13 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
           {/* TAB 6: USAGE & COST CONTROLS                                     */}
           {/* ================================================================ */}
           {activeTab === 'usage' && (
-            <div className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-5">
-              <div className="flex items-center justify-between border-b border-[#E2E4DF] pb-4">
+            <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 space-y-5">
+              <div className="flex items-center justify-between border-b border-[#1E3A5F] pb-4">
                 <div>
-                  <h2 className="text-base font-semibold text-[#172333]">
+                  <h2 className="text-base font-semibold text-[#F8FAFC]">
                     AI Usage, Security & Cost Controls
                   </h2>
-                  <p className="text-xs text-[#6E7785] mt-0.5">
+                  <p className="text-xs text-[#94A3B8] mt-0.5">
                     Monitor active rate limits, provider configuration, and recent administrator AI activity.
                   </p>
                 </div>
@@ -2145,7 +2145,7 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                       setUsageHistory([]);
                       showToast('info', 'AI Usage Log Cleared');
                     }}
-                    className="inline-flex items-center gap-1 text-xs text-[#B93832] hover:underline"
+                    className="inline-flex items-center gap-1 text-xs text-[#DC2626] hover:underline"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     <span>Clear Log</span>
@@ -2154,65 +2154,65 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="p-4 bg-[#F5F5F1] rounded-lg border border-[#E2E4DF]">
-                  <p className="text-[11px] text-[#6E7785]">Rate Limit Guard</p>
-                  <p className="text-lg font-mono font-semibold text-[#172333] mt-1 tabular-nums">
+                <div className="p-4 bg-[#132A4A] rounded-lg border border-[#1E3A5F]">
+                  <p className="text-[11px] text-[#94A3B8]">Rate Limit Guard</p>
+                  <p className="text-lg font-mono font-semibold text-[#F8FAFC] mt-1 tabular-nums">
                     {providerStatus?.rateLimitPerMinute || 20} req / min
                   </p>
                 </div>
-                <div className="p-4 bg-[#F5F5F1] rounded-lg border border-[#E2E4DF]">
-                  <p className="text-[11px] text-[#6E7785]">Prompt Cap</p>
-                  <p className="text-lg font-mono font-semibold text-[#172333] mt-1 tabular-nums">
+                <div className="p-4 bg-[#132A4A] rounded-lg border border-[#1E3A5F]">
+                  <p className="text-[11px] text-[#94A3B8]">Prompt Cap</p>
+                  <p className="text-lg font-mono font-semibold text-[#F8FAFC] mt-1 tabular-nums">
                     5,000 chars
                   </p>
                 </div>
-                <div className="p-4 bg-[#F5F5F1] rounded-lg border border-[#E2E4DF]">
-                  <p className="text-[11px] text-[#6E7785]">Session Requests Logged</p>
-                  <p className="text-lg font-mono font-semibold text-[#172333] mt-1 tabular-nums">
+                <div className="p-4 bg-[#132A4A] rounded-lg border border-[#1E3A5F]">
+                  <p className="text-[11px] text-[#94A3B8]">Session Requests Logged</p>
+                  <p className="text-lg font-mono font-semibold text-[#F8FAFC] mt-1 tabular-nums">
                     {usageHistory.length}
                   </p>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <h3 className="text-xs font-semibold text-[#172333]">Recent AI Activity Log</h3>
+                <h3 className="text-xs font-semibold text-[#F8FAFC]">Recent AI Activity Log</h3>
                 {usageHistory.length === 0 ? (
-                  <p className="text-xs text-[#6E7785] py-6 text-center bg-[#F5F5F1] rounded-lg">
+                  <p className="text-xs text-[#94A3B8] py-6 text-center bg-[#132A4A] rounded-lg">
                     No AI requests recorded in this browser session yet.
                   </p>
                 ) : (
-                  <div className="border border-[#E2E4DF] rounded-lg overflow-hidden">
+                  <div className="border border-[#1E3A5F] rounded-lg overflow-hidden">
                     <table className="w-full text-left border-collapse text-xs">
                       <thead>
-                        <tr className="bg-[#F5F5F1] border-b border-[#E2E4DF] text-[11px] font-semibold text-[#6E7785]">
+                        <tr className="bg-[#132A4A] border-b border-[#1E3A5F] text-[11px] font-semibold text-[#94A3B8]">
                           <th className="py-2.5 px-3">Time</th>
                           <th className="py-2.5 px-3">Tool & Task</th>
                           <th className="py-2.5 px-3">Model</th>
                           <th className="py-2.5 px-3">Status</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-[#E2E4DF]">
+                      <tbody className="divide-y divide-[#1E3A5F]">
                         {usageHistory.map((item) => (
                           <tr key={item.id}>
-                            <td className="py-2.5 px-3 font-mono text-[11px] text-[#6E7785]">
+                            <td className="py-2.5 px-3 font-mono text-[11px] text-[#94A3B8]">
                               {new Date(item.timestamp).toLocaleTimeString([], {
                                 hour: '2-digit',
                                 minute: '2-digit',
                               })}
                             </td>
                             <td className="py-2.5 px-3">
-                              <p className="font-semibold text-[#172333]">{item.taskLabel}</p>
-                              <p className="text-[11px] text-[#6E7785] line-clamp-1">
+                              <p className="font-semibold text-[#F8FAFC]">{item.taskLabel}</p>
+                              <p className="text-[11px] text-[#94A3B8] line-clamp-1">
                                 {item.summary}
                               </p>
                             </td>
-                            <td className="py-2.5 px-3 font-mono text-[11px] text-[#172333]">
+                            <td className="py-2.5 px-3 font-mono text-[11px] text-[#F8FAFC]">
                               {item.model}
                             </td>
                             <td className="py-2.5 px-3">
                               <span
                                 className={`font-semibold ${
-                                  item.status === 'success' ? 'text-[#26734D]' : 'text-[#B93832]'
+                                  item.status === 'success' ? 'text-[#16A34A]' : 'text-[#DC2626]'
                                 }`}
                               >
                                 {item.status === 'success' ? 'Success' : 'Error'}
@@ -2231,28 +2231,28 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
 
         {/* RIGHT CONTEXTUAL PANEL: Prompts, Guardrails & Quick Links */}
         <aside className="lg:col-span-3 space-y-4">
-          <div className="bg-white border border-[#E2E4DF] rounded-lg p-5 space-y-3">
+          <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-5 space-y-3">
             <div className="flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-[#26734D]" />
-              <h3 className="text-xs font-semibold text-[#172333]">
+              <ShieldCheck className="w-4 h-4 text-[#16A34A]" />
+              <h3 className="text-xs font-semibold text-[#F8FAFC]">
                 Editorial & Data Safety Rules
               </h3>
             </div>
-            <ul className="text-xs text-[#6E7785] space-y-2 leading-relaxed">
+            <ul className="text-xs text-[#94A3B8] space-y-2 leading-relaxed">
               <li>
-                · <strong className="text-[#172333]">Admin-Only Access:</strong> Verified via Supabase JWT on every server request.
+                · <strong className="text-[#F8FAFC]">Admin-Only Access:</strong> Verified via Supabase JWT on every server request.
               </li>
               <li>
-                · <strong className="text-[#172333]">No Auto-Publishing:</strong> Generated copy and visuals never overwrite live records without your approval.
+                · <strong className="text-[#F8FAFC]">No Auto-Publishing:</strong> Generated copy and visuals never overwrite live records without your approval.
               </li>
               <li>
-                · <strong className="text-[#172333]">Factual Honesty:</strong> AI is instructed never to invent prices, turnaround times, or fake client outcomes.
+                · <strong className="text-[#F8FAFC]">Factual Honesty:</strong> AI is instructed never to invent prices, turnaround times, or fake client outcomes.
               </li>
             </ul>
           </div>
 
-          <div className="bg-white border border-[#E2E4DF] rounded-lg p-5 space-y-3">
-            <h3 className="text-xs font-semibold text-[#172333]">
+          <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-5 space-y-3">
+            <h3 className="text-xs font-semibold text-[#F8FAFC]">
               Quick Prompt Templates
             </h3>
             <div className="space-y-2">
@@ -2290,34 +2290,34 @@ export const AdminAICreativeAssistantPage: React.FC = () => {
                       topicOrText: tpl.topic,
                     }));
                   }}
-                  className="w-full text-left p-2.5 text-xs bg-[#F5F5F1] hover:bg-[#E2E4DF]/70 rounded-lg transition-colors"
+                  className="w-full text-left p-2.5 text-xs bg-[#132A4A] hover:bg-[#1E3A5F]/70 rounded-lg transition-colors"
                 >
-                  <p className="font-semibold text-[#172333]">{tpl.label}</p>
-                  <p className="text-[11px] text-[#6E7785] line-clamp-2 mt-0.5">{tpl.topic}</p>
+                  <p className="font-semibold text-[#F8FAFC]">{tpl.label}</p>
+                  <p className="text-[11px] text-[#94A3B8] line-clamp-2 mt-0.5">{tpl.topic}</p>
                 </button>
               ))}
             </div>
           </div>
 
-          <div className="bg-white border border-[#E2E4DF] rounded-lg p-5 space-y-2.5">
-            <h3 className="text-xs font-semibold text-[#172333]">Connected Studio Editors</h3>
+          <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-5 space-y-2.5">
+            <h3 className="text-xs font-semibold text-[#F8FAFC]">Connected Studio Editors</h3>
             <Link
               to="/admin/services"
-              className="flex items-center justify-between text-xs font-medium text-[#172333] hover:text-[#F18A45] py-1"
+              className="flex items-center justify-between text-xs font-medium text-[#F8FAFC] hover:text-[#10B981] py-1"
             >
               <span>Services & Pricing Editor</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
             <Link
               to="/admin/portfolio"
-              className="flex items-center justify-between text-xs font-medium text-[#172333] hover:text-[#F18A45] py-1"
+              className="flex items-center justify-between text-xs font-medium text-[#F8FAFC] hover:text-[#10B981] py-1"
             >
               <span>Portfolio Case Studies Editor</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
             <Link
               to="/admin/media"
-              className="flex items-center justify-between text-xs font-medium text-[#172333] hover:text-[#F18A45] py-1"
+              className="flex items-center justify-between text-xs font-medium text-[#F8FAFC] hover:text-[#10B981] py-1"
             >
               <span>Studio Media Library</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -2973,10 +2973,10 @@ export const AdminQuotationsPage: React.FC<{
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4 no-print">
         <div>
-          <h1 className="font-editorial text-2xl font-semibold text-[#172333]">
+          <h1 className="font-editorial text-2xl font-semibold text-[#F8FAFC]">
             Quotations, Cost Estimates & Project Conversion
           </h1>
-          <p className="text-xs text-[#6E7785] mt-1">
+          <p className="text-xs text-[#94A3B8] mt-1">
             Create, edit, revise (v2/v3), duplicate, archive, or convert official Quotations (PE-QTN) and Cost Estimates (PE-EST) in INR.
           </p>
         </div>
@@ -2985,7 +2985,7 @@ export const AdminQuotationsPage: React.FC<{
             <button
               type="button"
               onClick={handleRequestCloseBuilder}
-              className="px-4 py-2 text-xs font-semibold text-[#172333] bg-white border border-[#E2E4DF] hover:bg-[#F5F5F1] rounded-lg"
+              className="px-4 py-2 text-xs font-semibold text-[#F8FAFC] bg-[#0D1F38] border border-[#1E3A5F] hover:bg-[#132A4A] rounded-lg"
             >
               Close Document Editor
             </button>
@@ -2994,7 +2994,7 @@ export const AdminQuotationsPage: React.FC<{
               <button
                 type="button"
                 onClick={() => handleOpenCreateDoc('Quotation')}
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg"
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>New Quotation</span>
@@ -3002,7 +3002,7 @@ export const AdminQuotationsPage: React.FC<{
               <button
                 type="button"
                 onClick={() => handleOpenCreateDoc('Estimate')}
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-[#172333] bg-[#F18A45] hover:bg-[#e07934] rounded-lg"
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>New Estimate</span>
@@ -3013,7 +3013,7 @@ export const AdminQuotationsPage: React.FC<{
       </div>
 
       {/* Document Type Switcher Tabs */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E2E4DF] pb-3 no-print">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#1E3A5F] pb-3 no-print">
         <div className="flex items-center gap-2">
           {(
             [
@@ -3028,8 +3028,8 @@ export const AdminQuotationsPage: React.FC<{
               onClick={() => setDocTypeFilter(tab.id)}
               className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                 docTypeFilter === tab.id
-                  ? 'bg-[#172333] text-white'
-                  : 'bg-white border border-[#E2E4DF] text-[#6E7785] hover:text-[#172333]'
+                  ? 'bg-[#132A4A] text-[#F8FAFC]'
+                  : 'bg-[#0D1F38] border border-[#1E3A5F] text-[#94A3B8] hover:text-[#F8FAFC]'
               }`}
             >
               {tab.label}
@@ -3042,23 +3042,23 @@ export const AdminQuotationsPage: React.FC<{
       {showBuilder && (
         <form
           onSubmit={handleSaveQuotation}
-          className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-5 no-print shadow-xs"
+          className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 space-y-5 no-print shadow-xs"
         >
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E2E4DF] pb-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#1E3A5F] pb-4">
             <div className="flex items-center gap-3">
-              <h2 className="text-base font-semibold text-[#172333]">
+              <h2 className="text-base font-semibold text-[#F8FAFC]">
                 {editingId
                   ? `Edit ${form.documentType} (${form.quotationNumber})`
                   : `Create INR ${form.documentType}`}
               </h2>
               {form.version > 1 && (
-                <span className="px-2 py-0.5 text-[11px] font-mono font-semibold bg-[#F18A45]/15 text-[#F18A45] rounded">
+                <span className="px-2 py-0.5 text-[11px] font-mono font-semibold bg-[#10B981]/15 text-[#10B981] rounded">
                   Revision v{form.version}
                 </span>
               )}
             </div>
             <div className="flex items-center gap-2">
-              <div className="flex items-center bg-[#F5F5F1] p-1 rounded-lg border border-[#E2E4DF] text-xs">
+              <div className="flex items-center bg-[#132A4A] p-1 rounded-lg border border-[#1E3A5F] text-xs">
                 {(['Quotation', 'Estimate'] as const).map((dt) => (
                   <button
                     key={dt}
@@ -3073,8 +3073,8 @@ export const AdminQuotationsPage: React.FC<{
                     }}
                     className={`px-3 py-1 rounded font-medium transition-colors ${
                       form.documentType === dt
-                        ? 'bg-[#172333] text-white font-semibold'
-                        : 'text-[#6E7785] hover:text-[#172333]'
+                        ? 'bg-[#132A4A] text-[#F8FAFC] font-semibold'
+                        : 'text-[#94A3B8] hover:text-[#F8FAFC]'
                     }`}
                   >
                     {dt}
@@ -3085,21 +3085,21 @@ export const AdminQuotationsPage: React.FC<{
                 type="text"
                 value={form.quotationNumber}
                 onChange={(e) => updateForm({ quotationNumber: e.target.value })}
-                className="w-44 px-3 py-1.5 text-xs font-mono font-semibold text-[#172333] bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-44 px-3 py-1.5 text-xs font-mono font-semibold text-[#F8FAFC] bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
           </div>
 
           {/* Revision Protection Banner for Accepted / Sent Quotations & Estimates */}
           {editingRecord && (editingRecord.status === 'Accepted' || editingRecord.status === 'Sent') && (
-            <div className="p-3.5 bg-[#F18A45]/10 border border-[#F18A45]/30 rounded-lg flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="p-3.5 bg-[#10B981]/10 border border-[#10B981]/30 rounded-lg flex flex-wrap items-center justify-between gap-3 text-xs">
               <div className="flex items-start gap-2.5">
-                <GitBranch className="w-4 h-4 text-[#F18A45] shrink-0 mt-0.5" />
+                <GitBranch className="w-4 h-4 text-[#10B981] shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-semibold text-[#172333]">
+                  <p className="font-semibold text-[#F8FAFC]">
                     {editingRecord.status} {form.documentType} — Revision History Protection
                   </p>
-                  <p className="text-[#6E7785] mt-0.5">
+                  <p className="text-[#94A3B8] mt-0.5">
                     You can save direct updates to {editingRecord.quotationNumber} or click "Save as New Revision (v
                     {(editingRecord.version || 1) + 1})" to preserve the original snapshot.
                   </p>
@@ -3109,7 +3109,7 @@ export const AdminQuotationsPage: React.FC<{
                 type="button"
                 disabled={savingDoc}
                 onClick={handleSaveAsNewRevision}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-[#F18A45] hover:bg-[#e07934] rounded-lg shrink-0"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg shrink-0"
               >
                 <GitBranch className="w-3.5 h-3.5" />
                 <span>Save as New Revision (v{(editingRecord.version || 1) + 1})</span>
@@ -3119,13 +3119,13 @@ export const AdminQuotationsPage: React.FC<{
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs font-medium text-[#172333] mb-1">
+              <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                 Link Existing Client (Optional)
               </label>
               <select
                 value={form.clientId}
                 onChange={(e) => handleSelectClient(e.target.value)}
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               >
                 <option value="">— Select Client or Type Below —</option>
                 {clients.map((c) => (
@@ -3137,7 +3137,7 @@ export const AdminQuotationsPage: React.FC<{
             </div>
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="block text-xs font-medium text-[#172333]">
+                <label className="block text-xs font-medium text-[#F8FAFC]">
                   Pre-fill from Inquiry (Optional)
                 </label>
                 {form.inquiryId && (
@@ -3145,7 +3145,7 @@ export const AdminQuotationsPage: React.FC<{
                     type="button"
                     disabled={aiDraftingQuote}
                     onClick={handleAIDraftFromSelectedInquiry}
-                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#F18A45] hover:underline disabled:opacity-50"
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#10B981] hover:underline disabled:opacity-50"
                   >
                     <Sparkles className="w-3 h-3" />
                     <span>{aiDraftingQuote ? 'Drafting...' : 'AI Draft Scope & Pricing'}</span>
@@ -3155,7 +3155,7 @@ export const AdminQuotationsPage: React.FC<{
               <select
                 value={form.inquiryId}
                 onChange={(e) => handleSelectInquiry(e.target.value)}
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               >
                 <option value="">— None —</option>
                 {inquiries.map((inq) => (
@@ -3166,13 +3166,13 @@ export const AdminQuotationsPage: React.FC<{
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-[#172333] mb-1">
+              <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                 {form.documentType} Status
               </label>
               <select
                 value={form.status}
                 onChange={(e) => updateForm({ status: e.target.value as QuotationStatus })}
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               >
                 {QUOTATION_STATUSES.map((st) => (
                   <option key={st} value={st}>
@@ -3185,7 +3185,7 @@ export const AdminQuotationsPage: React.FC<{
 
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-[#172333] mb-1">
+              <label className="block text-xs font-semibold text-[#F8FAFC] mb-1">
                 Client Name *
               </label>
               <input
@@ -3193,11 +3193,11 @@ export const AdminQuotationsPage: React.FC<{
                 required
                 value={form.clientName}
                 onChange={(e) => updateForm({ clientName: e.target.value })}
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-[#172333] mb-1">
+              <label className="block text-xs font-semibold text-[#F8FAFC] mb-1">
                 Client Email *
               </label>
               <input
@@ -3205,33 +3205,33 @@ export const AdminQuotationsPage: React.FC<{
                 required
                 value={form.clientEmail}
                 onChange={(e) => updateForm({ clientEmail: e.target.value })}
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-[#172333] mb-1">Issue Date</label>
+              <label className="block text-xs font-medium text-[#F8FAFC] mb-1">Issue Date</label>
               <input
                 type="date"
                 value={form.issueDate}
                 onChange={(e) => updateForm({ issueDate: e.target.value })}
-                className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-[#172333] mb-1">Valid Until *</label>
+              <label className="block text-xs font-medium text-[#F8FAFC] mb-1">Valid Until *</label>
               <input
                 type="date"
                 required
                 value={form.expiryDate}
                 onChange={(e) => updateForm({ expiryDate: e.target.value })}
-                className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="sm:col-span-2">
-              <label className="block text-xs font-semibold text-[#172333] mb-1">
+              <label className="block text-xs font-semibold text-[#F8FAFC] mb-1">
                 Project Title *
               </label>
               <input
@@ -3240,11 +3240,11 @@ export const AdminQuotationsPage: React.FC<{
                 value={form.projectTitle}
                 onChange={(e) => updateForm({ projectTitle: e.target.value })}
                 placeholder="e.g. Monthly YouTube Thumbnail & Reels Production Package"
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-[#172333] mb-1">
+              <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                 Estimated Timeline
               </label>
               <input
@@ -3252,32 +3252,32 @@ export const AdminQuotationsPage: React.FC<{
                 value={form.estimatedTimeline}
                 onChange={(e) => updateForm({ estimatedTimeline: e.target.value })}
                 placeholder="3–5 business days"
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-[#172333] mb-1">
+              <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                 Project Scope Summary
               </label>
               <textarea
                 rows={2}
                 value={form.scopeSummary}
                 onChange={(e) => updateForm({ scopeSummary: e.target.value })}
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-[#172333] mb-1">
+              <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                 Included Deliverables
               </label>
               <textarea
                 rows={2}
                 value={form.deliverables}
                 onChange={(e) => updateForm({ deliverables: e.target.value })}
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
           </div>
@@ -3285,7 +3285,7 @@ export const AdminQuotationsPage: React.FC<{
           {/* Line Items with Reordering */}
           <div className="space-y-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-xs font-semibold text-[#172333]">
+              <span className="text-xs font-semibold text-[#F8FAFC]">
                 {form.documentType} Line Items (INR)
               </span>
               <div className="flex items-center gap-2">
@@ -3307,7 +3307,7 @@ export const AdminQuotationsPage: React.FC<{
                       });
                       e.target.value = '';
                     }}
-                    className="px-2.5 py-1 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-md"
+                    className="px-2.5 py-1 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-md"
                   >
                     <option value="">+ Add from Services Catalog...</option>
                     {services.map((s) => (
@@ -3327,14 +3327,14 @@ export const AdminQuotationsPage: React.FC<{
                       ],
                     })
                   }
-                  className="text-xs font-semibold text-[#F18A45] hover:underline"
+                  className="text-xs font-semibold text-[#10B981] hover:underline"
                 >
                   + Add Custom Item
                 </button>
               </div>
             </div>
 
-            <div className="hidden sm:grid grid-cols-12 gap-2 px-1 text-[11px] font-semibold text-[#6E7785]">
+            <div className="hidden sm:grid grid-cols-12 gap-2 px-1 text-[11px] font-semibold text-[#94A3B8]">
               <div className="col-span-5">Deliverable / Service Description</div>
               <div className="col-span-2">Quantity</div>
               <div className="col-span-2">Unit Price (₹)</div>
@@ -3358,7 +3358,7 @@ export const AdminQuotationsPage: React.FC<{
                       updateForm({ lineItems: next });
                     }}
                     placeholder="Service / Deliverable description"
-                    className="col-span-12 sm:col-span-5 px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                    className="col-span-12 sm:col-span-5 px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                   />
                   <input
                     type="number"
@@ -3370,7 +3370,7 @@ export const AdminQuotationsPage: React.FC<{
                       next[idx] = { ...next[idx], quantity: Number(e.target.value) };
                       updateForm({ lineItems: next });
                     }}
-                    className="col-span-4 sm:col-span-2 px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                    className="col-span-4 sm:col-span-2 px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                   />
                   <input
                     type="number"
@@ -3382,9 +3382,9 @@ export const AdminQuotationsPage: React.FC<{
                       next[idx] = { ...next[idx], unitPrice: Number(e.target.value) };
                       updateForm({ lineItems: next });
                     }}
-                    className="col-span-4 sm:col-span-2 px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                    className="col-span-4 sm:col-span-2 px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                   />
-                  <div className="col-span-2 sm:col-span-2 text-right font-mono text-xs font-semibold text-[#172333] tabular-nums">
+                  <div className="col-span-2 sm:col-span-2 text-right font-mono text-xs font-semibold text-[#F8FAFC] tabular-nums">
                     {formatINR(lineAmount)}
                   </div>
                   <div className="col-span-2 sm:col-span-1 flex items-center justify-end gap-1">
@@ -3397,7 +3397,7 @@ export const AdminQuotationsPage: React.FC<{
                         updateForm({ lineItems: next });
                       }}
                       title="Move Up"
-                      className="p-1 text-[#6E7785] hover:text-[#172333] disabled:opacity-25"
+                      className="p-1 text-[#94A3B8] hover:text-[#F8FAFC] disabled:opacity-25"
                     >
                       <ArrowUp className="w-3.5 h-3.5" />
                     </button>
@@ -3410,7 +3410,7 @@ export const AdminQuotationsPage: React.FC<{
                         updateForm({ lineItems: next });
                       }}
                       title="Move Down"
-                      className="p-1 text-[#6E7785] hover:text-[#172333] disabled:opacity-25"
+                      className="p-1 text-[#94A3B8] hover:text-[#F8FAFC] disabled:opacity-25"
                     >
                       <ArrowDown className="w-3.5 h-3.5" />
                     </button>
@@ -3423,7 +3423,7 @@ export const AdminQuotationsPage: React.FC<{
                         })
                       }
                       title="Remove Item"
-                      className="p-1 text-xs font-bold text-[#B93832] disabled:opacity-30"
+                      className="p-1 text-xs font-bold text-[#DC2626] disabled:opacity-30"
                     >
                       ×
                     </button>
@@ -3433,20 +3433,20 @@ export const AdminQuotationsPage: React.FC<{
             })}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-[#E2E4DF]">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-[#1E3A5F]">
             <div>
-              <label className="block text-xs font-medium text-[#172333] mb-1">
+              <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                 Terms & Conditions
               </label>
               <textarea
                 rows={2}
                 value={form.termsAndConditions}
                 onChange={(e) => updateForm({ termsAndConditions: e.target.value })}
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-[#172333] mb-1">
+              <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                 Additional Notes / Assumptions (Optional)
               </label>
               <textarea
@@ -3454,12 +3454,12 @@ export const AdminQuotationsPage: React.FC<{
                 value={form.notes}
                 onChange={(e) => updateForm({ notes: e.target.value })}
                 placeholder="Any special assumptions, turnaround notes, or milestone details..."
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 pt-3 border-t border-[#E2E4DF]">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 pt-3 border-t border-[#1E3A5F]">
             <div>
               <label className="block text-xs font-medium mb-1">Discount (INR)</label>
               <input
@@ -3467,7 +3467,7 @@ export const AdminQuotationsPage: React.FC<{
                 min={0}
                 value={form.discount}
                 onChange={(e) => updateForm({ discount: Number(e.target.value) })}
-                className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
             <div>
@@ -3484,7 +3484,7 @@ export const AdminQuotationsPage: React.FC<{
                   else if (nextMode === 'CGST_SGST_18' || nextMode === 'IGST_18')
                     updateForm({ taxRate: 18 });
                 }}
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               >
                 <option value="NON_GST">Non-GST Billing (0% Default)</option>
                 <option value="CGST_SGST_18">CGST 9% + SGST 9% (Intra-State 18%)</option>
@@ -3502,7 +3502,7 @@ export const AdminQuotationsPage: React.FC<{
                     max={100}
                     value={form.taxRate}
                     onChange={(e) => updateForm({ taxRate: Number(e.target.value) })}
-                    className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                    className="w-full px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                   />
                 </>
               ) : (
@@ -3519,7 +3519,7 @@ export const AdminQuotationsPage: React.FC<{
                         setFormDirty(true);
                       }}
                       placeholder="Client GSTIN"
-                      className="w-2/3 px-2.5 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                      className="w-2/3 px-2.5 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                     />
                     <input
                       type="text"
@@ -3529,19 +3529,19 @@ export const AdminQuotationsPage: React.FC<{
                         setFormDirty(true);
                       }}
                       placeholder="SAC 9983"
-                      className="w-1/3 px-2 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                      className="w-1/3 px-2 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                     />
                   </div>
                 </>
               )}
             </div>
-            <div className="bg-[#F5F5F1] rounded-lg p-3 text-right">
-              <p className="text-xs text-[#6E7785]">Estimated Total (INR)</p>
-              <p className="text-xl font-mono font-semibold text-[#172333] tabular-nums">
+            <div className="bg-[#132A4A] rounded-lg p-3 text-right">
+              <p className="text-xs text-[#94A3B8]">Estimated Total (INR)</p>
+              <p className="text-xl font-mono font-semibold text-[#F8FAFC] tabular-nums">
                 {formatINR(totals.total)}
               </p>
               {gstBreakdown.mode !== 'NON_GST' && (
-                <p className="text-[11px] font-mono text-[#6E7785] mt-0.5">
+                <p className="text-[11px] font-mono text-[#94A3B8] mt-0.5">
                   Incl. {formatINR(gstBreakdown.totalTax)} Tax ({gstBreakdown.label})
                 </p>
               )}
@@ -3552,7 +3552,7 @@ export const AdminQuotationsPage: React.FC<{
             <button
               type="submit"
               disabled={savingDoc}
-              className="px-5 py-2.5 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg disabled:opacity-50"
+              className="px-5 py-2.5 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg disabled:opacity-50"
             >
               {savingDoc
                 ? 'Saving...'
@@ -3565,16 +3565,16 @@ export const AdminQuotationsPage: React.FC<{
                 type="button"
                 disabled={savingDoc}
                 onClick={handleSaveAsNewRevision}
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold text-[#172333] bg-[#F5F5F1] hover:bg-[#E2E4DF] rounded-lg"
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold text-[#F8FAFC] bg-[#132A4A] hover:bg-[#1E3A5F] rounded-lg"
               >
-                <GitBranch className="w-3.5 h-3.5 text-[#F18A45]" />
+                <GitBranch className="w-3.5 h-3.5 text-[#10B981]" />
                 <span>Save as New Revision (v{(editingRecord.version || 1) + 1})</span>
               </button>
             )}
             <button
               type="button"
               onClick={handleRequestCloseBuilder}
-              className="px-4 py-2 text-xs font-medium text-[#6E7785] hover:text-[#172333]"
+              className="px-4 py-2 text-xs font-medium text-[#94A3B8] hover:text-[#F8FAFC]"
             >
               Cancel
             </button>
@@ -3584,36 +3584,36 @@ export const AdminQuotationsPage: React.FC<{
 
       {/* Printable Quotation / Estimate View */}
       {printQuotation && (
-        <div className="bg-white border border-[#172333] rounded-lg p-8 space-y-6">
-          <div className="flex items-start justify-between border-b border-[#E2E4DF] pb-6">
+        <div className="bg-[#0D1F38] border border-[#040D1A] rounded-lg p-8 space-y-6">
+          <div className="flex items-start justify-between border-b border-[#1E3A5F] pb-6">
             <div>
-              <p className="text-xs font-semibold text-[#F18A45]">
+              <p className="text-xs font-semibold text-[#10B981]">
                 {inferQuotationDocumentType(printQuotation) === 'Estimate'
                   ? 'PROJECT COST ESTIMATE · SAC 9983'
                   : 'OFFICIAL PROJECT QUOTATION · SAC 9983'}
               </p>
-              <h2 className="font-editorial text-2xl font-semibold text-[#172333] mt-0.5">
+              <h2 className="font-editorial text-2xl font-semibold text-[#F8FAFC] mt-0.5">
                 Prithvi Editify
               </h2>
-              <p className="text-xs text-[#6E7785]">
+              <p className="text-xs text-[#94A3B8]">
                 Shankar Baluragi · Creative Design & Video Studio
               </p>
             </div>
             <div className="text-right">
               <div className="flex items-center justify-end gap-2">
-                <p className="font-mono text-lg font-semibold text-[#172333]">
+                <p className="font-mono text-lg font-semibold text-[#F8FAFC]">
                   {printQuotation.quotationNumber}
                 </p>
                 {(printQuotation.version || 1) > 1 && (
-                  <span className="px-2 py-0.5 text-[10px] font-mono font-semibold bg-[#F18A45]/15 text-[#F18A45] rounded">
+                  <span className="px-2 py-0.5 text-[10px] font-mono font-semibold bg-[#10B981]/15 text-[#10B981] rounded">
                     v{printQuotation.version}
                   </span>
                 )}
               </div>
-              <p className="text-xs text-[#6E7785]">
+              <p className="text-xs text-[#94A3B8]">
                 Issued: {printQuotation.issueDate} · Valid Until: {printQuotation.expiryDate}
               </p>
-              <p className="text-xs font-semibold text-[#172333] mt-1">
+              <p className="text-xs font-semibold text-[#F8FAFC] mt-1">
                 Status: {printQuotation.status}
               </p>
             </div>
@@ -3621,45 +3621,45 @@ export const AdminQuotationsPage: React.FC<{
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs">
             <div>
-              <p className="font-semibold text-[#6E7785]">Prepared For:</p>
-              <p className="text-sm font-semibold text-[#172333] mt-0.5">
+              <p className="font-semibold text-[#94A3B8]">Prepared For:</p>
+              <p className="text-sm font-semibold text-[#F8FAFC] mt-0.5">
                 {printQuotation.clientName}
               </p>
-              <p className="text-[#6E7785]">{printQuotation.clientEmail}</p>
+              <p className="text-[#94A3B8]">{printQuotation.clientEmail}</p>
             </div>
             <div className="sm:text-right">
-              <p className="font-semibold text-[#6E7785]">Project & Estimated Timeline:</p>
-              <p className="text-sm font-semibold text-[#172333] mt-0.5">
+              <p className="font-semibold text-[#94A3B8]">Project & Estimated Timeline:</p>
+              <p className="text-sm font-semibold text-[#F8FAFC] mt-0.5">
                 {printQuotation.projectTitle}
               </p>
-              <p className="text-[#6E7785]">Timeline: {printQuotation.estimatedTimeline}</p>
+              <p className="text-[#94A3B8]">Timeline: {printQuotation.estimatedTimeline}</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-[#F5F5F1] rounded-lg text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-[#132A4A] rounded-lg text-xs">
             <div>
-              <p className="font-semibold text-[#172333]">Scope Summary</p>
-              <p className="text-[#6E7785] mt-1">{printQuotation.scopeSummary || '—'}</p>
+              <p className="font-semibold text-[#F8FAFC]">Scope Summary</p>
+              <p className="text-[#94A3B8] mt-1">{printQuotation.scopeSummary || '—'}</p>
             </div>
             <div>
-              <p className="font-semibold text-[#172333]">Deliverables</p>
-              <p className="text-[#6E7785] mt-1">{printQuotation.deliverables || '—'}</p>
+              <p className="font-semibold text-[#F8FAFC]">Deliverables</p>
+              <p className="text-[#94A3B8] mt-1">{printQuotation.deliverables || '—'}</p>
             </div>
           </div>
 
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="border-b border-[#E2E4DF] text-[#6E7785]">
+              <tr className="border-b border-[#1E3A5F] text-[#94A3B8]">
                 <th className="py-2">Description</th>
                 <th className="py-2 text-right">Qty</th>
                 <th className="py-2 text-right">Unit Price</th>
                 <th className="py-2 text-right">Amount</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#E2E4DF]">
+            <tbody className="divide-y divide-[#1E3A5F]">
               {printQuotation.lineItems.map((li, i) => (
                 <tr key={i}>
-                  <td className="py-2.5 font-medium text-[#172333]">{li.description}</td>
+                  <td className="py-2.5 font-medium text-[#F8FAFC]">{li.description}</td>
                   <td className="py-2.5 text-right font-mono">{li.quantity}</td>
                   <td className="py-2.5 text-right font-mono">{formatINR(li.unitPrice)}</td>
                   <td className="py-2.5 text-right font-mono font-semibold">
@@ -3689,7 +3689,7 @@ export const AdminQuotationsPage: React.FC<{
             );
             const shareUrl = buildPublicQuotationShareUrl(printQuotation);
             return (
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start pt-4 border-t border-[#E2E4DF]">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start pt-4 border-t border-[#1E3A5F]">
                 <div className="md:col-span-7 space-y-4">
                   <UpiQrCodeCard
                     amount={Math.round(printQuotation.total * 0.5)}
@@ -3697,11 +3697,11 @@ export const AdminQuotationsPage: React.FC<{
                     clientName={printQuotation.clientName}
                     compact
                   />
-                  <div className="text-xs text-[#6E7785] space-y-1">
-                    <p className="font-semibold text-[#172333]">Terms & Conditions:</p>
+                  <div className="text-xs text-[#94A3B8] space-y-1">
+                    <p className="font-semibold text-[#F8FAFC]">Terms & Conditions:</p>
                     <p>{printQuotation.termsAndConditions}</p>
                     {printQuotation.notes && (
-                      <p className="text-[#172333] mt-1">
+                      <p className="text-[#F8FAFC] mt-1">
                         <span className="font-semibold">Notes:</span> {printQuotation.notes}
                       </p>
                     )}
@@ -3711,7 +3711,7 @@ export const AdminQuotationsPage: React.FC<{
                         href={shareUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="font-mono text-[#F18A45] underline"
+                        className="font-mono text-[#10B981] underline"
                       >
                         {shareUrl}
                       </a>
@@ -3721,13 +3721,13 @@ export const AdminQuotationsPage: React.FC<{
                 <div className="md:col-span-5 flex justify-end">
                   <div className="w-72 space-y-1.5 text-xs">
                     <div className="flex justify-between">
-                      <span className="text-[#6E7785]">Subtotal:</span>
+                      <span className="text-[#94A3B8]">Subtotal:</span>
                       <span className="font-mono tabular-nums">
                         {formatINR(printQuotation.subtotal)}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-[#6E7785]">Discount:</span>
+                      <span className="text-[#94A3B8]">Discount:</span>
                       <span className="font-mono tabular-nums">
                         -{formatINR(printQuotation.discount)}
                       </span>
@@ -3735,7 +3735,7 @@ export const AdminQuotationsPage: React.FC<{
                     {printGst.mode === 'CGST_SGST_18' ? (
                       <>
                         <div className="flex justify-between">
-                          <span className="text-[#6E7785]">
+                          <span className="text-[#94A3B8]">
                             CGST (9% · SAC {printGst.sacCode}):
                           </span>
                           <span className="font-mono tabular-nums">
@@ -3743,7 +3743,7 @@ export const AdminQuotationsPage: React.FC<{
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-[#6E7785]">
+                          <span className="text-[#94A3B8]">
                             SGST (9% · SAC {printGst.sacCode}):
                           </span>
                           <span className="font-mono tabular-nums">
@@ -3753,7 +3753,7 @@ export const AdminQuotationsPage: React.FC<{
                       </>
                     ) : printGst.mode === 'IGST_18' ? (
                       <div className="flex justify-between">
-                        <span className="text-[#6E7785]">
+                        <span className="text-[#94A3B8]">
                           IGST (18% · SAC {printGst.sacCode}):
                         </span>
                         <span className="font-mono tabular-nums">
@@ -3762,19 +3762,19 @@ export const AdminQuotationsPage: React.FC<{
                       </div>
                     ) : (
                       <div className="flex justify-between">
-                        <span className="text-[#6E7785]">Tax ({printQuotation.taxRate}%):</span>
+                        <span className="text-[#94A3B8]">Tax ({printQuotation.taxRate}%):</span>
                         <span className="font-mono tabular-nums">
                           {formatINR(printQuotation.taxAmount)}
                         </span>
                       </div>
                     )}
-                    <div className="flex justify-between pt-2 border-t border-[#E2E4DF] font-semibold text-sm text-[#172333]">
+                    <div className="flex justify-between pt-2 border-t border-[#1E3A5F] font-semibold text-sm text-[#F8FAFC]">
                       <span>Total {inferQuotationDocumentType(printQuotation)} (INR):</span>
                       <span className="font-mono tabular-nums">
                         {formatINR(printQuotation.total)}
                       </span>
                     </div>
-                    <div className="flex justify-between text-[11px] text-[#F18A45] font-semibold">
+                    <div className="flex justify-between text-[11px] text-[#10B981] font-semibold">
                       <span>50% Advance to Start:</span>
                       <span className="font-mono tabular-nums">
                         {formatINR(Math.round(printQuotation.total * 0.5))}
@@ -3788,18 +3788,18 @@ export const AdminQuotationsPage: React.FC<{
 
           {/* Revision History Trail if available */}
           {printQuotation.revisionHistory && printQuotation.revisionHistory.length > 0 && (
-            <div className="p-4 bg-[#F5F5F1] rounded-lg space-y-2 text-xs no-print">
-              <p className="font-semibold text-[#172333]">
+            <div className="p-4 bg-[#132A4A] rounded-lg space-y-2 text-xs no-print">
+              <p className="font-semibold text-[#F8FAFC]">
                 Prior Revision Snapshots ({printQuotation.revisionHistory.length})
               </p>
-              <div className="divide-y divide-[#E2E4DF]">
+              <div className="divide-y divide-[#1E3A5F]">
                 {printQuotation.revisionHistory.map((rev, idx) => (
-                  <div key={idx} className="py-1.5 flex items-center justify-between text-[#6E7785]">
+                  <div key={idx} className="py-1.5 flex items-center justify-between text-[#94A3B8]">
                     <span>
                       v{rev.version} · {rev.quotationNumber} ({rev.status}) · Saved{' '}
                       {rev.updatedAt?.split('T')[0]}
                     </span>
-                    <span className="font-mono font-semibold text-[#172333]">
+                    <span className="font-mono font-semibold text-[#F8FAFC]">
                       {formatINR(rev.total)}
                     </span>
                   </div>
@@ -3812,7 +3812,7 @@ export const AdminQuotationsPage: React.FC<{
             <button
               type="button"
               onClick={() => window.print()}
-              className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-[#172333] rounded-lg"
+              className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-[#040D1A] rounded-lg"
             >
               <Printer className="w-3.5 h-3.5" />
               <span>Print / Export PDF</span>
@@ -3824,7 +3824,7 @@ export const AdminQuotationsPage: React.FC<{
                 setPrintQuotation(null);
                 handleOpenEditDoc(target);
               }}
-              className="px-4 py-2 text-xs font-semibold text-[#172333] bg-[#F5F5F1] hover:bg-[#E2E4DF] rounded-lg"
+              className="px-4 py-2 text-xs font-semibold text-[#F8FAFC] bg-[#132A4A] hover:bg-[#1E3A5F] rounded-lg"
             >
               Edit {inferQuotationDocumentType(printQuotation)}
             </button>
@@ -3839,16 +3839,16 @@ export const AdminQuotationsPage: React.FC<{
                   'Public approval link copied to clipboard.'
                 );
               }}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-[#172333] bg-[#F5F5F1] hover:bg-[#E2E4DF] rounded-lg"
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-[#F8FAFC] bg-[#132A4A] hover:bg-[#1E3A5F] rounded-lg"
             >
-              <Share2 className="w-3.5 h-3.5 text-[#F18A45]" />
+              <Share2 className="w-3.5 h-3.5 text-[#10B981]" />
               <span>Copy Public Approval Link</span>
             </button>
             <a
               href={buildWhatsAppQuotationShareUrl(printQuotation)}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-[#26734D] hover:bg-[#1e5c3d] rounded-lg"
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-[#16A34A] hover:bg-[#15803D] rounded-lg"
             >
               <MessageSquare className="w-3.5 h-3.5" />
               <span>Send on WhatsApp</span>
@@ -3856,7 +3856,7 @@ export const AdminQuotationsPage: React.FC<{
             <Link
               to={`/quote/${printQuotation.id}`}
               target="_blank"
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-[#172333] border border-[#E2E4DF] rounded-lg hover:bg-[#F5F5F1]"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-[#F8FAFC] border border-[#1E3A5F] rounded-lg hover:bg-[#132A4A]"
             >
               <ExternalLink className="w-3.5 h-3.5" />
               <span>Open Public Link</span>
@@ -3864,7 +3864,7 @@ export const AdminQuotationsPage: React.FC<{
             <button
               type="button"
               onClick={() => setPrintQuotation(null)}
-              className="px-4 py-2 text-xs font-semibold text-[#6E7785] hover:text-[#172333]"
+              className="px-4 py-2 text-xs font-semibold text-[#94A3B8] hover:text-[#F8FAFC]"
             >
               Close Preview
             </button>
@@ -3874,7 +3874,7 @@ export const AdminQuotationsPage: React.FC<{
 
       {/* Search & Status Filter Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 no-print">
-        <div className="flex flex-wrap items-center gap-1 p-1 bg-[#E2E4DF]/60 rounded-lg w-fit">
+        <div className="flex flex-wrap items-center gap-1 p-1 bg-[#1E3A5F]/60 rounded-lg w-fit">
           {['All', ...QUOTATION_STATUSES].map((st) => (
             <button
               key={st}
@@ -3882,8 +3882,8 @@ export const AdminQuotationsPage: React.FC<{
               onClick={() => setStatusFilter(st)}
               className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                 statusFilter === st
-                  ? 'bg-white text-[#172333] shadow-xs font-semibold'
-                  : 'text-[#6E7785] hover:text-[#172333]'
+                  ? 'bg-[#0D1F38] text-[#F8FAFC] shadow-xs font-semibold'
+                  : 'text-[#94A3B8] hover:text-[#F8FAFC]'
               }`}
             >
               {st}
@@ -3896,15 +3896,15 @@ export const AdminQuotationsPage: React.FC<{
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search quote/estimate #, client, project..."
-          className="px-3.5 py-2 text-xs bg-white border border-[#E2E4DF] rounded-lg w-full sm:w-72"
+          className="px-3.5 py-2 text-xs bg-[#0D1F38] border border-[#1E3A5F] rounded-lg w-full sm:w-72"
         />
       </div>
 
       {/* Quotations & Estimates Table */}
-      <div className="bg-white border border-[#E2E4DF] rounded-lg overflow-x-auto no-print">
+      <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg overflow-x-auto no-print">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="border-b border-[#E2E4DF] text-[11px] font-semibold text-[#6E7785]">
+            <tr className="border-b border-[#1E3A5F] text-[11px] font-semibold text-[#94A3B8]">
               <th className="py-3 px-4">Document #</th>
               <th className="py-3 px-4">Type</th>
               <th className="py-3 px-4">Client & Project</th>
@@ -3914,10 +3914,10 @@ export const AdminQuotationsPage: React.FC<{
               <th className="py-3 px-4 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#E2E4DF] text-xs">
+          <tbody className="divide-y divide-[#1E3A5F] text-xs">
             {filteredQuotations.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-10 text-center text-[#6E7785]">
+                <td colSpan={7} className="py-10 text-center text-[#94A3B8]">
                   No quotations or estimates match the current filter. Use "+ New Quotation" or "+ New Estimate" above.
                 </td>
               </tr>
@@ -3925,12 +3925,12 @@ export const AdminQuotationsPage: React.FC<{
               filteredQuotations.map((q) => {
                 const docType = inferQuotationDocumentType(q);
                 return (
-                  <tr key={q.id} className="hover:bg-[#F5F5F1]/50">
-                    <td className="py-3.5 px-4 font-mono font-semibold text-[#172333]">
+                  <tr key={q.id} className="hover:bg-[#132A4A]/50">
+                    <td className="py-3.5 px-4 font-mono font-semibold text-[#F8FAFC]">
                       <div className="flex items-center gap-1.5">
                         <span>{q.quotationNumber}</span>
                         {(q.version || 1) > 1 && (
-                          <span className="px-1.5 py-0.5 text-[10px] bg-[#F18A45]/15 text-[#F18A45] rounded">
+                          <span className="px-1.5 py-0.5 text-[10px] bg-[#10B981]/15 text-[#10B981] rounded">
                             v{q.version}
                           </span>
                         )}
@@ -3940,39 +3940,39 @@ export const AdminQuotationsPage: React.FC<{
                       <span
                         className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
                           docType === 'Estimate'
-                            ? 'bg-[#F18A45]/15 text-[#B85D19]'
-                            : 'bg-[#172333]/10 text-[#172333]'
+                            ? 'bg-[#10B981]/15 text-[#B85D19]'
+                            : 'bg-[#040D1A]/10 text-[#F8FAFC]'
                         }`}
                       >
                         {docType}
                       </span>
                     </td>
                     <td className="py-3.5 px-4">
-                      <p className="font-semibold text-[#172333]">{q.projectTitle}</p>
-                      <p className="text-[11px] text-[#6E7785]">
+                      <p className="font-semibold text-[#F8FAFC]">{q.projectTitle}</p>
+                      <p className="text-[11px] text-[#94A3B8]">
                         {q.clientName} ({q.clientEmail})
                       </p>
                     </td>
-                    <td className="py-3.5 px-4 font-mono text-[#6E7785]">{q.expiryDate}</td>
+                    <td className="py-3.5 px-4 font-mono text-[#94A3B8]">{q.expiryDate}</td>
                     <td className="py-3.5 px-4">
                       <span
                         className={`font-semibold ${
                           q.status === 'Accepted'
-                            ? 'text-[#26734D]'
+                            ? 'text-[#16A34A]'
                             : q.status === 'Rejected' || q.status === 'Expired'
-                            ? 'text-[#B93832]'
+                            ? 'text-[#DC2626]'
                             : q.status === 'Archived'
-                            ? 'text-[#6E7785]'
-                            : 'text-[#172333]'
+                            ? 'text-[#94A3B8]'
+                            : 'text-[#F8FAFC]'
                         }`}
                       >
                         {q.status}
                       </span>
                       {q.convertedProjectId && (
-                        <span className="block text-[10px] text-[#26734D]">Converted to Project</span>
+                        <span className="block text-[10px] text-[#16A34A]">Converted to Project</span>
                       )}
                     </td>
-                    <td className="py-3.5 px-4 text-right font-mono font-semibold text-[#172333] tabular-nums">
+                    <td className="py-3.5 px-4 text-right font-mono font-semibold text-[#F8FAFC] tabular-nums">
                       {formatINR(q.total)}
                     </td>
                     <td className="py-3.5 px-4 text-right whitespace-nowrap">
@@ -3981,7 +3981,7 @@ export const AdminQuotationsPage: React.FC<{
                           <button
                             type="button"
                             onClick={() => handleDuplicateDoc(q, 'Quotation')}
-                            className="px-2 py-1 text-[11px] font-semibold text-[#172333] bg-[#F18A45]/20 hover:bg-[#F18A45]/30 rounded-md"
+                            className="px-2 py-1 text-[11px] font-semibold text-white bg-[#10B981]/20 hover:bg-[#10B981]/30 rounded-md"
                             title="Convert Estimate into an Official Quotation"
                           >
                             → To Quote
@@ -3990,7 +3990,7 @@ export const AdminQuotationsPage: React.FC<{
                         <button
                           type="button"
                           onClick={() => handleConvertQuotationToProjectAndInvoice(q)}
-                          className="px-2 py-1 text-[11px] font-semibold text-[#26734D] bg-[#26734D]/10 hover:bg-[#26734D]/20 rounded-md"
+                          className="px-2 py-1 text-[11px] font-semibold text-[#16A34A] bg-[#16A34A]/10 hover:bg-[#16A34A]/20 rounded-md"
                         >
                           {q.convertedProjectId ? 'View Project' : 'Convert to Project'}
                         </button>

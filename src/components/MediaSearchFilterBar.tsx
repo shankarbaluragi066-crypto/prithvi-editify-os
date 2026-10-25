@@ -80,12 +80,12 @@ export const MediaSearchFilterBar: React.FC<MediaSearchFilterBarProps> = ({
   };
 
   return (
-    <div className="bg-white border border-[#E2E4DF] rounded-lg p-4 space-y-4">
+    <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-4 space-y-4">
       {/* Row 1: Quick MIME Category Buttons + Exact MIME-Type Dropdown + View Switcher */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E2E4DF] pb-3.5">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#1E3A5F] pb-3.5">
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-[#6E7785] mr-1.5">
-            <Filter className="w-3.5 h-3.5 text-[#F18A45]" />
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-[#94A3B8] mr-1.5">
+            <Filter className="w-3.5 h-3.5 text-[#10B981]" />
             <span>Category / MIME:</span>
           </span>
           {MIME_TYPE_OPTIONS.map((opt) => {
@@ -98,15 +98,15 @@ export const MediaSearchFilterBar: React.FC<MediaSearchFilterBarProps> = ({
                 onClick={() => updateField('mimeType', opt.id)}
                 className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border transition-colors ${
                   active
-                    ? 'bg-[#172333] text-white border-[#172333]'
-                    : 'bg-[#F5F5F1] text-[#172333] border-[#E2E4DF] hover:border-[#172333]'
+                    ? 'bg-gradient-to-r from-[#0EA5E9] to-[#10B981] text-white border-[#10B981]'
+                    : 'bg-[#132A4A] text-[#F8FAFC] border-[#1E3A5F] hover:border-[#10B981]'
                 }`}
               >
-                <Icon className={`w-3.5 h-3.5 ${active ? 'text-[#F18A45]' : 'text-[#6E7785]'}`} />
+                <Icon className={`w-3.5 h-3.5 ${active ? 'text-[#10B981]' : 'text-[#94A3B8]'}`} />
                 <span>{opt.label}</span>
                 <span
                   className={`hidden sm:inline font-mono text-[10px] ${
-                    active ? 'text-white/75' : 'text-[#6E7785]'
+                    active ? 'text-white/75' : 'text-[#94A3B8]'
                   }`}
                 >
                   ({opt.mimeHint})
@@ -117,7 +117,7 @@ export const MediaSearchFilterBar: React.FC<MediaSearchFilterBarProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="font-mono text-[11px] text-[#6E7785]">
+          <span className="font-mono text-[11px] text-[#94A3B8]">
             {isFiltering ? 'Querying Supabase...' : `${totalMatching} matching`}
           </span>
           <div className="flex items-center gap-1">
@@ -126,8 +126,8 @@ export const MediaSearchFilterBar: React.FC<MediaSearchFilterBarProps> = ({
               onClick={() => onViewModeChange('grid')}
               className={`p-1.5 rounded-md border ${
                 viewMode === 'grid'
-                  ? 'bg-[#172333] text-white border-[#172333]'
-                  : 'bg-[#F5F5F1] text-[#6E7785] border-[#E2E4DF]'
+                  ? 'bg-gradient-to-r from-[#0EA5E9] to-[#10B981] text-white border-[#10B981]'
+                  : 'bg-[#132A4A] text-[#94A3B8] border-[#1E3A5F]'
               }`}
               title="Grid View"
             >
@@ -138,8 +138,8 @@ export const MediaSearchFilterBar: React.FC<MediaSearchFilterBarProps> = ({
               onClick={() => onViewModeChange('table')}
               className={`p-1.5 rounded-md border ${
                 viewMode === 'table'
-                  ? 'bg-[#172333] text-white border-[#172333]'
-                  : 'bg-[#F5F5F1] text-[#6E7785] border-[#E2E4DF]'
+                  ? 'bg-gradient-to-r from-[#0EA5E9] to-[#10B981] text-white border-[#10B981]'
+                  : 'bg-[#132A4A] text-[#94A3B8] border-[#1E3A5F]'
               }`}
               title="Table View"
             >
@@ -153,19 +153,19 @@ export const MediaSearchFilterBar: React.FC<MediaSearchFilterBarProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
         {/* Search by File Title (.ilike('title', ...)) or Associated Project Tags */}
         <div className="md:col-span-4 relative">
-          <Search className="w-3.5 h-3.5 text-[#6E7785] absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="w-3.5 h-3.5 text-[#94A3B8] absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={filters.searchQuery}
             onChange={(e) => updateField('searchQuery', e.target.value)}
             placeholder="Search by file title (.ilike) or #tag..."
-            className="w-full pl-8 pr-8 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg focus:outline-none focus:border-[#172333]"
+            className="w-full pl-8 pr-8 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg focus:outline-none focus:border-[#10B981]"
           />
           {filters.searchQuery && (
             <button
               type="button"
               onClick={() => updateField('searchQuery', '')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#6E7785] hover:text-[#172333]"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#F8FAFC]"
               title="Clear search"
             >
               <X className="w-3.5 h-3.5" />
@@ -175,11 +175,11 @@ export const MediaSearchFilterBar: React.FC<MediaSearchFilterBarProps> = ({
 
         {/* Category / Exact MIME-Type Filter Dropdown (.eq('mime_type', ...)) */}
         <div className="md:col-span-2 relative">
-          <Filter className="w-3.5 h-3.5 text-[#6E7785] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <Filter className="w-3.5 h-3.5 text-[#94A3B8] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           <select
             value={filters.mimeType}
             onChange={(e) => updateField('mimeType', e.target.value)}
-            className="w-full pl-7 pr-2.5 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg font-mono"
+            className="w-full pl-7 pr-2.5 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg font-mono"
             title="Filter by Category or Exact MIME Type (.eq('mime_type', ...))"
           >
             <option value="all">All MIME Types</option>
@@ -203,11 +203,11 @@ export const MediaSearchFilterBar: React.FC<MediaSearchFilterBarProps> = ({
 
         {/* Specific Project Tag Dropdown */}
         <div className="md:col-span-2 relative">
-          <Tag className="w-3.5 h-3.5 text-[#6E7785] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <Tag className="w-3.5 h-3.5 text-[#94A3B8] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           <select
             value={filters.tag}
             onChange={(e) => updateField('tag', e.target.value)}
-            className="w-full pl-7 pr-2.5 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg font-mono"
+            className="w-full pl-7 pr-2.5 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg font-mono"
             title="Filter by Associated Project Tag"
           >
             <option value="">All Project Tags</option>
@@ -221,11 +221,11 @@ export const MediaSearchFilterBar: React.FC<MediaSearchFilterBarProps> = ({
 
         {/* Associated Project Filter */}
         <div className="md:col-span-2 relative">
-          <FolderKanban className="w-3.5 h-3.5 text-[#6E7785] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <FolderKanban className="w-3.5 h-3.5 text-[#94A3B8] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           <select
             value={filters.projectId}
             onChange={(e) => updateField('projectId', e.target.value)}
-            className="w-full pl-7 pr-2.5 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+            className="w-full pl-7 pr-2.5 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             title="Filter by Associated Project"
           >
             <option value="all">All Projects</option>
@@ -242,7 +242,7 @@ export const MediaSearchFilterBar: React.FC<MediaSearchFilterBarProps> = ({
           <select
             value={filters.bucket}
             onChange={(e) => updateField('bucket', e.target.value as 'all' | MediaBucket)}
-            className="w-full px-2 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg font-mono"
+            className="w-full px-2 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg font-mono"
             title="Filter by Supabase Storage Bucket"
           >
             <option value="all">Buckets</option>
@@ -262,7 +262,7 @@ export const MediaSearchFilterBar: React.FC<MediaSearchFilterBarProps> = ({
                 e.target.value as 'newest' | 'oldest' | 'name_asc' | 'size_desc' | 'size_asc'
               )
             }
-            className="w-full px-2 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+            className="w-full px-2 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             title="Sort Order"
           >
             <option value="newest">Newest</option>
@@ -276,9 +276,9 @@ export const MediaSearchFilterBar: React.FC<MediaSearchFilterBarProps> = ({
 
       {/* Row 3: Quick Project Tag Chips & Active Supabase Filter Summary */}
       {(availableTags.length > 0 || hasActiveFilters) && (
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[#E2E4DF]/70 text-xs">
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[#1E3A5F]/70 text-xs">
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[11px] font-medium text-[#6E7785] mr-1">Project Tags:</span>
+            <span className="text-[11px] font-medium text-[#94A3B8] mr-1">Project Tags:</span>
             {availableTags.slice(0, 10).map((tag) => {
               const isSelected = filters.tag === tag;
               return (
@@ -288,8 +288,8 @@ export const MediaSearchFilterBar: React.FC<MediaSearchFilterBarProps> = ({
                   onClick={() => updateField('tag', isSelected ? '' : tag)}
                   className={`px-2 py-0.5 text-[11px] font-mono rounded border transition-colors ${
                     isSelected
-                      ? 'bg-[#F18A45] text-[#172333] border-[#F18A45] font-semibold'
-                      : 'bg-[#F5F5F1] text-[#172333] border-[#E2E4DF] hover:border-[#172333]'
+                      ? 'bg-[#10B981] text-white border-[#10B981] font-semibold'
+                      : 'bg-[#132A4A] text-[#F8FAFC] border-[#1E3A5F] hover:border-[#10B981]'
                   }`}
                 >
                   #{tag}
@@ -302,7 +302,7 @@ export const MediaSearchFilterBar: React.FC<MediaSearchFilterBarProps> = ({
             <button
               type="button"
               onClick={onResetFilters}
-              className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-[#B93832] bg-[#B93832]/10 hover:bg-[#B93832]/15 rounded-md"
+              className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-[#DC2626] bg-[#DC2626]/10 hover:bg-[#DC2626]/15 rounded-md"
             >
               <RotateCcw className="w-3 h-3" />
               <span>Reset Supabase Filters</span>

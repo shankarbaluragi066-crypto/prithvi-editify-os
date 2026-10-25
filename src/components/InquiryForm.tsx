@@ -148,22 +148,22 @@ export const InquiryForm: React.FC<{
 
   if (submittedId) {
     return (
-      <div className="bg-white border border-[#E2E4DF] rounded-lg p-8 shadow-[0_1px_2px_rgba(23,35,51,0.04)]">
-        <div className="flex items-center gap-3 text-[#26734D]">
+      <div className="pe-card-interactive bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-8 shadow-[0_1px_2px_rgba(0,0,0,0.35)]">
+        <div className="flex items-center gap-3 text-[#16A34A]">
           <CheckCircle2 className="w-6 h-6 shrink-0" />
-          <h3 className="text-xl font-semibold text-[#172333]">Brief Received by Prithvi Editify</h3>
+          <h3 className="text-xl font-semibold text-[#F8FAFC]">Brief Received by Prithvi Editify</h3>
         </div>
-        <p className="text-sm text-[#6E7785] mt-3 leading-relaxed">
+        <p className="text-sm text-[#94A3B8] mt-3 leading-relaxed">
           Thank you for sharing your project brief. Your inquiry has been logged in our studio CRM with status{' '}
-          <span className="font-medium text-[#172333]">New</span> (Reference ID:{' '}
-          <span className="font-mono text-xs text-[#172333]">{submittedId}</span>). Shankar Baluragi will review your
+          <span className="font-medium text-[#F8FAFC]">New</span> (Reference ID:{' '}
+          <span className="font-mono text-xs text-[#F8FAFC]">{submittedId}</span>). Shankar Baluragi will review your
           requirements and respond with scope and pricing details.
         </p>
         <div className="mt-6">
           <button
             type="button"
             onClick={() => setSubmittedId(null)}
-            className="px-4 py-2 text-sm font-medium text-[#172333] bg-[#F5F5F1] hover:bg-[#E2E4DF] rounded-lg transition-colors whitespace-nowrap shrink-0"
+            className="px-4 py-2 text-sm font-medium text-[#F8FAFC] bg-[#132A4A] hover:bg-[#1E3A5F] rounded-lg transition-colors whitespace-nowrap shrink-0"
           >
             Submit Another Brief
           </button>
@@ -173,10 +173,10 @@ export const InquiryForm: React.FC<{
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="bg-white border border-[#E2E4DF] rounded-lg p-6 sm:p-8 space-y-5 shadow-[0_1px_2px_rgba(23,35,51,0.04)]">
+    <form onSubmit={handleSubmit(onSubmit)} noValidate className="pe-card-interactive bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 sm:p-8 space-y-5 shadow-[0_1px_2px_rgba(0,0,0,0.35)]">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
         <div>
-          <label htmlFor="inq-fullName" className="block text-xs font-medium text-[#172333] mb-1.5">
+          <label htmlFor="inq-fullName" className="block text-xs font-medium text-[#F8FAFC] mb-1.5">
             Full Name *
           </label>
           <input
@@ -184,13 +184,13 @@ export const InquiryForm: React.FC<{
             type="text"
             placeholder="Aarav Sharma"
             {...register('fullName')}
-            className="w-full px-3.5 py-2.5 text-sm bg-[#F5F5F1]/60 border border-[#E2E4DF] rounded-lg focus:outline-none focus:border-[#172333] focus:bg-white transition-colors"
+            className="w-full px-3.5 py-2.5 text-sm bg-[#132A4A]/60 border border-[#1E3A5F] rounded-lg focus:outline-none focus:border-[#10B981] focus:bg-[#132A4A] transition-colors"
           />
-          {errors.fullName && <p className="text-xs text-[#B93832] mt-1">{errors.fullName.message}</p>}
+          {errors.fullName && <p className="text-xs text-[#DC2626] mt-1">{errors.fullName.message}</p>}
         </div>
 
         <div>
-          <label htmlFor="inq-email" className="block text-xs font-medium text-[#172333] mb-1.5">
+          <label htmlFor="inq-email" className="block text-xs font-medium text-[#F8FAFC] mb-1.5">
             Email Address *
           </label>
           <input
@@ -198,13 +198,13 @@ export const InquiryForm: React.FC<{
             type="email"
             placeholder="you@company.com"
             {...register('email')}
-            className="w-full px-3.5 py-2.5 text-sm bg-[#F5F5F1]/60 border border-[#E2E4DF] rounded-lg focus:outline-none focus:border-[#172333] focus:bg-white transition-colors"
+            className="w-full px-3.5 py-2.5 text-sm bg-[#132A4A]/60 border border-[#1E3A5F] rounded-lg focus:outline-none focus:border-[#10B981] focus:bg-[#132A4A] transition-colors"
           />
-          {errors.email && <p className="text-xs text-[#B93832] mt-1">{errors.email.message}</p>}
+          {errors.email && <p className="text-xs text-[#DC2626] mt-1">{errors.email.message}</p>}
         </div>
 
         <div>
-          <label htmlFor="inq-phone" className="block text-xs font-medium text-[#172333] mb-1.5">
+          <label htmlFor="inq-phone" className="block text-xs font-medium text-[#F8FAFC] mb-1.5">
             WhatsApp or Phone Number *
           </label>
           <input
@@ -212,13 +212,13 @@ export const InquiryForm: React.FC<{
             type="tel"
             placeholder="+91 98765 43210"
             {...register('phone')}
-            className="w-full px-3.5 py-2.5 text-sm bg-[#F5F5F1]/60 border border-[#E2E4DF] rounded-lg focus:outline-none focus:border-[#172333] focus:bg-white transition-colors"
+            className="w-full px-3.5 py-2.5 text-sm bg-[#132A4A]/60 border border-[#1E3A5F] rounded-lg focus:outline-none focus:border-[#10B981] focus:bg-[#132A4A] transition-colors"
           />
-          {errors.phone && <p className="text-xs text-[#B93832] mt-1">{errors.phone.message}</p>}
+          {errors.phone && <p className="text-xs text-[#DC2626] mt-1">{errors.phone.message}</p>}
         </div>
 
         <div>
-          <label htmlFor="inq-company" className="block text-xs font-medium text-[#172333] mb-1.5">
+          <label htmlFor="inq-company" className="block text-xs font-medium text-[#F8FAFC] mb-1.5">
             Company or Brand Name
           </label>
           <input
@@ -226,19 +226,19 @@ export const InquiryForm: React.FC<{
             type="text"
             placeholder="Your Brand or Channel"
             {...register('companyName')}
-            className="w-full px-3.5 py-2.5 text-sm bg-[#F5F5F1]/60 border border-[#E2E4DF] rounded-lg focus:outline-none focus:border-[#172333] focus:bg-white transition-colors"
+            className="w-full px-3.5 py-2.5 text-sm bg-[#132A4A]/60 border border-[#1E3A5F] rounded-lg focus:outline-none focus:border-[#10B981] focus:bg-[#132A4A] transition-colors"
           />
-          {errors.companyName && <p className="text-xs text-[#B93832] mt-1">{errors.companyName.message}</p>}
+          {errors.companyName && <p className="text-xs text-[#DC2626] mt-1">{errors.companyName.message}</p>}
         </div>
 
         <div>
-          <label htmlFor="inq-service" className="block text-xs font-medium text-[#172333] mb-1.5">
+          <label htmlFor="inq-service" className="block text-xs font-medium text-[#F8FAFC] mb-1.5">
             Required Service *
           </label>
           <select
             id="inq-service"
             {...register('serviceRequired')}
-            className="w-full px-3.5 py-2.5 text-sm bg-[#F5F5F1]/60 border border-[#E2E4DF] rounded-lg focus:outline-none focus:border-[#172333] focus:bg-white transition-colors"
+            className="w-full px-3.5 py-2.5 text-sm bg-[#132A4A]/60 border border-[#1E3A5F] rounded-lg focus:outline-none focus:border-[#10B981] focus:bg-[#132A4A] transition-colors"
           >
             {serviceOptions.map((opt) => (
               <option key={opt} value={opt}>
@@ -246,17 +246,17 @@ export const InquiryForm: React.FC<{
               </option>
             ))}
           </select>
-          {errors.serviceRequired && <p className="text-xs text-[#B93832] mt-1">{errors.serviceRequired.message}</p>}
+          {errors.serviceRequired && <p className="text-xs text-[#DC2626] mt-1">{errors.serviceRequired.message}</p>}
         </div>
 
         <div>
-          <label htmlFor="inq-budget" className="block text-xs font-medium text-[#172333] mb-1.5">
+          <label htmlFor="inq-budget" className="block text-xs font-medium text-[#F8FAFC] mb-1.5">
             Estimated Budget Range (INR) *
           </label>
           <select
             id="inq-budget"
             {...register('budgetRange')}
-            className="w-full px-3.5 py-2.5 text-sm bg-[#F5F5F1]/60 border border-[#E2E4DF] rounded-lg focus:outline-none focus:border-[#172333] focus:bg-white transition-colors"
+            className="w-full px-3.5 py-2.5 text-sm bg-[#132A4A]/60 border border-[#1E3A5F] rounded-lg focus:outline-none focus:border-[#10B981] focus:bg-[#132A4A] transition-colors"
           >
             {activeBudgetRanges.map((range) => (
               <option key={range} value={range}>
@@ -264,30 +264,30 @@ export const InquiryForm: React.FC<{
               </option>
             ))}
           </select>
-          {errors.budgetRange && <p className="text-xs text-[#B93832] mt-1">{errors.budgetRange.message}</p>}
+          {errors.budgetRange && <p className="text-xs text-[#DC2626] mt-1">{errors.budgetRange.message}</p>}
         </div>
 
         <div>
-          <label htmlFor="inq-deadline" className="block text-xs font-medium text-[#172333] mb-1.5">
+          <label htmlFor="inq-deadline" className="block text-xs font-medium text-[#F8FAFC] mb-1.5">
             Preferred Deadline
           </label>
           <input
             id="inq-deadline"
             type="date"
             {...register('preferredDeadline')}
-            className="w-full px-3.5 py-2.5 text-sm bg-[#F5F5F1]/60 border border-[#E2E4DF] rounded-lg focus:outline-none focus:border-[#172333] focus:bg-white transition-colors"
+            className="w-full px-3.5 py-2.5 text-sm bg-[#132A4A]/60 border border-[#1E3A5F] rounded-lg focus:outline-none focus:border-[#10B981] focus:bg-[#132A4A] transition-colors"
           />
         </div>
 
         <div>
-          <label htmlFor="inq-file" className="block text-xs font-medium text-[#172333] mb-1.5">
+          <label htmlFor="inq-file" className="block text-xs font-medium text-[#F8FAFC] mb-1.5">
             Optional Reference File (Max 15 MB)
           </label>
           <label
             htmlFor="inq-file"
-            className="flex items-center gap-2 w-full px-3.5 py-2 text-sm text-[#6E7785] bg-[#F5F5F1]/60 border border-[#E2E4DF] rounded-lg cursor-pointer hover:border-[#172333] transition-colors truncate"
+            className="flex items-center gap-2 w-full px-3.5 py-2 text-sm text-[#94A3B8] bg-[#132A4A]/60 border border-[#1E3A5F] rounded-lg cursor-pointer hover:border-[#10B981] transition-colors truncate"
           >
-            <Paperclip className="w-4 h-4 shrink-0 text-[#172333]" />
+            <Paperclip className="w-4 h-4 shrink-0 text-[#F8FAFC]" />
             <span className="truncate">{referenceFile ? referenceFile.name : 'Attach brief PDF, image, or reference'}</span>
             <input
               id="inq-file"
@@ -301,7 +301,7 @@ export const InquiryForm: React.FC<{
       </div>
 
       <div>
-        <label htmlFor="inq-description" className="block text-xs font-medium text-[#172333] mb-1.5">
+        <label htmlFor="inq-description" className="block text-xs font-medium text-[#F8FAFC] mb-1.5">
           Project Description & Deliverables Needed *
         </label>
         <textarea
@@ -309,9 +309,9 @@ export const InquiryForm: React.FC<{
           rows={4}
           placeholder="Describe your brand, target platform (YouTube, Instagram, Ad Campaign), number of deliverables, and style references..."
           {...register('description')}
-          className="w-full px-3.5 py-2.5 text-sm bg-[#F5F5F1]/60 border border-[#E2E4DF] rounded-lg focus:outline-none focus:border-[#172333] focus:bg-white transition-colors"
+          className="w-full px-3.5 py-2.5 text-sm bg-[#132A4A]/60 border border-[#1E3A5F] rounded-lg focus:outline-none focus:border-[#10B981] focus:bg-[#132A4A] transition-colors"
         />
-        {errors.description && <p className="text-xs text-[#B93832] mt-1">{errors.description.message}</p>}
+        {errors.description && <p className="text-xs text-[#DC2626] mt-1">{errors.description.message}</p>}
       </div>
 
       <div className="flex items-start gap-2.5">
@@ -319,23 +319,23 @@ export const InquiryForm: React.FC<{
           id="inq-consent"
           type="checkbox"
           {...register('privacyConsent')}
-          className="mt-1 h-4 w-4 rounded border-[#E2E4DF] text-[#172333] focus:ring-[#172333]"
+          className="mt-1 h-4 w-4 rounded border-[#1E3A5F] text-[#F8FAFC] focus:ring-[#10B981]"
         />
-        <label htmlFor="inq-consent" className="text-xs text-[#6E7785] leading-relaxed">
+        <label htmlFor="inq-consent" className="text-xs text-[#94A3B8] leading-relaxed">
           I consent to Prithvi Editify storing my contact and brief details to evaluate and respond to this project inquiry in accordance with the{' '}
-          <Link to="/privacy" className="underline text-[#172333] hover:text-[#F18A45]">
+          <Link to="/privacy" className="underline text-[#F8FAFC] hover:text-[#10B981]">
             Privacy Policy
           </Link>
           . *
         </label>
       </div>
-      {errors.privacyConsent && <p className="text-xs text-[#B93832]">{errors.privacyConsent.message}</p>}
+      {errors.privacyConsent && <p className="text-xs text-[#DC2626]">{errors.privacyConsent.message}</p>}
 
       <div className="pt-2">
         <button
           type="submit"
           disabled={isSubmitting}
-          className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-medium text-white bg-[#172333] hover:bg-[#24364A] rounded-lg transition-colors whitespace-nowrap shrink-0 disabled:opacity-60"
+          className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-medium text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-colors whitespace-nowrap shrink-0 disabled:opacity-60"
         >
           <Send className="w-4 h-4" />
           {isSubmitting ? 'Submitting Brief...' : 'Submit Project Inquiry'}

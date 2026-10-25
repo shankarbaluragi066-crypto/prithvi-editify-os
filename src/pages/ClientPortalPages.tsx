@@ -85,19 +85,19 @@ export const ClientDashboardPage: React.FC = () => {
 
   return (
     <div className="space-y-8">
-      <div className="bg-white border border-[#E2E4DF] rounded-lg p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold text-[#6E7785]">Private Client Portal</p>
-          <h1 className="font-editorial text-2xl sm:text-3xl font-semibold text-[#172333] mt-1">
+          <p className="text-xs font-semibold text-[#94A3B8]">Private Client Portal</p>
+          <h1 className="font-editorial text-2xl sm:text-3xl font-semibold text-[#F8FAFC] mt-1">
             Welcome, {profile?.displayName || 'Client'}
           </h1>
-          <p className="text-xs text-[#6E7785] mt-1">
-            Portal UID: <span className="font-mono text-[#172333] select-all">{user?.uid}</span> — Share this UID with Shankar Baluragi if you need an existing project linked to your account.
+          <p className="text-xs text-[#94A3B8] mt-1">
+            Portal UID: <span className="font-mono text-[#F8FAFC] select-all">{user?.uid}</span> — Share this UID with Shankar Baluragi if you need an existing project linked to your account.
           </p>
         </div>
         <Link
           to="/contact"
-          className="px-4 py-2.5 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg whitespace-nowrap shrink-0"
+          className="px-4 py-2.5 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg whitespace-nowrap shrink-0"
         >
           Submit New Brief
         </Link>
@@ -105,45 +105,45 @@ export const ClientDashboardPage: React.FC = () => {
 
       {/* Summary Metric Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white border border-[#E2E4DF] rounded-lg p-5">
-          <p className="text-xs text-[#6E7785]">Active Projects</p>
-          <p className="text-2xl font-mono font-semibold text-[#172333] mt-1 tabular-nums">
+        <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-5">
+          <p className="text-xs text-[#94A3B8]">Active Projects</p>
+          <p className="text-2xl font-mono font-semibold text-[#F8FAFC] mt-1 tabular-nums">
             {activeProjects.length}
           </p>
         </div>
-        <div className="bg-white border border-[#E2E4DF] rounded-lg p-5">
-          <p className="text-xs text-[#6E7785]">Pending Approvals & Quotes</p>
-          <p className="text-2xl font-mono font-semibold text-[#A96518] mt-1 tabular-nums">
+        <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-5">
+          <p className="text-xs text-[#94A3B8]">Pending Approvals & Quotes</p>
+          <p className="text-2xl font-mono font-semibold text-[#D97706] mt-1 tabular-nums">
             {pendingApprovals.length + pendingQuotations.length}
           </p>
         </div>
-        <div className="bg-white border border-[#E2E4DF] rounded-lg p-5">
-          <p className="text-xs text-[#6E7785]">Unpaid Invoices</p>
-          <p className="text-2xl font-mono font-semibold text-[#B93832] mt-1 tabular-nums">
+        <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-5">
+          <p className="text-xs text-[#94A3B8]">Unpaid Invoices</p>
+          <p className="text-2xl font-mono font-semibold text-[#DC2626] mt-1 tabular-nums">
             {unpaidInvoices.length}
           </p>
         </div>
-        <div className="bg-white border border-[#E2E4DF] rounded-lg p-5">
-          <p className="text-xs text-[#6E7785]">Paid Invoices</p>
-          <p className="text-2xl font-mono font-semibold text-[#26734D] mt-1 tabular-nums">
+        <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-5">
+          <p className="text-xs text-[#94A3B8]">Paid Invoices</p>
+          <p className="text-2xl font-mono font-semibold text-[#16A34A] mt-1 tabular-nums">
             {paidInvoices.length}
           </p>
         </div>
       </div>
 
       {pendingQuotations.length > 0 && (
-        <div className="bg-white border border-[#F18A45]/40 rounded-lg p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="bg-[#0D1F38] border border-[#10B981]/40 rounded-lg p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold text-[#A96518]">
+            <p className="text-xs font-semibold text-[#D97706]">
               Action Required · {pendingQuotations.length} Quotation / Estimate Awaiting Approval
             </p>
-            <p className="text-xs text-[#6E7785] mt-0.5">
+            <p className="text-xs text-[#94A3B8] mt-0.5">
               Review scope, line items, and approve your project estimate or quotation in the billing portal.
             </p>
           </div>
           <Link
             to="/portal/invoices"
-            className="px-4 py-2 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg whitespace-nowrap shrink-0"
+            className="px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg whitespace-nowrap shrink-0"
           >
             Review Quotations & Estimates →
           </Link>
@@ -151,27 +151,27 @@ export const ClientDashboardPage: React.FC = () => {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white border border-[#E2E4DF] rounded-lg p-6">
+        <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base font-semibold text-[#172333]">Recent Project Updates</h2>
-            <Link to="/portal/projects" className="text-xs font-semibold text-[#172333] hover:text-[#F18A45]">
+            <h2 className="text-base font-semibold text-[#F8FAFC]">Recent Project Updates</h2>
+            <Link to="/portal/projects" className="text-xs font-semibold text-[#F8FAFC] hover:text-[#10B981]">
               All Projects →
             </Link>
           </div>
           {loading ? (
-            <p className="text-xs text-[#6E7785]">Loading projects...</p>
+            <p className="text-xs text-[#94A3B8]">Loading projects...</p>
           ) : projects.length === 0 ? (
-            <p className="text-xs text-[#6E7785] py-6">
+            <p className="text-xs text-[#94A3B8] py-6">
               No projects are currently assigned to your account.
             </p>
           ) : (
-            <div className="divide-y divide-[#E2E4DF]">
+            <div className="divide-y divide-[#1E3A5F]">
               {projects.map((p) => (
                 <div key={p.id} className="py-3.5 space-y-1">
                   <div className="flex items-center justify-between">
                     <Link
                       to={`/portal/projects/${p.id}`}
-                      className="text-sm font-semibold text-[#172333] hover:text-[#F18A45]"
+                      className="text-sm font-semibold text-[#F8FAFC] hover:text-[#10B981]"
                     >
                       {p.title}
                     </Link>
@@ -179,34 +179,34 @@ export const ClientDashboardPage: React.FC = () => {
                       {p.progress}% · {p.status}
                     </span>
                   </div>
-                  <p className="text-xs text-[#6E7785]">{p.latestUpdate}</p>
-                  <p className="text-[11px] font-mono text-[#6E7785]">Deadline: {p.deadline}</p>
+                  <p className="text-xs text-[#94A3B8]">{p.latestUpdate}</p>
+                  <p className="text-[11px] font-mono text-[#94A3B8]">Deadline: {p.deadline}</p>
                 </div>
               ))}
             </div>
           )}
         </div>
 
-        <div className="bg-white border border-[#E2E4DF] rounded-lg p-6">
+        <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base font-semibold text-[#172333]">Latest Deliverables</h2>
-            <Link to="/portal/files" className="text-xs font-semibold text-[#172333] hover:text-[#F18A45]">
+            <h2 className="text-base font-semibold text-[#F8FAFC]">Latest Deliverables</h2>
+            <Link to="/portal/files" className="text-xs font-semibold text-[#F8FAFC] hover:text-[#10B981]">
               All Files →
             </Link>
           </div>
           {files.length === 0 ? (
-            <p className="text-xs text-[#6E7785] py-6">
+            <p className="text-xs text-[#94A3B8] py-6">
               No deliverable files have been uploaded to your projects yet.
             </p>
           ) : (
-            <div className="divide-y divide-[#E2E4DF]">
+            <div className="divide-y divide-[#1E3A5F]">
               {files.slice(0, 5).map((f) => (
                 <div key={f.id} className="py-3 flex items-center justify-between text-xs">
                   <div>
-                    <p className="font-semibold text-[#172333]">
+                    <p className="font-semibold text-[#F8FAFC]">
                       {f.fileName} ({f.versionLabel})
                     </p>
-                    <p className="text-[#6E7785]">
+                    <p className="text-[#94A3B8]">
                       {f.category} · {formatFileSize(f.fileSize)}
                     </p>
                   </div>
@@ -215,7 +215,7 @@ export const ClientDashboardPage: React.FC = () => {
                       href={f.downloadUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="font-semibold text-[#172333] hover:text-[#F18A45]"
+                      className="font-semibold text-[#F8FAFC] hover:text-[#10B981]"
                     >
                       Download →
                     </a>
@@ -245,16 +245,16 @@ export const ClientProjectsPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-editorial text-2xl font-semibold text-[#172333]">My Projects</h1>
-        <p className="text-xs text-[#6E7785] mt-1">
+        <h1 className="font-editorial text-2xl font-semibold text-[#F8FAFC]">My Projects</h1>
+        <p className="text-xs text-[#94A3B8] mt-1">
           View project progress, deadlines, deliverables, and leave revision feedback.
         </p>
       </div>
 
       {projects.length === 0 ? (
-        <div className="bg-white border border-[#E2E4DF] rounded-lg p-10 text-center space-y-3">
-          <p className="text-sm font-semibold text-[#172333]">No active projects found</p>
-          <p className="text-xs text-[#6E7785]">
+        <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-10 text-center space-y-3">
+          <p className="text-sm font-semibold text-[#F8FAFC]">No active projects found</p>
+          <p className="text-xs text-[#94A3B8]">
             Submit a project brief or ask Shankar Baluragi to link your UID ({user?.uid}).
           </p>
         </div>
@@ -263,32 +263,32 @@ export const ClientProjectsPage: React.FC = () => {
           {projects.map((p) => (
             <div
               key={p.id}
-              className="bg-white border border-[#E2E4DF] rounded-lg p-6 flex flex-col justify-between space-y-4"
+              className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 flex flex-col justify-between space-y-4"
             >
               <div>
-                <div className="flex items-center justify-between text-xs text-[#6E7785] mb-2">
+                <div className="flex items-center justify-between text-xs text-[#94A3B8] mb-2">
                   <span>{p.serviceType}</span>
                   <span>Due {p.deadline}</span>
                 </div>
-                <h2 className="text-lg font-semibold text-[#172333]">{p.title}</h2>
-                <p className="text-xs text-[#6E7785] mt-2 leading-relaxed">{p.latestUpdate}</p>
+                <h2 className="text-lg font-semibold text-[#F8FAFC]">{p.title}</h2>
+                <p className="text-xs text-[#94A3B8] mt-2 leading-relaxed">{p.latestUpdate}</p>
               </div>
 
-              <div className="space-y-3 pt-4 border-t border-[#E2E4DF]">
+              <div className="space-y-3 pt-4 border-t border-[#1E3A5F]">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-medium text-[#172333]">Status: {p.status}</span>
+                  <span className="font-medium text-[#F8FAFC]">Status: {p.status}</span>
                   <span className="font-mono font-semibold tabular-nums">{p.progress}%</span>
                 </div>
-                <div className="w-full h-2 bg-[#F5F5F1] rounded-full overflow-hidden">
+                <div className="w-full h-2 bg-[#132A4A] rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-[#F18A45]"
+                    className="h-full bg-[#10B981]"
                     style={{ width: `${Math.min(100, Math.max(0, p.progress))}%` }}
                   />
                 </div>
                 <div className="pt-1 flex justify-end">
                   <Link
                     to={`/portal/projects/${p.id}`}
-                    className="text-xs font-semibold text-[#172333] hover:text-[#F18A45]"
+                    className="text-xs font-semibold text-[#F8FAFC] hover:text-[#10B981]"
                   >
                     Open Project Workspace →
                   </Link>
@@ -337,7 +337,7 @@ export const ClientProjectDetailsPage: React.FC = () => {
 
   if (!project) {
     return (
-      <div className="text-xs text-[#6E7785] py-12">
+      <div className="text-xs text-[#94A3B8] py-12">
         Project not found or does not belong to your client account.
       </div>
     );
@@ -382,28 +382,28 @@ export const ClientProjectDetailsPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <Link to="/portal/projects" className="text-xs text-[#6E7785] hover:text-[#172333]">
+        <Link to="/portal/projects" className="text-xs text-[#94A3B8] hover:text-[#F8FAFC]">
           ← Back to My Projects
         </Link>
-        <h1 className="font-editorial text-2xl font-semibold text-[#172333] mt-1">{project.title}</h1>
-        <p className="text-xs text-[#6E7785]">
-          Status: <span className="font-semibold text-[#172333]">{project.status}</span> · Progress:{' '}
+        <h1 className="font-editorial text-2xl font-semibold text-[#F8FAFC] mt-1">{project.title}</h1>
+        <p className="text-xs text-[#94A3B8]">
+          Status: <span className="font-semibold text-[#F8FAFC]">{project.status}</span> · Progress:{' '}
           <span className="font-mono">{project.progress}%</span> · Deadline: {project.deadline}
         </p>
       </div>
 
-      <div className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-4">
-        <h2 className="text-sm font-semibold text-[#172333]">Latest Studio Update & Brief</h2>
-        <p className="text-xs text-[#172333] bg-[#F5F5F1] p-3.5 rounded-lg">{project.latestUpdate}</p>
+      <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 space-y-4">
+        <h2 className="text-sm font-semibold text-[#F8FAFC]">Latest Studio Update & Brief</h2>
+        <p className="text-xs text-[#F8FAFC] bg-[#132A4A] p-3.5 rounded-lg">{project.latestUpdate}</p>
         {project.brief && (
-          <p className="text-xs text-[#6E7785] leading-relaxed">
-            <span className="font-semibold text-[#172333]">Scope Brief:</span> {project.brief}
+          <p className="text-xs text-[#94A3B8] leading-relaxed">
+            <span className="font-semibold text-[#F8FAFC]">Scope Brief:</span> {project.brief}
           </p>
         )}
 
         {!['Completed', 'Cancelled'].includes(project.status) && (
-          <div className="pt-4 border-t border-[#E2E4DF] space-y-3">
-            <label className="block text-xs font-semibold text-[#172333]">
+          <div className="pt-4 border-t border-[#1E3A5F] space-y-3">
+            <label className="block text-xs font-semibold text-[#F8FAFC]">
               Submit Review Decision or Revision Notes
             </label>
             <input
@@ -411,20 +411,20 @@ export const ClientProjectDetailsPage: React.FC = () => {
               value={revisionNote}
               onChange={(e) => setRevisionNote(e.target.value)}
               placeholder="Optional note regarding revision details or final approval..."
-              className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             />
             <div className="flex flex-wrap gap-3">
               <button
                 type="button"
                 onClick={() => handleAction('Revision Requested')}
-                className="px-4 py-2 text-xs font-semibold text-[#172333] bg-[#F5F5F1] hover:bg-[#E2E4DF] rounded-lg"
+                className="px-4 py-2 text-xs font-semibold text-[#F8FAFC] bg-[#132A4A] hover:bg-[#1E3A5F] rounded-lg"
               >
                 Request Revision
               </button>
               <button
                 type="button"
                 onClick={() => handleAction('Completed')}
-                className="px-4 py-2 text-xs font-semibold text-white bg-[#26734D] hover:bg-[#1e5c3d] rounded-lg"
+                className="px-4 py-2 text-xs font-semibold text-white bg-[#16A34A] hover:bg-[#15803D] rounded-lg"
               >
                 Approve Final Deliverables
               </button>
@@ -435,14 +435,14 @@ export const ClientProjectDetailsPage: React.FC = () => {
 
       {/* Deliverables & Milestones */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white border border-[#E2E4DF] rounded-lg p-6">
-          <h3 className="text-sm font-semibold text-[#172333] mb-3">
+        <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6">
+          <h3 className="text-sm font-semibold text-[#F8FAFC] mb-3">
             Client-Visible Milestones ({tasks.length})
           </h3>
           {tasks.length === 0 ? (
-            <p className="text-xs text-[#6E7785]">No milestones listed yet.</p>
+            <p className="text-xs text-[#94A3B8]">No milestones listed yet.</p>
           ) : (
-            <div className="divide-y divide-[#E2E4DF] text-xs">
+            <div className="divide-y divide-[#1E3A5F] text-xs">
               {tasks.map((t) => (
                 <div key={t.id} className="py-2.5 flex justify-between">
                   <span>{t.title}</span>
@@ -453,43 +453,43 @@ export const ClientProjectDetailsPage: React.FC = () => {
           )}
         </div>
 
-        <div className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-3">
+        <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 space-y-3">
           {(() => {
             const unlockStatus = checkProjectMasterUnlockStatus(project.id, invoices);
             const projectPins = getProofingPins(project.id);
             return (
               <>
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h3 className="text-sm font-semibold text-[#172333]">
+                  <h3 className="text-sm font-semibold text-[#F8FAFC]">
                     Project Deliverables & Visual Proofing ({files.length})
                   </h3>
                   <span
                     className={`px-2.5 py-0.5 rounded text-[11px] font-semibold ${
                       unlockStatus.isUnlocked
-                        ? 'bg-[#26734D]/15 text-[#26734D]'
-                        : 'bg-[#F18A45]/20 text-[#B85D1D]'
+                        ? 'bg-[#16A34A]/15 text-[#16A34A]'
+                        : 'bg-[#10B981]/20 text-[#0EA5E9]'
                     }`}
                   >
                     {unlockStatus.isUnlocked ? 'High-Res Master Unlocked' : 'Watermarked Preview Mode'}
                   </span>
                 </div>
-                <p className="text-[11px] text-[#6E7785] bg-[#F5F5F1] p-2.5 rounded border border-[#E2E4DF]">
+                <p className="text-[11px] text-[#94A3B8] bg-[#132A4A] p-2.5 rounded border border-[#1E3A5F]">
                   {unlockStatus.reason}. Click <strong>Proof & Pin Note</strong> on any image or video to drop coordinate/timestamp revision pins ({projectPins.length} pins recorded).
                 </p>
                 {files.length === 0 ? (
-                  <p className="text-xs text-[#6E7785]">No files uploaded for this project yet.</p>
+                  <p className="text-xs text-[#94A3B8]">No files uploaded for this project yet.</p>
                 ) : (
-                  <div className="divide-y divide-[#E2E4DF] text-xs">
+                  <div className="divide-y divide-[#1E3A5F] text-xs">
                     {files.map((f) => {
                       const filePins = getProofingPins(project.id, f.id);
                       const isLockedPreview = !unlockStatus.isUnlocked && f.category !== 'Reference';
                       return (
                         <div key={f.id} className="py-2.5 flex items-center justify-between gap-3">
                           <div className="min-w-0">
-                            <span className="font-semibold text-[#172333] block truncate">
+                            <span className="font-semibold text-[#F8FAFC] block truncate">
                               {f.fileName} ({f.versionLabel})
                             </span>
-                            <span className="text-[11px] text-[#6E7785]">
+                            <span className="text-[11px] text-[#94A3B8]">
                               {f.category} · {formatFileSize(f.fileSize)}
                               {filePins.length > 0 ? ` · ${filePins.length} Pin Notes` : ''}
                             </span>
@@ -518,9 +518,9 @@ export const ClientProjectDetailsPage: React.FC = () => {
                                     masterDownloadLocked: isLockedPreview,
                                   })
                                 }
-                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-[#172333] text-white font-semibold hover:bg-[#24364A]"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-[#132A4A] text-[#F8FAFC] font-semibold hover:bg-[#132A4A]"
                               >
-                                <Eye className="w-3.5 h-3.5 text-[#F18A45]" />
+                                <Eye className="w-3.5 h-3.5 text-[#10B981]" />
                                 <span>Proof & Pin Note</span>
                               </button>
                               {!isLockedPreview ? (
@@ -535,14 +535,14 @@ export const ClientProjectDetailsPage: React.FC = () => {
                                     });
                                     if (url) window.open(url, '_blank', 'noopener,noreferrer');
                                   }}
-                                  className="font-semibold text-[#26734D] hover:underline"
+                                  className="font-semibold text-[#16A34A] hover:underline"
                                 >
                                   Download Master →
                                 </button>
                               ) : (
                                 <Link
                                   to="/portal/invoices"
-                                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#A96518] hover:underline"
+                                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#D97706] hover:underline"
                                   title="Settle project invoice balance to ₹0 to unlock high-res master download"
                                 >
                                   <Lock className="w-3 h-3" />
@@ -563,13 +563,13 @@ export const ClientProjectDetailsPage: React.FC = () => {
       </div>
 
       {/* Project Comments */}
-      <div className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-4">
-        <h3 className="text-sm font-semibold text-[#172333]">Project Discussion Thread</h3>
+      <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 space-y-4">
+        <h3 className="text-sm font-semibold text-[#F8FAFC]">Project Discussion Thread</h3>
         <div className="space-y-2.5 max-h-72 overflow-y-auto">
           {messages.map((m) => (
-            <div key={m.id} className="p-3 bg-[#F5F5F1] rounded-lg text-xs">
-              <p className="font-semibold text-[#172333]">
-                {m.senderName} · <span className="text-[#6E7785] font-normal">{formatDate(m.createdAt)}</span>
+            <div key={m.id} className="p-3 bg-[#132A4A] rounded-lg text-xs">
+              <p className="font-semibold text-[#F8FAFC]">
+                {m.senderName} · <span className="text-[#94A3B8] font-normal">{formatDate(m.createdAt)}</span>
               </p>
               <p className="mt-1">{m.content}</p>
             </div>
@@ -581,11 +581,11 @@ export const ClientProjectDetailsPage: React.FC = () => {
             value={commentText}
             onChange={(e) => setCommentText(e.target.value)}
             placeholder="Write a comment or feedback note..."
-            className="flex-1 px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+            className="flex-1 px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
           />
           <button
             type="submit"
-            className="px-4 py-2 text-xs font-semibold text-white bg-[#172333] rounded-lg"
+            className="px-4 py-2 text-xs font-semibold text-white bg-[#040D1A] rounded-lg"
           >
             Send
           </button>
@@ -639,20 +639,20 @@ export const ClientTimelinePage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="font-editorial text-2xl font-semibold text-[#172333]">Project Timeline & Milestones</h1>
-      <div className="bg-white border border-[#E2E4DF] rounded-lg divide-y divide-[#E2E4DF]">
+      <h1 className="font-editorial text-2xl font-semibold text-[#F8FAFC]">Project Timeline & Milestones</h1>
+      <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg divide-y divide-[#1E3A5F]">
         {tasks.length === 0 ? (
-          <div className="p-8 text-center text-xs text-[#6E7785]">
+          <div className="p-8 text-center text-xs text-[#94A3B8]">
             No client-visible tasks or milestones scheduled yet.
           </div>
         ) : (
           tasks.map((t) => (
             <div key={t.id} className="p-4 flex items-center justify-between text-xs">
               <div>
-                <p className="font-semibold text-[#172333]">{t.title}</p>
-                <p className="text-[#6E7785]">Due: {t.dueDate}</p>
+                <p className="font-semibold text-[#F8FAFC]">{t.title}</p>
+                <p className="text-[#94A3B8]">Due: {t.dueDate}</p>
               </div>
-              <span className="font-semibold text-[#172333]">{t.status}</span>
+              <span className="font-semibold text-[#F8FAFC]">{t.status}</span>
             </div>
           ))
         )}
@@ -689,17 +689,17 @@ export const ClientFilesPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-editorial text-2xl font-semibold text-[#172333]">
+        <h1 className="font-editorial text-2xl font-semibold text-[#F8FAFC]">
           Deliverable Files & Previews
         </h1>
-        <p className="text-xs text-[#6E7785] mt-1">
+        <p className="text-xs text-[#94A3B8] mt-1">
           Inspect design proofs, watch video previews, and download final deliverables via authenticated signed links.
         </p>
       </div>
 
-      <div className="bg-white border border-[#E2E4DF] rounded-lg divide-y divide-[#E2E4DF]">
+      <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg divide-y divide-[#1E3A5F]">
         {files.length === 0 ? (
-          <div className="p-8 text-center text-xs text-[#6E7785]">
+          <div className="p-8 text-center text-xs text-[#94A3B8]">
             No deliverable files available for download yet.
           </div>
         ) : (
@@ -707,25 +707,25 @@ export const ClientFilesPage: React.FC = () => {
             <div key={f.id} className="p-4 flex flex-wrap items-center justify-between gap-4 text-xs">
               <div>
                 <div className="flex items-center gap-2">
-                  <p className="font-semibold text-[#172333]">
+                  <p className="font-semibold text-[#F8FAFC]">
                     {f.fileName} ({f.versionLabel})
                   </p>
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded">
-                    <Lock className="w-2.5 h-2.5 text-[#F18A45]" />
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-mono bg-[#132A4A] border border-[#1E3A5F] rounded">
+                    <Lock className="w-2.5 h-2.5 text-[#10B981]" />
                     Private Vault
                   </span>
                 </div>
-                <p className="text-[#6E7785] mt-0.5">
+                <p className="text-[#94A3B8] mt-0.5">
                   {f.category} · {formatFileSize(f.fileSize)} · Uploaded {formatDate(f.createdAt)}
                 </p>
-                {f.description && <p className="text-[#6E7785] mt-1">{f.description}</p>}
+                {f.description && <p className="text-[#94A3B8] mt-1">{f.description}</p>}
               </div>
               {(f.downloadUrl || f.storagePath) && (
                 <div className="flex items-center gap-2.5">
                   <button
                     type="button"
                     onClick={() => setPreviewItem(previewGalleryItems[idx])}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 font-semibold text-[#172333] bg-[#F5F5F1] hover:bg-[#E2E4DF] rounded-md"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 font-semibold text-[#F8FAFC] bg-[#132A4A] hover:bg-[#1E3A5F] rounded-md"
                   >
                     <Eye className="w-3.5 h-3.5" />
                     <span>Preview</span>
@@ -741,7 +741,7 @@ export const ClientFilesPage: React.FC = () => {
                       });
                       if (signed) window.open(signed, '_blank', 'noopener,noreferrer');
                     }}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-md"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-md"
                   >
                     <Download className="w-3.5 h-3.5" />
                     <span>Download File</span>
@@ -852,24 +852,24 @@ export const ClientInvoicesPage: React.FC = () => {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="font-editorial text-2xl font-semibold text-[#172333] no-print">
+        <h1 className="font-editorial text-2xl font-semibold text-[#F8FAFC] no-print">
           My Quotations & Invoices (INR)
         </h1>
-        <p className="text-xs text-[#6E7785] mt-1 no-print">
+        <p className="text-xs text-[#94A3B8] mt-1 no-print">
           Review and approve project estimates, scan dynamic UPI QR codes, submit UTR payment proofs, and print official PDF receipts.
         </p>
       </div>
 
       {/* Selected Quotation Printable Preview */}
       {selectedQuote && (
-        <div className="bg-white border border-[#172333] rounded-lg p-8 space-y-5">
-          <div className="flex justify-between border-b border-[#E2E4DF] pb-4">
+        <div className="bg-[#0D1F38] border border-[#040D1A] rounded-lg p-8 space-y-5">
+          <div className="flex justify-between border-b border-[#1E3A5F] pb-4">
             <div>
-              <p className="text-[11px] font-semibold text-[#F18A45]">PROJECT QUOTATION · SAC 9983</p>
-              <h2 className="font-editorial text-xl font-semibold text-[#172333]">
+              <p className="text-[11px] font-semibold text-[#10B981]">PROJECT QUOTATION · SAC 9983</p>
+              <h2 className="font-editorial text-xl font-semibold text-[#F8FAFC]">
                 {selectedQuote.projectTitle}
               </h2>
-              <p className="text-xs text-[#6E7785]">
+              <p className="text-xs text-[#94A3B8]">
                 Prepared for {selectedQuote.clientName} · Timeline: {selectedQuote.estimatedTimeline}
               </p>
             </div>
@@ -880,20 +880,20 @@ export const ClientInvoicesPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-[#F5F5F1] rounded-lg text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-[#132A4A] rounded-lg text-xs">
             <div>
-              <p className="font-semibold text-[#172333]">Scope Summary</p>
-              <p className="text-[#6E7785] mt-1">{selectedQuote.scopeSummary || '—'}</p>
+              <p className="font-semibold text-[#F8FAFC]">Scope Summary</p>
+              <p className="text-[#94A3B8] mt-1">{selectedQuote.scopeSummary || '—'}</p>
             </div>
             <div>
-              <p className="font-semibold text-[#172333]">Deliverables</p>
-              <p className="text-[#6E7785] mt-1">{selectedQuote.deliverables || '—'}</p>
+              <p className="font-semibold text-[#F8FAFC]">Deliverables</p>
+              <p className="text-[#94A3B8] mt-1">{selectedQuote.deliverables || '—'}</p>
             </div>
           </div>
 
           <div className="space-y-2 text-xs">
             {selectedQuote.lineItems.map((li, i) => (
-              <div key={i} className="flex justify-between py-1.5 border-b border-[#E2E4DF]">
+              <div key={i} className="flex justify-between py-1.5 border-b border-[#1E3A5F]">
                 <span>
                   {li.description} ({li.quantity} × {formatINR(li.unitPrice)})
                 </span>
@@ -914,7 +914,7 @@ export const ClientInvoicesPage: React.FC = () => {
             compact
           />
 
-          <p className="text-xs text-[#6E7785]">{selectedQuote.termsAndConditions}</p>
+          <p className="text-xs text-[#94A3B8]">{selectedQuote.termsAndConditions}</p>
 
           <div className="flex flex-wrap gap-3 no-print">
             {selectedQuote.status === 'Sent' && (
@@ -922,14 +922,14 @@ export const ClientInvoicesPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => handleDecisionOnQuote(selectedQuote, 'Accepted')}
-                  className="px-4 py-2 text-xs font-semibold text-white bg-[#26734D] hover:bg-[#1e5c3d] rounded-lg"
+                  className="px-4 py-2 text-xs font-semibold text-white bg-[#16A34A] hover:bg-[#15803D] rounded-lg"
                 >
                   Approve & Accept Quotation
                 </button>
                 <button
                   type="button"
                   onClick={() => handleDecisionOnQuote(selectedQuote, 'Rejected')}
-                  className="px-4 py-2 text-xs font-semibold text-[#B93832] bg-[#B93832]/10 rounded-lg"
+                  className="px-4 py-2 text-xs font-semibold text-[#DC2626] bg-[#DC2626]/10 rounded-lg"
                 >
                   Decline Quotation
                 </button>
@@ -938,14 +938,14 @@ export const ClientInvoicesPage: React.FC = () => {
             <button
               type="button"
               onClick={() => window.print()}
-              className="px-4 py-2 text-xs font-semibold text-white bg-[#172333] rounded-lg"
+              className="px-4 py-2 text-xs font-semibold text-white bg-[#040D1A] rounded-lg"
             >
               Print / Save PDF
             </button>
             <button
               type="button"
               onClick={() => setSelectedQuote(null)}
-              className="px-4 py-2 text-xs font-semibold bg-[#F5F5F1] rounded-lg"
+              className="px-4 py-2 text-xs font-semibold bg-[#132A4A] rounded-lg"
             >
               Close
             </button>
@@ -955,13 +955,13 @@ export const ClientInvoicesPage: React.FC = () => {
 
       {/* Client Quotations Table (when any exist) */}
       {quotations.length > 0 && (
-        <div className="bg-white border border-[#E2E4DF] rounded-lg overflow-x-auto no-print">
-          <div className="px-4 py-3 border-b border-[#E2E4DF]">
-            <h2 className="text-sm font-semibold text-[#172333]">Project Quotations & Estimates</h2>
+        <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg overflow-x-auto no-print">
+          <div className="px-4 py-3 border-b border-[#1E3A5F]">
+            <h2 className="text-sm font-semibold text-[#F8FAFC]">Project Quotations & Estimates</h2>
           </div>
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-[#E2E4DF] text-[11px] font-semibold text-[#6E7785]">
+              <tr className="border-b border-[#1E3A5F] text-[11px] font-semibold text-[#94A3B8]">
                 <th className="py-3 px-4">Document #</th>
                 <th className="py-3 px-4">Type</th>
                 <th className="py-3 px-4">Project</th>
@@ -971,7 +971,7 @@ export const ClientInvoicesPage: React.FC = () => {
                 <th className="py-3 px-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#E2E4DF] text-xs">
+            <tbody className="divide-y divide-[#1E3A5F] text-xs">
               {quotations.map((q) => {
                 const docType = inferQuotationDocumentType(q);
                 return (
@@ -981,12 +981,12 @@ export const ClientInvoicesPage: React.FC = () => {
                       {q.version && q.version > 1 ? ` (v${q.version})` : ''}
                     </td>
                     <td className="py-3.5 px-4">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-[#F5F5F1] text-[#172333]">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-[#132A4A] text-[#F8FAFC]">
                         {docType}
                       </span>
                     </td>
                     <td className="py-3.5 px-4">{q.projectTitle}</td>
-                    <td className="py-3.5 px-4 font-mono text-[#6E7785]">{q.expiryDate}</td>
+                    <td className="py-3.5 px-4 font-mono text-[#94A3B8]">{q.expiryDate}</td>
                     <td className="py-3.5 px-4 font-semibold">{q.status}</td>
                     <td className="py-3.5 px-4 text-right font-mono font-semibold tabular-nums">
                       {formatINR(q.total)}
@@ -996,7 +996,7 @@ export const ClientInvoicesPage: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => handleDecisionOnQuote(q, 'Accepted')}
-                          className="font-semibold text-[#26734D] hover:underline"
+                          className="font-semibold text-[#16A34A] hover:underline"
                         >
                           Approve {docType}
                         </button>
@@ -1004,7 +1004,7 @@ export const ClientInvoicesPage: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setSelectedQuote(q)}
-                        className="font-semibold text-[#172333] hover:text-[#F18A45]"
+                        className="font-semibold text-[#F8FAFC] hover:text-[#10B981]"
                       >
                         Inspect / Print →
                       </button>
@@ -1018,12 +1018,12 @@ export const ClientInvoicesPage: React.FC = () => {
       )}
 
       {selected && (
-        <div className="bg-white border border-[#172333] rounded-lg p-8 space-y-5">
-          <div className="flex justify-between border-b border-[#E2E4DF] pb-4">
+        <div className="bg-[#0D1F38] border border-[#040D1A] rounded-lg p-8 space-y-5">
+          <div className="flex justify-between border-b border-[#1E3A5F] pb-4">
             <div>
-              <p className="text-[11px] font-semibold text-[#F18A45]">OFFICIAL TAX / STUDIO INVOICE · SAC 9983</p>
+              <p className="text-[11px] font-semibold text-[#10B981]">OFFICIAL TAX / STUDIO INVOICE · SAC 9983</p>
               <h2 className="font-editorial text-xl font-semibold">Prithvi Editify Invoice</h2>
-              <p className="text-xs text-[#6E7785]">{selected.projectTitle}</p>
+              <p className="text-xs text-[#94A3B8]">{selected.projectTitle}</p>
             </div>
             <div className="text-right font-mono text-xs">
               <p className="text-base font-semibold">{selected.invoiceNumber}</p>
@@ -1031,14 +1031,14 @@ export const ClientInvoicesPage: React.FC = () => {
               <p className="font-sans font-semibold mt-0.5">Status: {selected.status}</p>
             </div>
           </div>
-          <p className="text-xs text-[#172333]">{selected.itemsSummary}</p>
-          <div className="flex flex-wrap justify-between gap-4 text-sm font-mono font-semibold pt-3 border-t border-[#E2E4DF]">
+          <p className="text-xs text-[#F8FAFC]">{selected.itemsSummary}</p>
+          <div className="flex flex-wrap justify-between gap-4 text-sm font-mono font-semibold pt-3 border-t border-[#1E3A5F]">
             <span>Subtotal: {formatINR(selected.subtotal)}</span>
             {selected.taxRate > 0 && (
               <span>GST/Tax ({selected.taxRate}%): {formatINR(selected.taxAmount)}</span>
             )}
             <span>Total: {formatINR(selected.total)}</span>
-            <span className={selected.balanceDue > 0 ? 'text-[#B93832]' : 'text-[#26734D]'}>
+            <span className={selected.balanceDue > 0 ? 'text-[#DC2626]' : 'text-[#16A34A]'}>
               Balance Due: {formatINR(selected.balanceDue)}
             </span>
           </div>
@@ -1049,7 +1049,7 @@ export const ClientInvoicesPage: React.FC = () => {
             referenceNumber={selected.invoiceNumber}
           />
 
-          <p className="text-xs text-[#6E7785]">{selected.paymentInstructions}</p>
+          <p className="text-xs text-[#94A3B8]">{selected.paymentInstructions}</p>
           <div className="flex flex-wrap gap-3 no-print">
             {selected.balanceDue > 0 && (
               <button
@@ -1064,7 +1064,7 @@ export const ClientInvoicesPage: React.FC = () => {
                     notes: '',
                   });
                 }}
-                className="px-4 py-2 text-xs font-semibold text-white bg-[#26734D] hover:bg-[#1e5c3d] rounded-lg"
+                className="px-4 py-2 text-xs font-semibold text-white bg-[#16A34A] hover:bg-[#15803D] rounded-lg"
               >
                 Submit UTR / Payment Proof
               </button>
@@ -1072,14 +1072,14 @@ export const ClientInvoicesPage: React.FC = () => {
             <button
               type="button"
               onClick={() => window.print()}
-              className="px-4 py-2 text-xs font-semibold text-white bg-[#172333] rounded-lg"
+              className="px-4 py-2 text-xs font-semibold text-white bg-[#040D1A] rounded-lg"
             >
               Print / Save PDF
             </button>
             <button
               type="button"
               onClick={() => setSelected(null)}
-              className="px-4 py-2 text-xs font-semibold bg-[#F5F5F1] rounded-lg"
+              className="px-4 py-2 text-xs font-semibold bg-[#132A4A] rounded-lg"
             >
               Close
             </button>
@@ -1087,13 +1087,13 @@ export const ClientInvoicesPage: React.FC = () => {
         </div>
       )}
 
-      <div className="bg-white border border-[#E2E4DF] rounded-lg overflow-x-auto no-print">
-        <div className="px-4 py-3 border-b border-[#E2E4DF]">
-          <h2 className="text-sm font-semibold text-[#172333]">Official Invoices</h2>
+      <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg overflow-x-auto no-print">
+        <div className="px-4 py-3 border-b border-[#1E3A5F]">
+          <h2 className="text-sm font-semibold text-[#F8FAFC]">Official Invoices</h2>
         </div>
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="border-b border-[#E2E4DF] text-[11px] font-semibold text-[#6E7785]">
+            <tr className="border-b border-[#1E3A5F] text-[11px] font-semibold text-[#94A3B8]">
               <th className="py-3 px-4">Invoice #</th>
               <th className="py-3 px-4">Project</th>
               <th className="py-3 px-4">Due Date</th>
@@ -1103,10 +1103,10 @@ export const ClientInvoicesPage: React.FC = () => {
               <th className="py-3 px-4 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#E2E4DF] text-xs">
+          <tbody className="divide-y divide-[#1E3A5F] text-xs">
             {invoices.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-8 text-center text-[#6E7785]">
+                <td colSpan={7} className="py-8 text-center text-[#94A3B8]">
                   No invoices issued to your account yet.
                 </td>
               </tr>
@@ -1119,11 +1119,11 @@ export const ClientInvoicesPage: React.FC = () => {
                   <tr key={inv.id}>
                     <td className="py-3.5 px-4 font-mono font-semibold">{inv.invoiceNumber}</td>
                     <td className="py-3.5 px-4">{inv.projectTitle}</td>
-                    <td className="py-3.5 px-4 font-mono text-[#6E7785]">{inv.dueDate}</td>
+                    <td className="py-3.5 px-4 font-mono text-[#94A3B8]">{inv.dueDate}</td>
                     <td className="py-3.5 px-4 font-medium">
                       <span>{inv.status}</span>
                       {pendingProof && (
-                        <span className="block text-[10px] text-[#A96518] font-semibold">
+                        <span className="block text-[10px] text-[#D97706] font-semibold">
                           UTR Submitted (Pending Admin Verification)
                         </span>
                       )}
@@ -1148,7 +1148,7 @@ export const ClientInvoicesPage: React.FC = () => {
                               notes: '',
                             });
                           }}
-                          className="font-semibold text-[#26734D] hover:underline"
+                          className="font-semibold text-[#16A34A] hover:underline"
                         >
                           Submit UTR Proof
                         </button>
@@ -1156,7 +1156,7 @@ export const ClientInvoicesPage: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setSelected(inv)}
-                        className="font-semibold text-[#172333] hover:text-[#F18A45]"
+                        className="font-semibold text-[#F8FAFC] hover:text-[#10B981]"
                       >
                         UPI QR / Print →
                       </button>
@@ -1171,19 +1171,19 @@ export const ClientInvoicesPage: React.FC = () => {
 
       {/* Client Payment Proof Upload Modal */}
       {proofModalInvoice && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#172333]/65 p-4 no-print">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#040D1A]/65 p-4 no-print">
           <form
             onSubmit={handleSubmitPaymentProof}
-            className="bg-white border border-[#E2E4DF] rounded-lg max-w-md w-full p-6 space-y-4 shadow-xl"
+            className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg max-w-md w-full p-6 space-y-4 shadow-xl"
           >
             <div>
-              <span className="text-[11px] font-mono font-semibold text-[#F18A45]">
+              <span className="text-[11px] font-mono font-semibold text-[#10B981]">
                 PAYMENT VERIFICATION QUEUE
               </span>
-              <h3 className="text-base font-semibold text-[#172333]">
+              <h3 className="text-base font-semibold text-[#F8FAFC]">
                 Submit Payment Proof ({proofModalInvoice.invoiceNumber})
               </h3>
-              <p className="text-xs text-[#6E7785] mt-0.5">
+              <p className="text-xs text-[#94A3B8] mt-0.5">
                 Share your UPI UTR / Bank Reference ID or screenshot. Once verified by Shankar Baluragi, your invoice balance updates to ₹0 and master deliverables unlock automatically.
               </p>
             </div>
@@ -1198,7 +1198,7 @@ export const ClientInvoicesPage: React.FC = () => {
                   max={proofModalInvoice.balanceDue}
                   value={proofForm.amount}
                   onChange={(e) => setProofForm({ ...proofForm, amount: Number(e.target.value) })}
-                  className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                  className="w-full px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                 />
               </div>
               <div>
@@ -1211,7 +1211,7 @@ export const ClientInvoicesPage: React.FC = () => {
                       method: e.target.value as 'UPI' | 'Bank Transfer (NEFT/IMPS)' | 'Other',
                     })
                   }
-                  className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                  className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                 >
                   <option value="UPI">UPI (GPay / PhonePe / Paytm)</option>
                   <option value="Bank Transfer (NEFT/IMPS)">Bank Transfer (NEFT/IMPS)</option>
@@ -1221,7 +1221,7 @@ export const ClientInvoicesPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[#172333] mb-1">
+              <label className="block text-xs font-semibold text-[#F8FAFC] mb-1">
                 12-Digit UPI UTR / Transaction Reference ID *
               </label>
               <input
@@ -1230,12 +1230,12 @@ export const ClientInvoicesPage: React.FC = () => {
                 value={proofForm.utrNumber}
                 onChange={(e) => setProofForm({ ...proofForm, utrNumber: e.target.value })}
                 placeholder="e.g. 429118394812"
-                className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-[#172333] mb-1">
+              <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                 Optional Payment Screenshot (PNG/JPG)
               </label>
               <input
@@ -1255,12 +1255,12 @@ export const ClientInvoicesPage: React.FC = () => {
                   };
                   reader.readAsDataURL(file);
                 }}
-                className="w-full text-xs text-[#6E7785]"
+                className="w-full text-xs text-[#94A3B8]"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-[#172333] mb-1">
+              <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                 Note (Optional)
               </label>
               <input
@@ -1268,7 +1268,7 @@ export const ClientInvoicesPage: React.FC = () => {
                 value={proofForm.notes}
                 onChange={(e) => setProofForm({ ...proofForm, notes: e.target.value })}
                 placeholder="Paid via Google Pay..."
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
 
@@ -1276,13 +1276,13 @@ export const ClientInvoicesPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setProofModalInvoice(null)}
-                className="px-4 py-2 text-xs font-medium bg-[#F5F5F1] rounded-lg"
+                className="px-4 py-2 text-xs font-medium bg-[#132A4A] rounded-lg"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 text-xs font-semibold text-white bg-[#26734D] hover:bg-[#1e5c3d] rounded-lg"
+                className="px-4 py-2 text-xs font-semibold text-white bg-[#16A34A] hover:bg-[#15803D] rounded-lg"
               >
                 Submit for Admin Verification
               </button>
@@ -1296,19 +1296,19 @@ export const ClientInvoicesPage: React.FC = () => {
 
 export const ClientPaymentInstructionsPage: React.FC = () => (
   <div className="max-w-2xl space-y-6">
-    <h1 className="font-editorial text-2xl font-semibold text-[#172333]">
+    <h1 className="font-editorial text-2xl font-semibold text-[#F8FAFC]">
       Payment Instructions & Verification
     </h1>
-    <div className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-4 text-xs leading-relaxed text-[#6E7785]">
-      <h2 className="text-sm font-semibold text-[#172333]">1. Standard INR Settlement (UPI / Bank Transfer)</h2>
+    <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 space-y-4 text-xs leading-relaxed text-[#94A3B8]">
+      <h2 className="text-sm font-semibold text-[#F8FAFC]">1. Standard INR Settlement (UPI / Bank Transfer)</h2>
       <p>
         Each invoice issued in your Client Portal contains specific UPI or NEFT/IMPS bank transfer instructions along with the exact INR balance due.
       </p>
-      <h2 className="text-sm font-semibold text-[#172333]">2. Payment Verification Policy</h2>
+      <h2 className="text-sm font-semibold text-[#F8FAFC]">2. Payment Verification Policy</h2>
       <p>
         To maintain strict financial accuracy, clients cannot self-mark an invoice as paid. Once you complete a UPI or bank transfer, share the 12-digit UTR / transaction reference in your project message thread. Shankar Baluragi will verify receipt and record the payment on your invoice.
       </p>
-      <h2 className="text-sm font-semibold text-[#172333]">3. Online Gateway Support</h2>
+      <h2 className="text-sm font-semibold text-[#F8FAFC]">3. Online Gateway Support</h2>
       <p>
         When online payment provider credentials (such as Razorpay) are configured on the server, payments are verified cryptographically via server-side HMAC signatures before updating your invoice status.
       </p>
@@ -1327,22 +1327,22 @@ export const ClientMessagesPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="font-editorial text-2xl font-semibold text-[#172333]">Project Messages</h1>
-      <div className="bg-white border border-[#E2E4DF] rounded-lg divide-y divide-[#E2E4DF] text-xs">
+      <h1 className="font-editorial text-2xl font-semibold text-[#F8FAFC]">Project Messages</h1>
+      <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg divide-y divide-[#1E3A5F] text-xs">
         {projects.length === 0 ? (
-          <div className="p-8 text-center text-[#6E7785]">
+          <div className="p-8 text-center text-[#94A3B8]">
             Open any assigned project to view and post project comments.
           </div>
         ) : (
           projects.map((p) => (
             <div key={p.id} className="p-4 flex items-center justify-between">
               <div>
-                <p className="font-semibold text-[#172333]">{p.title}</p>
-                <p className="text-[#6E7785]">{p.latestUpdate}</p>
+                <p className="font-semibold text-[#F8FAFC]">{p.title}</p>
+                <p className="text-[#94A3B8]">{p.latestUpdate}</p>
               </div>
               <Link
                 to={`/portal/projects/${p.id}`}
-                className="font-semibold text-[#172333] hover:text-[#F18A45]"
+                className="font-semibold text-[#F8FAFC] hover:text-[#10B981]"
               >
                 Open Thread →
               </Link>

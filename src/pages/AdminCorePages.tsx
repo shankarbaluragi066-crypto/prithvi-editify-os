@@ -188,35 +188,35 @@ export const AdminDashboardPage: React.FC = () => {
       {
         name: 'In Progress',
         value: projects.filter((p) => p.status === 'In Progress').length,
-        color: '#172333',
+        color: '#040D1A',
       },
       {
         name: 'Planned / Inquiry',
         value: projects.filter((p) => ['Planned', 'Inquiry'].includes(p.status)).length,
-        color: '#24364A',
+        color: '#132A4A',
       },
       {
         name: 'In Review',
         value: projects.filter((p) => p.status === 'In Review').length,
-        color: '#F18A45',
+        color: '#10B981',
       },
       {
         name: 'Revision / Waiting',
         value: projects.filter((p) =>
           ['Revision Requested', 'Waiting for Client', 'On Hold'].includes(p.status)
         ).length,
-        color: '#A96518',
+        color: '#D97706',
       },
       {
         name: 'Completed',
         value: projects.filter((p) => p.status === 'Completed').length,
-        color: '#26734D',
+        color: '#16A34A',
       },
     ];
     const activeSlices = groups.filter((g) => g.value > 0);
     return activeSlices.length > 0
       ? activeSlices
-      : [{ name: 'No Projects Yet', value: 1, color: '#E2E4DF' }];
+      : [{ name: 'No Projects Yet', value: 1, color: '#1E3A5F' }];
   }, [projects]);
 
   // 2. Recharts Data: Upcoming Deadlines Horizon
@@ -225,11 +225,11 @@ export const AdminDashboardPage: React.FC = () => {
     now.setHours(0, 0, 0, 0);
 
     const buckets = [
-      { horizon: 'Overdue', count: 0, color: '#B93832' },
-      { horizon: '≤ 3 Days', count: 0, color: '#F18A45' },
-      { horizon: '4–7 Days', count: 0, color: '#A96518' },
-      { horizon: '8–14 Days', count: 0, color: '#172333' },
-      { horizon: '15+ Days', count: 0, color: '#24364A' },
+      { horizon: 'Overdue', count: 0, color: '#DC2626' },
+      { horizon: '≤ 3 Days', count: 0, color: '#10B981' },
+      { horizon: '4–7 Days', count: 0, color: '#D97706' },
+      { horizon: '8–14 Days', count: 0, color: '#040D1A' },
+      { horizon: '15+ Days', count: 0, color: '#132A4A' },
     ];
 
     const withDays: { project: ProjectRecord; diffDays: number }[] = [];
@@ -299,10 +299,10 @@ export const AdminDashboardPage: React.FC = () => {
       {/* Header & Seed Button */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="font-editorial text-2xl sm:text-3xl font-semibold text-[#172333]">
+          <h1 className="font-editorial text-2xl sm:text-3xl font-semibold text-[#F8FAFC]">
             Studio Command Center
           </h1>
-          <p className="text-xs text-[#6E7785] mt-1">
+          <p className="text-xs text-[#94A3B8] mt-1">
             Live metrics and visual telemetry derived directly from Supabase PostgreSQL records.
           </p>
         </div>
@@ -310,7 +310,7 @@ export const AdminDashboardPage: React.FC = () => {
         <div className="flex flex-wrap items-center gap-2.5 shrink-0">
           <Link
             to="/admin/website-customizer"
-            className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-[#172333] bg-[#F18A45] hover:bg-[#e07934] rounded-lg transition-colors whitespace-nowrap"
+            className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-colors whitespace-nowrap"
           >
             <span>Customize Website (A–Z)</span>
           </Link>
@@ -318,74 +318,74 @@ export const AdminDashboardPage: React.FC = () => {
             type="button"
             disabled={seeding}
             onClick={handleSeedCatalog}
-            className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-[#172333] bg-white border border-[#E2E4DF] hover:border-[#172333] rounded-lg transition-colors whitespace-nowrap"
+            className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-[#F8FAFC] bg-[#0D1F38] border border-[#1E3A5F] hover:border-[#10B981] rounded-lg transition-colors whitespace-nowrap"
           >
-            <Database className="w-3.5 h-3.5 text-[#F18A45]" />
+            <Database className="w-3.5 h-3.5 text-[#10B981]" />
             <span>{seeding ? 'Seeding Catalog...' : 'Sync Default Services & Demo Portfolio'}</span>
           </button>
         </div>
       </div>
 
       {/* Quick Actions Bar */}
-      <div className="bg-white border border-[#E2E4DF] rounded-lg p-4 flex flex-wrap items-center gap-2.5">
-        <span className="text-xs font-semibold text-[#6E7785] mr-2">Quick Actions:</span>
+      <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-4 flex flex-wrap items-center gap-2.5">
+        <span className="text-xs font-semibold text-[#94A3B8] mr-2">Quick Actions:</span>
         <Link
           to="/admin/ai-assistant"
-          className="px-3 py-1.5 text-xs font-semibold text-[#172333] bg-[#F18A45] hover:bg-[#e07934] rounded-md transition-colors whitespace-nowrap"
+          className="px-3 py-1.5 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-md transition-colors whitespace-nowrap"
         >
           ✦ AI Creative Assistant
         </Link>
         <Link
           to="/admin/website-customizer"
-          className="px-3 py-1.5 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-md transition-colors whitespace-nowrap"
+          className="px-3 py-1.5 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-md transition-colors whitespace-nowrap"
         >
           Customize Website (A–Z)
         </Link>
         <Link
           to="/admin/quotations"
-          className="px-3 py-1.5 text-xs font-medium text-white bg-[#172333] hover:bg-[#24364A] rounded-md transition-colors whitespace-nowrap"
+          className="px-3 py-1.5 text-xs font-medium text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-md transition-colors whitespace-nowrap"
         >
           + New Quotation ({quotations.filter((q) => inferQuotationDocumentType(q) === 'Quotation').length})
         </Link>
         <Link
           to="/admin/estimates"
-          className="px-3 py-1.5 text-xs font-medium text-white bg-[#172333] hover:bg-[#24364A] rounded-md transition-colors whitespace-nowrap"
+          className="px-3 py-1.5 text-xs font-medium text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-md transition-colors whitespace-nowrap"
         >
           + New Cost Estimate ({quotations.filter((q) => inferQuotationDocumentType(q) === 'Estimate').length})
         </Link>
         <Link
           to="/admin/clients"
-          className="px-3 py-1.5 text-xs font-medium text-white bg-[#172333] hover:bg-[#24364A] rounded-md transition-colors whitespace-nowrap"
+          className="px-3 py-1.5 text-xs font-medium text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-md transition-colors whitespace-nowrap"
         >
           + Add Client
         </Link>
         <Link
           to="/admin/projects"
-          className="px-3 py-1.5 text-xs font-medium text-white bg-[#172333] hover:bg-[#24364A] rounded-md transition-colors whitespace-nowrap"
+          className="px-3 py-1.5 text-xs font-medium text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-md transition-colors whitespace-nowrap"
         >
           + Create Project
         </Link>
         <Link
           to="/admin/invoices"
-          className="px-3 py-1.5 text-xs font-medium text-white bg-[#172333] hover:bg-[#24364A] rounded-md transition-colors whitespace-nowrap"
+          className="px-3 py-1.5 text-xs font-medium text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-md transition-colors whitespace-nowrap"
         >
           + Create Invoice
         </Link>
         <Link
           to="/admin/inquiries"
-          className="px-3 py-1.5 text-xs font-medium text-[#172333] bg-[#F5F5F1] hover:bg-[#E2E4DF] rounded-md transition-colors whitespace-nowrap"
+          className="px-3 py-1.5 text-xs font-medium text-[#F8FAFC] bg-[#132A4A] hover:bg-[#1E3A5F] rounded-md transition-colors whitespace-nowrap"
         >
           Review Inquiries ({openInquiries.length})
         </Link>
         <Link
           to="/admin/portfolio"
-          className="px-3 py-1.5 text-xs font-medium text-[#172333] bg-[#F5F5F1] hover:bg-[#E2E4DF] rounded-md transition-colors whitespace-nowrap"
+          className="px-3 py-1.5 text-xs font-medium text-[#F8FAFC] bg-[#132A4A] hover:bg-[#1E3A5F] rounded-md transition-colors whitespace-nowrap"
         >
           + Add Portfolio Item
         </Link>
         <Link
           to="/admin/services"
-          className="px-3 py-1.5 text-xs font-medium text-[#172333] bg-[#F5F5F1] hover:bg-[#E2E4DF] rounded-md transition-colors whitespace-nowrap"
+          className="px-3 py-1.5 text-xs font-medium text-[#F8FAFC] bg-[#132A4A] hover:bg-[#1E3A5F] rounded-md transition-colors whitespace-nowrap"
         >
           + Add Service
         </Link>
@@ -395,56 +395,56 @@ export const AdminDashboardPage: React.FC = () => {
       {loading ? (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
-            <div key={n} className="h-24 bg-white border border-[#E2E4DF] rounded-lg animate-pulse" />
+            <div key={n} className="h-24 bg-[#0D1F38] border border-[#1E3A5F] rounded-lg animate-pulse" />
           ))}
         </div>
       ) : (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white border border-[#E2E4DF] rounded-lg p-5">
-            <p className="text-xs text-[#6E7785]">Total Clients</p>
-            <p className="text-2xl font-mono font-semibold text-[#172333] mt-1 tabular-nums">
+          <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-5">
+            <p className="text-xs text-[#94A3B8]">Total Clients</p>
+            <p className="text-2xl font-mono font-semibold text-[#F8FAFC] mt-1 tabular-nums">
               {clients.length}
             </p>
           </div>
-          <div className="bg-white border border-[#E2E4DF] rounded-lg p-5">
-            <p className="text-xs text-[#6E7785]">Active Projects</p>
-            <p className="text-2xl font-mono font-semibold text-[#172333] mt-1 tabular-nums">
+          <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-5">
+            <p className="text-xs text-[#94A3B8]">Active Projects</p>
+            <p className="text-2xl font-mono font-semibold text-[#F8FAFC] mt-1 tabular-nums">
               {activeProjects.length}
             </p>
           </div>
-          <div className="bg-white border border-[#E2E4DF] rounded-lg p-5">
-            <p className="text-xs text-[#6E7785]">Awaiting Review</p>
-            <p className="text-2xl font-mono font-semibold text-[#A96518] mt-1 tabular-nums">
+          <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-5">
+            <p className="text-xs text-[#94A3B8]">Awaiting Review</p>
+            <p className="text-2xl font-mono font-semibold text-[#D97706] mt-1 tabular-nums">
               {reviewProjects.length}
             </p>
           </div>
-          <div className="bg-white border border-[#E2E4DF] rounded-lg p-5">
-            <p className="text-xs text-[#6E7785]">Completed Projects</p>
-            <p className="text-2xl font-mono font-semibold text-[#26734D] mt-1 tabular-nums">
+          <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-5">
+            <p className="text-xs text-[#94A3B8]">Completed Projects</p>
+            <p className="text-2xl font-mono font-semibold text-[#16A34A] mt-1 tabular-nums">
               {completedProjects.length}
             </p>
           </div>
-          <div className="bg-white border border-[#E2E4DF] rounded-lg p-5">
-            <p className="text-xs text-[#6E7785]">Open Inquiries</p>
-            <p className="text-2xl font-mono font-semibold text-[#172333] mt-1 tabular-nums">
+          <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-5">
+            <p className="text-xs text-[#94A3B8]">Open Inquiries</p>
+            <p className="text-2xl font-mono font-semibold text-[#F8FAFC] mt-1 tabular-nums">
               {openInquiries.length}
             </p>
           </div>
-          <div className="bg-white border border-[#E2E4DF] rounded-lg p-5">
-            <p className="text-xs text-[#6E7785]">Unpaid Invoices</p>
-            <p className="text-2xl font-mono font-semibold text-[#A96518] mt-1 tabular-nums">
+          <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-5">
+            <p className="text-xs text-[#94A3B8]">Unpaid Invoices</p>
+            <p className="text-2xl font-mono font-semibold text-[#D97706] mt-1 tabular-nums">
               {unpaidInvoices.length}
             </p>
           </div>
-          <div className="bg-white border border-[#E2E4DF] rounded-lg p-5">
-            <p className="text-xs text-[#6E7785]">Overdue Invoices</p>
-            <p className="text-2xl font-mono font-semibold text-[#B93832] mt-1 tabular-nums">
+          <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-5">
+            <p className="text-xs text-[#94A3B8]">Overdue Invoices</p>
+            <p className="text-2xl font-mono font-semibold text-[#DC2626] mt-1 tabular-nums">
               {overdueInvoices.length}
             </p>
           </div>
-          <div className="bg-white border border-[#E2E4DF] rounded-lg p-5">
-            <p className="text-xs text-[#6E7785]">Total Recorded Payments</p>
-            <p className="text-2xl font-mono font-semibold text-[#26734D] mt-1 tabular-nums">
+          <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-5">
+            <p className="text-xs text-[#94A3B8]">Total Recorded Payments</p>
+            <p className="text-2xl font-mono font-semibold text-[#16A34A] mt-1 tabular-nums">
               {formatINR(totalRecordedPayments)}
             </p>
           </div>
@@ -454,21 +454,21 @@ export const AdminDashboardPage: React.FC = () => {
       {/* RECHARTS VISUAL SUMMARY CARDS: Pending Projects, Upcoming Deadlines, Recent Invoices */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Visual Summary Card 1: Total Pending Projects & Status Breakdown */}
-        <div className="bg-white border border-[#E2E4DF] rounded-lg p-6 flex flex-col justify-between">
+        <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 flex flex-col justify-between">
           <div>
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-medium text-[#6E7785]">Pending Projects Pipeline</p>
+                <p className="text-xs font-medium text-[#94A3B8]">Pending Projects Pipeline</p>
                 <div className="flex items-baseline gap-2 mt-1">
-                  <span className="text-2xl font-mono font-semibold text-[#172333] tabular-nums">
+                  <span className="text-2xl font-mono font-semibold text-[#F8FAFC] tabular-nums">
                     {pendingProjects.length}
                   </span>
-                  <span className="text-xs text-[#6E7785]">
+                  <span className="text-xs text-[#94A3B8]">
                     pending · {completedProjects.length} completed
                   </span>
                 </div>
               </div>
-              <FolderKanban className="w-4 h-4 text-[#F18A45] shrink-0 mt-1" />
+              <FolderKanban className="w-4 h-4 text-[#10B981] shrink-0 mt-1" />
             </div>
 
             <div className="h-48 w-full mt-4">
@@ -493,10 +493,10 @@ export const AdminDashboardPage: React.FC = () => {
                   <Tooltip
                     contentStyle={{
                       backgroundColor: '#FFFFFF',
-                      borderColor: '#E2E4DF',
+                      borderColor: '#1E3A5F',
                       borderRadius: '8px',
                       fontSize: '12px',
-                      color: '#172333',
+                      color: '#040D1A',
                     }}
                   />
                 </PieChart>
@@ -504,29 +504,29 @@ export const AdminDashboardPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="pt-4 border-t border-[#E2E4DF] space-y-2">
+          <div className="pt-4 border-t border-[#1E3A5F] space-y-2">
             <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
-              <div className="flex items-center justify-between text-[#6E7785]">
+              <div className="flex items-center justify-between text-[#94A3B8]">
                 <span>In Progress</span>
-                <span className="font-mono font-semibold text-[#172333] tabular-nums">
+                <span className="font-mono font-semibold text-[#F8FAFC] tabular-nums">
                   {projects.filter((p) => p.status === 'In Progress').length}
                 </span>
               </div>
-              <div className="flex items-center justify-between text-[#6E7785]">
+              <div className="flex items-center justify-between text-[#94A3B8]">
                 <span>In Review</span>
-                <span className="font-mono font-semibold text-[#F18A45] tabular-nums">
+                <span className="font-mono font-semibold text-[#10B981] tabular-nums">
                   {reviewProjects.length}
                 </span>
               </div>
-              <div className="flex items-center justify-between text-[#6E7785]">
+              <div className="flex items-center justify-between text-[#94A3B8]">
                 <span>Planned / Brief</span>
-                <span className="font-mono font-semibold text-[#172333] tabular-nums">
+                <span className="font-mono font-semibold text-[#F8FAFC] tabular-nums">
                   {projects.filter((p) => ['Planned', 'Inquiry'].includes(p.status)).length}
                 </span>
               </div>
-              <div className="flex items-center justify-between text-[#6E7785]">
+              <div className="flex items-center justify-between text-[#94A3B8]">
                 <span>Revisions</span>
-                <span className="font-mono font-semibold text-[#A96518] tabular-nums">
+                <span className="font-mono font-semibold text-[#D97706] tabular-nums">
                   {projects.filter((p) => p.status === 'Revision Requested').length}
                 </span>
               </div>
@@ -534,7 +534,7 @@ export const AdminDashboardPage: React.FC = () => {
             <div className="pt-2 flex justify-end">
               <Link
                 to="/admin/projects"
-                className="text-xs font-semibold text-[#172333] hover:text-[#F18A45]"
+                className="text-xs font-semibold text-[#F8FAFC] hover:text-[#10B981]"
               >
                 Open Project Board →
               </Link>
@@ -543,19 +543,19 @@ export const AdminDashboardPage: React.FC = () => {
         </div>
 
         {/* Visual Summary Card 2: Upcoming Deadlines Horizon */}
-        <div className="bg-white border border-[#E2E4DF] rounded-lg p-6 flex flex-col justify-between">
+        <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 flex flex-col justify-between">
           <div>
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-medium text-[#6E7785]">Upcoming Deadlines (7-Day Alert)</p>
+                <p className="text-xs font-medium text-[#94A3B8]">Upcoming Deadlines (7-Day Alert)</p>
                 <div className="flex items-baseline gap-2 mt-1">
-                  <span className="text-2xl font-mono font-semibold text-[#172333] tabular-nums">
+                  <span className="text-2xl font-mono font-semibold text-[#F8FAFC] tabular-nums">
                     {urgentDeadlinesCount}
                   </span>
-                  <span className="text-xs text-[#6E7785]">due within 7 days or overdue</span>
+                  <span className="text-xs text-[#94A3B8]">due within 7 days or overdue</span>
                 </div>
               </div>
-              <Clock className="w-4 h-4 text-[#F18A45] shrink-0 mt-1" />
+              <Clock className="w-4 h-4 text-[#10B981] shrink-0 mt-1" />
             </div>
 
             <div className="h-48 w-full mt-4">
@@ -564,27 +564,27 @@ export const AdminDashboardPage: React.FC = () => {
                   data={deadlineChartData}
                   margin={{ top: 8, right: 8, left: -24, bottom: 0 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#E2E4DF" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1E3A5F" vertical={false} />
                   <XAxis
                     dataKey="horizon"
-                    tick={{ fontSize: 10, fill: '#6E7785' }}
-                    axisLine={{ stroke: '#E2E4DF' }}
+                    tick={{ fontSize: 10, fill: '#94A3B8' }}
+                    axisLine={{ stroke: '#1E3A5F' }}
                     tickLine={false}
                   />
                   <YAxis
                     allowDecimals={false}
-                    tick={{ fontSize: 10, fill: '#6E7785' }}
+                    tick={{ fontSize: 10, fill: '#94A3B8' }}
                     axisLine={false}
                     tickLine={false}
                   />
                   <Tooltip
-                    cursor={{ fill: '#F5F5F1' }}
+                    cursor={{ fill: '#132A4A' }}
                     contentStyle={{
                       backgroundColor: '#FFFFFF',
-                      borderColor: '#E2E4DF',
+                      borderColor: '#1E3A5F',
                       borderRadius: '8px',
                       fontSize: '12px',
-                      color: '#172333',
+                      color: '#040D1A',
                     }}
                   />
                   <Bar dataKey="count" name="Pending Projects" radius={[4, 4, 0, 0]}>
@@ -597,9 +597,9 @@ export const AdminDashboardPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="pt-4 border-t border-[#E2E4DF] space-y-2">
+          <div className="pt-4 border-t border-[#1E3A5F] space-y-2">
             {sortedUpcomingDeadlines.length === 0 ? (
-              <p className="text-xs text-[#6E7785]">No scheduled pending deadlines.</p>
+              <p className="text-xs text-[#94A3B8]">No scheduled pending deadlines.</p>
             ) : (
               <div className="space-y-1.5">
                 {sortedUpcomingDeadlines.slice(0, 2).map(({ project, diffDays }) => (
@@ -609,17 +609,17 @@ export const AdminDashboardPage: React.FC = () => {
                   >
                     <Link
                       to={`/admin/projects/${project.id}`}
-                      className="font-medium text-[#172333] hover:text-[#F18A45] truncate"
+                      className="font-medium text-[#F8FAFC] hover:text-[#10B981] truncate"
                     >
                       {project.title}
                     </Link>
                     <span
                       className={`font-mono shrink-0 tabular-nums ${
                         diffDays < 0
-                          ? 'text-[#B93832] font-semibold'
+                          ? 'text-[#DC2626] font-semibold'
                           : diffDays <= 3
-                          ? 'text-[#A96518] font-semibold'
-                          : 'text-[#6E7785]'
+                          ? 'text-[#D97706] font-semibold'
+                          : 'text-[#94A3B8]'
                       }`}
                     >
                       {diffDays < 0
@@ -635,7 +635,7 @@ export const AdminDashboardPage: React.FC = () => {
             <div className="pt-1 flex justify-end">
               <Link
                 to="/admin/tasks"
-                className="text-xs font-semibold text-[#172333] hover:text-[#F18A45]"
+                className="text-xs font-semibold text-[#F8FAFC] hover:text-[#10B981]"
               >
                 Manage Milestones →
               </Link>
@@ -644,19 +644,19 @@ export const AdminDashboardPage: React.FC = () => {
         </div>
 
         {/* Visual Summary Card 3: Recent Invoices (Billed vs Paid in INR) */}
-        <div className="bg-white border border-[#E2E4DF] rounded-lg p-6 flex flex-col justify-between">
+        <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 flex flex-col justify-between">
           <div>
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-medium text-[#6E7785]">Recent Invoices & Balance Due</p>
+                <p className="text-xs font-medium text-[#94A3B8]">Recent Invoices & Balance Due</p>
                 <div className="flex items-baseline gap-2 mt-1">
-                  <span className="text-2xl font-mono font-semibold text-[#172333] tabular-nums">
+                  <span className="text-2xl font-mono font-semibold text-[#F8FAFC] tabular-nums">
                     {formatINR(totalOutstandingINR)}
                   </span>
-                  <span className="text-xs text-[#6E7785]">outstanding across {unpaidInvoices.length + overdueInvoices.length} invoices</span>
+                  <span className="text-xs text-[#94A3B8]">outstanding across {unpaidInvoices.length + overdueInvoices.length} invoices</span>
                 </div>
               </div>
-              <FileText className="w-4 h-4 text-[#F18A45] shrink-0 mt-1" />
+              <FileText className="w-4 h-4 text-[#10B981] shrink-0 mt-1" />
             </div>
 
             <div className="h-48 w-full mt-4">
@@ -665,48 +665,48 @@ export const AdminDashboardPage: React.FC = () => {
                   data={recentInvoicesChartData}
                   margin={{ top: 8, right: 8, left: -12, bottom: 0 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#E2E4DF" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1E3A5F" vertical={false} />
                   <XAxis
                     dataKey="invoice"
-                    tick={{ fontSize: 10, fill: '#6E7785' }}
-                    axisLine={{ stroke: '#E2E4DF' }}
+                    tick={{ fontSize: 10, fill: '#94A3B8' }}
+                    axisLine={{ stroke: '#1E3A5F' }}
                     tickLine={false}
                   />
                   <YAxis
-                    tick={{ fontSize: 10, fill: '#6E7785' }}
+                    tick={{ fontSize: 10, fill: '#94A3B8' }}
                     axisLine={false}
                     tickLine={false}
                     tickFormatter={(val) => (val >= 1000 ? `₹${Math.round(val / 1000)}k` : `₹${val}`)}
                   />
                   <Tooltip
-                    cursor={{ fill: '#F5F5F1' }}
+                    cursor={{ fill: '#132A4A' }}
                     formatter={(value) => formatINR(Number(value) || 0)}
                     contentStyle={{
                       backgroundColor: '#FFFFFF',
-                      borderColor: '#E2E4DF',
+                      borderColor: '#1E3A5F',
                       borderRadius: '8px',
                       fontSize: '12px',
-                      color: '#172333',
+                      color: '#040D1A',
                     }}
                   />
-                  <Bar dataKey="paid" name="Paid (INR)" stackId="a" fill="#26734D" radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="due" name="Balance Due (INR)" stackId="a" fill="#F18A45" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="paid" name="Paid (INR)" stackId="a" fill="#16A34A" radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="due" name="Balance Due (INR)" stackId="a" fill="#10B981" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </div>
 
-          <div className="pt-4 border-t border-[#E2E4DF] space-y-2">
+          <div className="pt-4 border-t border-[#1E3A5F] space-y-2">
             {invoices.length === 0 ? (
-              <p className="text-xs text-[#6E7785]">No invoices issued yet.</p>
+              <p className="text-xs text-[#94A3B8]">No invoices issued yet.</p>
             ) : (
               <div className="space-y-1.5">
                 {invoices.slice(0, 2).map((inv) => (
                   <div key={inv.id} className="flex items-center justify-between gap-2 text-xs">
-                    <span className="font-mono font-medium text-[#172333] truncate">
+                    <span className="font-mono font-medium text-[#F8FAFC] truncate">
                       {inv.invoiceNumber} · {inv.clientName}
                     </span>
-                    <span className="font-mono font-semibold text-[#172333] tabular-nums shrink-0">
+                    <span className="font-mono font-semibold text-[#F8FAFC] tabular-nums shrink-0">
                       {formatINR(inv.total)} ({inv.status})
                     </span>
                   </div>
@@ -716,7 +716,7 @@ export const AdminDashboardPage: React.FC = () => {
             <div className="pt-1 flex justify-end">
               <Link
                 to="/admin/invoices"
-                className="text-xs font-semibold text-[#172333] hover:text-[#F18A45]"
+                className="text-xs font-semibold text-[#F8FAFC] hover:text-[#10B981]"
               >
                 Open Invoices Ledger →
               </Link>
@@ -727,33 +727,33 @@ export const AdminDashboardPage: React.FC = () => {
 
       {/* Recent Projects & Inquiries Split */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white border border-[#E2E4DF] rounded-lg p-6">
+        <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base font-semibold text-[#172333]">Recent Projects & Deadlines</h2>
-            <Link to="/admin/projects" className="text-xs font-semibold text-[#172333] hover:text-[#F18A45]">
+            <h2 className="text-base font-semibold text-[#F8FAFC]">Recent Projects & Deadlines</h2>
+            <Link to="/admin/projects" className="text-xs font-semibold text-[#F8FAFC] hover:text-[#10B981]">
               View All →
             </Link>
           </div>
           {projects.length === 0 ? (
-            <div className="py-8 text-center text-xs text-[#6E7785]">
+            <div className="py-8 text-center text-xs text-[#94A3B8]">
               No projects created yet. Convert an inquiry or click "+ Create Project".
             </div>
           ) : (
-            <div className="divide-y divide-[#E2E4DF]">
+            <div className="divide-y divide-[#1E3A5F]">
               {projects.slice(0, 5).map((proj) => (
                 <div key={proj.id} className="py-3 flex items-center justify-between gap-4">
                   <div className="min-w-0">
                     <Link
                       to={`/admin/projects/${proj.id}`}
-                      className="text-sm font-semibold text-[#172333] hover:text-[#F18A45] truncate block"
+                      className="text-sm font-semibold text-[#F8FAFC] hover:text-[#10B981] truncate block"
                     >
                       {proj.title}
                     </Link>
-                    <p className="text-xs text-[#6E7785] truncate">
+                    <p className="text-xs text-[#94A3B8] truncate">
                       {proj.clientName} · {proj.status} · Due {proj.deadline || 'TBD'}
                     </p>
                   </div>
-                  <span className="font-mono text-xs font-semibold text-[#172333] tabular-nums shrink-0">
+                  <span className="font-mono text-xs font-semibold text-[#F8FAFC] tabular-nums shrink-0">
                     {proj.progress}%
                   </span>
                 </div>
@@ -762,28 +762,28 @@ export const AdminDashboardPage: React.FC = () => {
           )}
         </div>
 
-        <div className="bg-white border border-[#E2E4DF] rounded-lg p-6">
+        <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base font-semibold text-[#172333]">Recent Lead Inquiries</h2>
-            <Link to="/admin/inquiries" className="text-xs font-semibold text-[#172333] hover:text-[#F18A45]">
+            <h2 className="text-base font-semibold text-[#F8FAFC]">Recent Lead Inquiries</h2>
+            <Link to="/admin/inquiries" className="text-xs font-semibold text-[#F8FAFC] hover:text-[#10B981]">
               Manage Leads →
             </Link>
           </div>
           {inquiries.length === 0 ? (
-            <div className="py-8 text-center text-xs text-[#6E7785]">
+            <div className="py-8 text-center text-xs text-[#94A3B8]">
               No inquiries received yet. Public contact form submissions appear here automatically.
             </div>
           ) : (
-            <div className="divide-y divide-[#E2E4DF]">
+            <div className="divide-y divide-[#1E3A5F]">
               {inquiries.slice(0, 5).map((inq) => (
                 <div key={inq.id} className="py-3 flex items-center justify-between gap-4">
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-[#172333] truncate">{inq.fullName}</p>
-                    <p className="text-xs text-[#6E7785] truncate">
+                    <p className="text-sm font-semibold text-[#F8FAFC] truncate">{inq.fullName}</p>
+                    <p className="text-xs text-[#94A3B8] truncate">
                       {inq.serviceRequired} · {inq.budgetRange}
                     </p>
                   </div>
-                  <span className="text-xs font-medium text-[#172333] shrink-0">{inq.status}</span>
+                  <span className="text-xs font-medium text-[#F8FAFC] shrink-0">{inq.status}</span>
                 </div>
               ))}
             </div>
@@ -929,8 +929,8 @@ export const AdminInquiriesPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="font-editorial text-2xl font-semibold text-[#172333]">Leads & Inquiries</h1>
-          <p className="text-xs text-[#6E7785] mt-1">
+          <h1 className="font-editorial text-2xl font-semibold text-[#F8FAFC]">Leads & Inquiries</h1>
+          <p className="text-xs text-[#94A3B8] mt-1">
             Review incoming briefs, qualify leads, and convert inquiries directly into clients and projects.
           </p>
         </div>
@@ -938,7 +938,7 @@ export const AdminInquiriesPage: React.FC = () => {
 
       {/* Search & Status Filters */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-1 p-1 bg-[#E2E4DF]/60 rounded-lg w-fit">
+        <div className="flex flex-wrap items-center gap-1 p-1 bg-[#1E3A5F]/60 rounded-lg w-fit">
           {['All', ...INQUIRY_STATUSES].map((st) => (
             <button
               key={st}
@@ -946,8 +946,8 @@ export const AdminInquiriesPage: React.FC = () => {
               onClick={() => setFilterStatus(st)}
               className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap ${
                 filterStatus === st
-                  ? 'bg-white text-[#172333] shadow-sm font-semibold'
-                  : 'text-[#6E7785] hover:text-[#172333]'
+                  ? 'bg-[#0D1F38] text-[#F8FAFC] shadow-sm font-semibold'
+                  : 'text-[#94A3B8] hover:text-[#F8FAFC]'
               }`}
             >
               {st}
@@ -956,44 +956,44 @@ export const AdminInquiriesPage: React.FC = () => {
         </div>
 
         <div className="relative w-full md:w-72">
-          <Search className="w-4 h-4 text-[#6E7785] absolute left-3 top-2.5" />
+          <Search className="w-4 h-4 text-[#94A3B8] absolute left-3 top-2.5" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search name, email, service..."
-            className="w-full pl-9 pr-3 py-2 text-xs bg-white border border-[#E2E4DF] rounded-lg"
+            className="w-full pl-9 pr-3 py-2 text-xs bg-[#0D1F38] border border-[#1E3A5F] rounded-lg"
           />
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Inquiries List */}
-        <div className="lg:col-span-7 bg-white border border-[#E2E4DF] rounded-lg overflow-hidden">
+        <div className="lg:col-span-7 bg-[#0D1F38] border border-[#1E3A5F] rounded-lg overflow-hidden">
           {loading ? (
-            <div className="p-8 text-center text-xs text-[#6E7785]">Loading inquiries...</div>
+            <div className="p-8 text-center text-xs text-[#94A3B8]">Loading inquiries...</div>
           ) : filtered.length === 0 ? (
-            <div className="p-10 text-center text-xs text-[#6E7785]">
+            <div className="p-10 text-center text-xs text-[#94A3B8]">
               No inquiries match the current filter.
             </div>
           ) : (
-            <div className="divide-y divide-[#E2E4DF]">
+            <div className="divide-y divide-[#1E3A5F]">
               {filtered.map((inq) => (
                 <div
                   key={inq.id}
                   onClick={() => handleSelect(inq)}
-                  className={`p-4 cursor-pointer hover:bg-[#F5F5F1]/60 transition-colors ${
-                    selected?.id === inq.id ? 'bg-[#F5F5F1]' : ''
+                  className={`p-4 cursor-pointer hover:bg-[#132A4A]/60 transition-colors ${
+                    selected?.id === inq.id ? 'bg-[#132A4A]' : ''
                   }`}
                 >
                   <div className="flex items-center justify-between gap-4">
-                    <p className="text-sm font-semibold text-[#172333]">{inq.fullName}</p>
-                    <span className="text-xs font-medium text-[#172333]">{inq.status}</span>
+                    <p className="text-sm font-semibold text-[#F8FAFC]">{inq.fullName}</p>
+                    <span className="text-xs font-medium text-[#F8FAFC]">{inq.status}</span>
                   </div>
-                  <p className="text-xs text-[#6E7785] mt-1">
+                  <p className="text-xs text-[#94A3B8] mt-1">
                     {inq.serviceRequired} · {inq.budgetRange} · {inq.phone}
                   </p>
-                  <p className="text-xs text-[#6E7785] mt-1 line-clamp-1">{inq.description}</p>
+                  <p className="text-xs text-[#94A3B8] mt-1 line-clamp-1">{inq.description}</p>
                 </div>
               ))}
             </div>
@@ -1001,21 +1001,21 @@ export const AdminInquiriesPage: React.FC = () => {
         </div>
 
         {/* Selected Inquiry Detail Inspector */}
-        <div className="lg:col-span-5 bg-white border border-[#E2E4DF] rounded-lg p-6">
+        <div className="lg:col-span-5 bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6">
           {!selected ? (
-            <p className="text-xs text-[#6E7785] text-center py-12">
+            <p className="text-xs text-[#94A3B8] text-center py-12">
               Select an inquiry on the left to inspect its project brief, add internal notes, or convert to a client and project.
             </p>
           ) : (
             <div className="space-y-4">
-              <div className="flex items-start justify-between gap-3 border-b border-[#E2E4DF] pb-4">
+              <div className="flex items-start justify-between gap-3 border-b border-[#1E3A5F] pb-4">
                 <div>
-                  <h2 className="text-lg font-semibold text-[#172333]">{selected.fullName}</h2>
-                  <p className="text-xs text-[#6E7785]">
+                  <h2 className="text-lg font-semibold text-[#F8FAFC]">{selected.fullName}</h2>
+                  <p className="text-xs text-[#94A3B8]">
                     {selected.email} · {selected.phone}
                   </p>
                   {selected.companyName && (
-                    <p className="text-xs text-[#6E7785]">Brand: {selected.companyName}</p>
+                    <p className="text-xs text-[#94A3B8]">Brand: {selected.companyName}</p>
                   )}
                 </div>
                 <button
@@ -1032,7 +1032,7 @@ export const AdminInquiriesPage: React.FC = () => {
                       },
                     })
                   }
-                  className="text-xs text-[#B93832] hover:underline"
+                  className="text-xs text-[#DC2626] hover:underline"
                 >
                   Delete
                 </button>
@@ -1049,7 +1049,7 @@ export const AdminInquiriesPage: React.FC = () => {
                   <span className="font-semibold">Preferred Deadline:</span>{' '}
                   {selected.preferredDeadline || 'Flexible'}
                 </p>
-                <div className="p-3 bg-[#F5F5F1] rounded-lg text-[#172333] leading-relaxed">
+                <div className="p-3 bg-[#132A4A] rounded-lg text-[#F8FAFC] leading-relaxed">
                   {selected.description}
                 </div>
                 {selected.referenceFileUrl && (
@@ -1060,7 +1060,7 @@ export const AdminInquiriesPage: React.FC = () => {
                         href={selected.referenceFileUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="underline text-[#F18A45]"
+                        className="underline text-[#10B981]"
                       >
                         View Reference File
                       </a>
@@ -1072,11 +1072,11 @@ export const AdminInquiriesPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[#172333] mb-1">Update Status</label>
+                <label className="block text-xs font-semibold text-[#F8FAFC] mb-1">Update Status</label>
                 <select
                   value={selected.status}
                   onChange={(e) => handleSaveDetails(e.target.value as InquiryStatus)}
-                  className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                  className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                 >
                   {INQUIRY_STATUSES.map((st) => (
                     <option key={st} value={st}>
@@ -1087,24 +1087,24 @@ export const AdminInquiriesPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[#172333] mb-1">Lead Source</label>
+                <label className="block text-xs font-semibold text-[#F8FAFC] mb-1">Lead Source</label>
                 <input
                   type="text"
                   value={sourceDraft}
                   onChange={(e) => setSourceDraft(e.target.value)}
-                  className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                  className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[#172333] mb-1">
+                <label className="block text-xs font-semibold text-[#F8FAFC] mb-1">
                   Internal Studio Notes (Admin Only)
                 </label>
                 <textarea
                   rows={3}
                   value={notesDraft}
                   onChange={(e) => setNotesDraft(e.target.value)}
-                  className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                  className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                 />
               </div>
 
@@ -1112,7 +1112,7 @@ export const AdminInquiriesPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => handleSaveDetails()}
-                  className="px-3.5 py-2 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg"
+                  className="px-3.5 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg"
                 >
                   Save Notes
                 </button>
@@ -1145,7 +1145,7 @@ export const AdminInquiriesPage: React.FC = () => {
                       setAiDraftingId(null);
                     }
                   }}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-[#F18A45] hover:bg-[#e07934] rounded-lg disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg disabled:opacity-50"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>
@@ -1159,14 +1159,14 @@ export const AdminInquiriesPage: React.FC = () => {
                       state: { fromInquiry: selected },
                     })
                   }
-                  className="px-3.5 py-2 text-xs font-semibold text-[#172333] bg-[#F5F5F1] hover:bg-[#E2E4DF] border border-[#E2E4DF] rounded-lg"
+                  className="px-3.5 py-2 text-xs font-semibold text-[#F8FAFC] bg-[#132A4A] hover:bg-[#1E3A5F] border border-[#1E3A5F] rounded-lg"
                 >
                   Prepare Blank Quote →
                 </button>
                 <button
                   type="button"
                   onClick={() => handleConvertInquiry(selected)}
-                  className="px-3.5 py-2 text-xs font-semibold text-[#172333] border border-[#172333] hover:bg-[#172333] hover:text-white rounded-lg transition-colors"
+                  className="px-3.5 py-2 text-xs font-semibold text-[#F8FAFC] border border-[#040D1A] hover:bg-[#040D1A] hover:text-white rounded-lg transition-colors"
                 >
                   Convert to Client & Project →
                 </button>
@@ -1477,15 +1477,15 @@ export const AdminClientsPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="font-editorial text-2xl font-semibold text-[#172333]">Client Directory</h1>
-          <p className="text-xs text-[#6E7785] mt-1">
+          <h1 className="font-editorial text-2xl font-semibold text-[#F8FAFC]">Client Directory</h1>
+          <p className="text-xs text-[#94A3B8] mt-1">
             Create, view, edit, archive, and safely manage client profiles, portal access, and linked financial records.
           </p>
         </div>
         <button
           type="button"
           onClick={handleOpenCreate}
-          className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg whitespace-nowrap"
+          className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg whitespace-nowrap"
         >
           <UserPlus className="w-4 h-4" />
           <span>+ New Client Profile</span>
@@ -1496,16 +1496,16 @@ export const AdminClientsPage: React.FC = () => {
       {showForm && (
         <form
           onSubmit={handleSubmitForm}
-          className="bg-white border border-[#172333] rounded-lg p-6 space-y-4 shadow-sm"
+          className="bg-[#0D1F38] border border-[#040D1A] rounded-lg p-6 space-y-4 shadow-sm"
         >
-          <div className="flex items-center justify-between border-b border-[#E2E4DF] pb-3">
+          <div className="flex items-center justify-between border-b border-[#1E3A5F] pb-3">
             <div>
-              <h2 className="text-base font-semibold text-[#172333]">
+              <h2 className="text-base font-semibold text-[#F8FAFC]">
                 {editingClient
                   ? `Edit Client Profile: ${editingClient.fullName}`
                   : 'Create New Client Profile'}
               </h2>
-              <p className="text-xs text-[#6E7785] mt-0.5">
+              <p className="text-xs text-[#94A3B8] mt-0.5">
                 {editingClient
                   ? 'Changes to client name or email automatically synchronize across linked projects and invoices.'
                   : 'Add a client record to link projects, quotations, estimates, and INR invoices.'}
@@ -1514,7 +1514,7 @@ export const AdminClientsPage: React.FC = () => {
             <button
               type="button"
               onClick={handleAttemptCloseForm}
-              className="text-xs font-medium text-[#6E7785] hover:text-[#172333]"
+              className="text-xs font-medium text-[#94A3B8] hover:text-[#F8FAFC]"
             >
               Close
             </button>
@@ -1529,7 +1529,7 @@ export const AdminClientsPage: React.FC = () => {
                 value={formData.fullName}
                 onChange={(e) => updateFormField('fullName', e.target.value)}
                 placeholder="e.g. Rohan Deshmukh"
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
             <div>
@@ -1540,7 +1540,7 @@ export const AdminClientsPage: React.FC = () => {
                 value={formData.email}
                 onChange={(e) => updateFormField('email', e.target.value)}
                 placeholder="client@company.com"
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
             <div>
@@ -1550,7 +1550,7 @@ export const AdminClientsPage: React.FC = () => {
                 value={formData.phone}
                 onChange={(e) => updateFormField('phone', e.target.value)}
                 placeholder="+91 98765 43210"
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
             <div>
@@ -1560,7 +1560,7 @@ export const AdminClientsPage: React.FC = () => {
                 value={formData.companyName}
                 onChange={(e) => updateFormField('companyName', e.target.value)}
                 placeholder="e.g. Apex Creator Studio"
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
             <div>
@@ -1570,7 +1570,7 @@ export const AdminClientsPage: React.FC = () => {
                 value={formData.country}
                 onChange={(e) => updateFormField('country', e.target.value)}
                 placeholder="Bengaluru, Karnataka, India"
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
             <div>
@@ -1583,7 +1583,7 @@ export const AdminClientsPage: React.FC = () => {
                     e.target.value as 'Email' | 'WhatsApp' | 'Phone'
                   )
                 }
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               >
                 <option value="WhatsApp">WhatsApp</option>
                 <option value="Email">Email</option>
@@ -1600,7 +1600,7 @@ export const AdminClientsPage: React.FC = () => {
                     e.target.value as 'active' | 'invited' | 'deactivated'
                   )
                 }
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               >
                 <option value="active">Active</option>
                 <option value="invited">Invited</option>
@@ -1616,7 +1616,7 @@ export const AdminClientsPage: React.FC = () => {
                 value={formData.userId}
                 onChange={(e) => updateFormField('userId', e.target.value)}
                 placeholder="Paste client UUID when registered in Supabase Auth"
-                className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
           </div>
@@ -1630,23 +1630,23 @@ export const AdminClientsPage: React.FC = () => {
               value={formData.adminNotes}
               onChange={(e) => updateFormField('adminNotes', e.target.value)}
               placeholder="Internal notes on brand guidelines, GSTIN, billing preferences..."
-              className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             />
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-2 border-t border-[#E2E4DF]">
+          <div className="flex items-center justify-end gap-3 pt-2 border-t border-[#1E3A5F]">
             <button
               type="button"
               disabled={savingClient}
               onClick={handleAttemptCloseForm}
-              className="px-4 py-2 text-xs font-medium text-[#6E7785] hover:text-[#172333]"
+              className="px-4 py-2 text-xs font-medium text-[#94A3B8] hover:text-[#F8FAFC]"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={savingClient}
-              className="px-5 py-2 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg disabled:opacity-50"
+              className="px-5 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg disabled:opacity-50"
             >
               {savingClient
                 ? 'Saving...'
@@ -1660,7 +1660,7 @@ export const AdminClientsPage: React.FC = () => {
 
       {/* Search & Status Filter Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-1 p-1 bg-[#E2E4DF]/60 rounded-lg w-fit">
+        <div className="flex flex-wrap items-center gap-1 p-1 bg-[#1E3A5F]/60 rounded-lg w-fit">
           {(
             [
               { id: 'all', label: `All (${clients.length})` },
@@ -1686,8 +1686,8 @@ export const AdminClientsPage: React.FC = () => {
               onClick={() => setStatusFilter(tab.id)}
               className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                 statusFilter === tab.id
-                  ? 'bg-white text-[#172333] shadow-xs font-semibold'
-                  : 'text-[#6E7785] hover:text-[#172333]'
+                  ? 'bg-[#0D1F38] text-[#F8FAFC] shadow-xs font-semibold'
+                  : 'text-[#94A3B8] hover:text-[#F8FAFC]'
               }`}
             >
               {tab.label}
@@ -1696,22 +1696,22 @@ export const AdminClientsPage: React.FC = () => {
         </div>
 
         <div className="relative w-full sm:w-80">
-          <Search className="w-4 h-4 text-[#6E7785] absolute left-3 top-2.5" />
+          <Search className="w-4 h-4 text-[#94A3B8] absolute left-3 top-2.5" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search name, brand, email, phone..."
-            className="w-full pl-9 pr-3 py-2 text-xs bg-white border border-[#E2E4DF] rounded-lg"
+            className="w-full pl-9 pr-3 py-2 text-xs bg-[#0D1F38] border border-[#1E3A5F] rounded-lg"
           />
         </div>
       </div>
 
       {/* Clients Table */}
-      <div className="bg-white border border-[#E2E4DF] rounded-lg overflow-x-auto">
+      <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="border-b border-[#E2E4DF] text-[11px] font-semibold text-[#6E7785]">
+            <tr className="border-b border-[#1E3A5F] text-[11px] font-semibold text-[#94A3B8]">
               <th className="py-3 px-4">Client Name & Brand</th>
               <th className="py-3 px-4">Email & WhatsApp / Phone</th>
               <th className="py-3 px-4">Status</th>
@@ -1721,16 +1721,16 @@ export const AdminClientsPage: React.FC = () => {
               <th className="py-3 px-4 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#E2E4DF] text-xs">
+          <tbody className="divide-y divide-[#1E3A5F] text-xs">
             {loading ? (
               <tr>
-                <td colSpan={7} className="py-8 text-center text-[#6E7785]">
+                <td colSpan={7} className="py-8 text-center text-[#94A3B8]">
                   Loading client directory...
                 </td>
               </tr>
             ) : filtered.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-8 text-center text-[#6E7785]">
+                <td colSpan={7} className="py-8 text-center text-[#94A3B8]">
                   No client profiles match the current filter.
                 </td>
               </tr>
@@ -1744,20 +1744,20 @@ export const AdminClientsPage: React.FC = () => {
                   totalPaid: 0,
                 };
                 return (
-                  <tr key={c.id} className="hover:bg-[#F5F5F1]/50">
+                  <tr key={c.id} className="hover:bg-[#132A4A]/50">
                     <td className="py-3.5 px-4">
                       <Link
                         to={`/admin/clients/${c.id}`}
-                        className="font-semibold text-[#172333] hover:text-[#F18A45]"
+                        className="font-semibold text-[#F8FAFC] hover:text-[#10B981]"
                       >
                         {c.fullName}
                       </Link>
-                      <p className="text-[11px] text-[#6E7785]">
+                      <p className="text-[11px] text-[#94A3B8]">
                         {c.companyName || 'Independent Client'} · {c.country || 'India'}
                       </p>
                     </td>
-                    <td className="py-3.5 px-4 text-[#6E7785]">
-                      <span className="text-[#172333]">{c.email}</span>
+                    <td className="py-3.5 px-4 text-[#94A3B8]">
+                      <span className="text-[#F8FAFC]">{c.email}</span>
                       <span className="block text-[11px]">
                         {c.phone || 'No phone'} · Prefers {c.preferredContact}
                       </span>
@@ -1766,10 +1766,10 @@ export const AdminClientsPage: React.FC = () => {
                       <span
                         className={`font-semibold ${
                           c.accountStatus === 'active'
-                            ? 'text-[#26734D]'
+                            ? 'text-[#16A34A]'
                             : c.accountStatus === 'deactivated'
-                            ? 'text-[#B93832]'
-                            : 'text-[#A96518]'
+                            ? 'text-[#DC2626]'
+                            : 'text-[#D97706]'
                         }`}
                       >
                         {c.accountStatus === 'active'
@@ -1780,9 +1780,9 @@ export const AdminClientsPage: React.FC = () => {
                       </span>
                     </td>
                     <td className="py-3.5 px-4 text-center font-mono">
-                      <span className="font-semibold text-[#172333]">{metrics.projectsCount}</span>
+                      <span className="font-semibold text-[#F8FAFC]">{metrics.projectsCount}</span>
                       {metrics.quotationsCount > 0 && (
-                        <span className="block text-[10px] text-[#6E7785]">
+                        <span className="block text-[10px] text-[#94A3B8]">
                           {metrics.quotationsCount} quote(s)
                         </span>
                       )}
@@ -1791,14 +1791,14 @@ export const AdminClientsPage: React.FC = () => {
                       <span
                         className={
                           metrics.outstandingBalance > 0
-                            ? 'font-semibold text-[#B93832]'
-                            : 'text-[#6E7785]'
+                            ? 'font-semibold text-[#DC2626]'
+                            : 'text-[#94A3B8]'
                         }
                       >
                         {formatINR(metrics.outstandingBalance)}
                       </span>
                     </td>
-                    <td className="py-3.5 px-4 text-[#6E7785] whitespace-nowrap">
+                    <td className="py-3.5 px-4 text-[#94A3B8] whitespace-nowrap">
                       {formatDate(c.createdAt)}
                     </td>
                     <td className="py-3.5 px-4 text-right whitespace-nowrap">
@@ -1823,18 +1823,18 @@ export const AdminClientsPage: React.FC = () => {
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[#172333]/65 p-4 overflow-y-auto"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#040D1A]/65 p-4 overflow-y-auto"
         >
-          <div className="bg-white border border-[#E2E4DF] rounded-lg max-w-3xl w-full p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
-            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[#E2E4DF] pb-4">
+          <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg max-w-3xl w-full p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[#1E3A5F] pb-4">
               <div>
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#F18A45]">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#10B981]">
                   Client Profile Inspector
                 </span>
-                <h2 className="font-editorial text-xl font-semibold text-[#172333] mt-0.5">
+                <h2 className="font-editorial text-xl font-semibold text-[#F8FAFC] mt-0.5">
                   {viewingClient.fullName}
                 </h2>
-                <p className="text-xs text-[#6E7785]">
+                <p className="text-xs text-[#94A3B8]">
                   {viewingClient.companyName || 'Independent Client'} · {viewingClient.email} ·{' '}
                   {viewingClient.phone || 'No phone'}
                 </p>
@@ -1847,20 +1847,20 @@ export const AdminClientsPage: React.FC = () => {
                     setViewingClient(null);
                     handleOpenEdit(target);
                   }}
-                  className="px-3 py-1.5 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg"
+                  className="px-3 py-1.5 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg"
                 >
                   Edit Profile
                 </button>
                 <Link
                   to={`/admin/clients/${viewingClient.id}`}
-                  className="px-3 py-1.5 text-xs font-semibold text-[#172333] bg-[#F5F5F1] hover:bg-[#E2E4DF] rounded-lg"
+                  className="px-3 py-1.5 text-xs font-semibold text-[#F8FAFC] bg-[#132A4A] hover:bg-[#1E3A5F] rounded-lg"
                 >
                   Full Page →
                 </Link>
                 <button
                   type="button"
                   onClick={() => setViewingClient(null)}
-                  className="px-2.5 py-1.5 text-xs text-[#6E7785] hover:text-[#172333]"
+                  className="px-2.5 py-1.5 text-xs text-[#94A3B8] hover:text-[#F8FAFC]"
                 >
                   Close
                 </button>
@@ -1898,59 +1898,59 @@ export const AdminClientsPage: React.FC = () => {
               return (
                 <div className="space-y-5 text-xs">
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div className="p-3 bg-[#F5F5F1] rounded-lg">
-                      <p className="text-[#6E7785]">Account Status</p>
-                      <p className="font-semibold text-[#172333] mt-0.5 capitalize">
+                    <div className="p-3 bg-[#132A4A] rounded-lg">
+                      <p className="text-[#94A3B8]">Account Status</p>
+                      <p className="font-semibold text-[#F8FAFC] mt-0.5 capitalize">
                         {viewingClient.accountStatus}
                       </p>
                     </div>
-                    <div className="p-3 bg-[#F5F5F1] rounded-lg">
-                      <p className="text-[#6E7785]">Total Billed</p>
-                      <p className="font-mono font-semibold text-[#172333] mt-0.5">
+                    <div className="p-3 bg-[#132A4A] rounded-lg">
+                      <p className="text-[#94A3B8]">Total Billed</p>
+                      <p className="font-mono font-semibold text-[#F8FAFC] mt-0.5">
                         {formatINR(totalBilled)}
                       </p>
                     </div>
-                    <div className="p-3 bg-[#F5F5F1] rounded-lg">
-                      <p className="text-[#6E7785]">Total Paid</p>
-                      <p className="font-mono font-semibold text-[#26734D] mt-0.5">
+                    <div className="p-3 bg-[#132A4A] rounded-lg">
+                      <p className="text-[#94A3B8]">Total Paid</p>
+                      <p className="font-mono font-semibold text-[#16A34A] mt-0.5">
                         {formatINR(totalPaid)}
                       </p>
                     </div>
-                    <div className="p-3 bg-[#F5F5F1] rounded-lg">
-                      <p className="text-[#6E7785]">Balance Due</p>
-                      <p className="font-mono font-semibold text-[#B93832] mt-0.5">
+                    <div className="p-3 bg-[#132A4A] rounded-lg">
+                      <p className="text-[#94A3B8]">Balance Due</p>
+                      <p className="font-mono font-semibold text-[#DC2626] mt-0.5">
                         {formatINR(balanceDue)}
                       </p>
                     </div>
                   </div>
 
                   {viewingClient.adminNotes && (
-                    <div className="p-3.5 bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg">
-                      <p className="font-semibold text-[#172333] mb-1">Private Admin Notes:</p>
-                      <p className="text-[#6E7785] whitespace-pre-wrap">{viewingClient.adminNotes}</p>
+                    <div className="p-3.5 bg-[#132A4A] border border-[#1E3A5F] rounded-lg">
+                      <p className="font-semibold text-[#F8FAFC] mb-1">Private Admin Notes:</p>
+                      <p className="text-[#94A3B8] whitespace-pre-wrap">{viewingClient.adminNotes}</p>
                     </div>
                   )}
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="border border-[#E2E4DF] rounded-lg p-4 space-y-2">
-                      <p className="font-semibold text-[#172333]">
+                    <div className="border border-[#1E3A5F] rounded-lg p-4 space-y-2">
+                      <p className="font-semibold text-[#F8FAFC]">
                         Related Projects ({cProjects.length})
                       </p>
                       {cProjects.length === 0 ? (
-                        <p className="text-[#6E7785]">No projects linked yet.</p>
+                        <p className="text-[#94A3B8]">No projects linked yet.</p>
                       ) : (
                         cProjects.map((p) => (
                           <div
                             key={p.id}
-                            className="flex items-center justify-between py-1.5 border-b border-[#E2E4DF] last:border-0"
+                            className="flex items-center justify-between py-1.5 border-b border-[#1E3A5F] last:border-0"
                           >
                             <Link
                               to={`/admin/projects/${p.id}`}
-                              className="font-semibold text-[#172333] hover:text-[#F18A45]"
+                              className="font-semibold text-[#F8FAFC] hover:text-[#10B981]"
                             >
                               {p.title}
                             </Link>
-                            <span className="text-[#6E7785]">
+                            <span className="text-[#94A3B8]">
                               {p.status} · {formatINR(p.budget)}
                             </span>
                           </div>
@@ -1958,14 +1958,14 @@ export const AdminClientsPage: React.FC = () => {
                       )}
                     </div>
 
-                    <div className="border border-[#E2E4DF] rounded-lg p-4 space-y-2">
-                      <p className="font-semibold text-[#172333]">
+                    <div className="border border-[#1E3A5F] rounded-lg p-4 space-y-2">
+                      <p className="font-semibold text-[#F8FAFC]">
                         Invoices ({cInvoices.length}) & Quotes/Estimates ({cQuotes.length})
                       </p>
                       {cInvoices.map((inv) => (
                         <div
                           key={inv.id}
-                          className="flex items-center justify-between py-1 border-b border-[#E2E4DF] last:border-0"
+                          className="flex items-center justify-between py-1 border-b border-[#1E3A5F] last:border-0"
                         >
                           <span className="font-mono font-semibold">{inv.invoiceNumber}</span>
                           <span className="font-mono">
@@ -1976,9 +1976,9 @@ export const AdminClientsPage: React.FC = () => {
                       {cQuotes.map((q) => (
                         <div
                           key={q.id}
-                          className="flex items-center justify-between py-1 border-b border-[#E2E4DF] last:border-0"
+                          className="flex items-center justify-between py-1 border-b border-[#1E3A5F] last:border-0"
                         >
-                          <span className="font-mono text-[#6E7785]">
+                          <span className="font-mono text-[#94A3B8]">
                             {q.quotationNumber} ({inferQuotationDocumentType(q)})
                           </span>
                           <span className="font-mono">
@@ -1987,18 +1987,18 @@ export const AdminClientsPage: React.FC = () => {
                         </div>
                       ))}
                       {cInvoices.length === 0 && cQuotes.length === 0 && (
-                        <p className="text-[#6E7785]">No invoices or quotations yet.</p>
+                        <p className="text-[#94A3B8]">No invoices or quotations yet.</p>
                       )}
                     </div>
                   </div>
 
                   {cInquiries.length > 0 && (
-                    <div className="border border-[#E2E4DF] rounded-lg p-4 space-y-1.5">
-                      <p className="font-semibold text-[#172333]">
+                    <div className="border border-[#1E3A5F] rounded-lg p-4 space-y-1.5">
+                      <p className="font-semibold text-[#F8FAFC]">
                         Original Website Inquiries ({cInquiries.length})
                       </p>
                       {cInquiries.map((inq) => (
-                        <p key={inq.id} className="text-[#6E7785]">
+                        <p key={inq.id} className="text-[#94A3B8]">
                           {inq.serviceRequired} · {inq.budgetRange} · Status: {inq.status} (
                           {formatDate(inq.createdAt)})
                         </p>
@@ -2101,7 +2101,7 @@ export const AdminClientDetailsPage: React.FC = () => {
   }, [loadData]);
 
   if (!client) {
-    return <div className="text-xs text-[#6E7785] py-12">Client record not found.</div>;
+    return <div className="text-xs text-[#94A3B8] py-12">Client record not found.</div>;
   }
 
   const updateField = <K extends keyof ClientRecord>(key: K, val: ClientRecord[K]) => {
@@ -2182,13 +2182,13 @@ export const AdminClientDetailsPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <Link to="/admin/clients" className="text-xs text-[#6E7785] hover:text-[#172333]">
+          <Link to="/admin/clients" className="text-xs text-[#94A3B8] hover:text-[#F8FAFC]">
             ← Back to Client Directory
           </Link>
-          <h1 className="font-editorial text-2xl font-semibold text-[#172333] mt-1">
+          <h1 className="font-editorial text-2xl font-semibold text-[#F8FAFC] mt-1">
             {client.fullName}
           </h1>
-          <p className="text-xs text-[#6E7785]">
+          <p className="text-xs text-[#94A3B8]">
             {client.companyName || 'Independent Client'} · {client.email} · {client.phone || 'No phone'}
           </p>
         </div>
@@ -2201,14 +2201,14 @@ export const AdminClientDetailsPage: React.FC = () => {
               showToast('success', `Client Marked ${nextStatus}`);
               await loadData();
             }}
-            className="px-3.5 py-2 text-xs font-semibold text-[#172333] bg-white border border-[#E2E4DF] hover:border-[#172333] rounded-lg"
+            className="px-3.5 py-2 text-xs font-semibold text-[#F8FAFC] bg-[#0D1F38] border border-[#1E3A5F] hover:border-[#10B981] rounded-lg"
           >
             {client.accountStatus === 'deactivated' ? 'Reactivate Client' : 'Archive / Mark Inactive'}
           </button>
           <button
             type="button"
             onClick={handleOpenDelete}
-            className="px-3.5 py-2 text-xs font-semibold text-white bg-[#B93832] hover:bg-[#992B26] rounded-lg"
+            className="px-3.5 py-2 text-xs font-semibold text-white bg-[#DC2626] hover:bg-[#B91C1C] rounded-lg"
           >
             Delete Client
           </button>
@@ -2217,37 +2217,37 @@ export const AdminClientDetailsPage: React.FC = () => {
 
       {/* Financial Summary Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
-        <div className="bg-white border border-[#E2E4DF] rounded-lg p-4">
-          <p className="text-[#6E7785]">Total Projects</p>
-          <p className="text-lg font-mono font-semibold text-[#172333] mt-1">{projects.length}</p>
+        <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-4">
+          <p className="text-[#94A3B8]">Total Projects</p>
+          <p className="text-lg font-mono font-semibold text-[#F8FAFC] mt-1">{projects.length}</p>
         </div>
-        <div className="bg-white border border-[#E2E4DF] rounded-lg p-4">
-          <p className="text-[#6E7785]">Total Billed (INR)</p>
-          <p className="text-lg font-mono font-semibold text-[#172333] mt-1">
+        <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-4">
+          <p className="text-[#94A3B8]">Total Billed (INR)</p>
+          <p className="text-lg font-mono font-semibold text-[#F8FAFC] mt-1">
             {formatINR(totalBilled)}
           </p>
         </div>
-        <div className="bg-white border border-[#E2E4DF] rounded-lg p-4">
-          <p className="text-[#6E7785]">Total Paid (INR)</p>
-          <p className="text-lg font-mono font-semibold text-[#26734D] mt-1">
+        <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-4">
+          <p className="text-[#94A3B8]">Total Paid (INR)</p>
+          <p className="text-lg font-mono font-semibold text-[#16A34A] mt-1">
             {formatINR(totalPaid)}
           </p>
         </div>
-        <div className="bg-white border border-[#E2E4DF] rounded-lg p-4">
-          <p className="text-[#6E7785]">Outstanding Balance</p>
-          <p className="text-lg font-mono font-semibold text-[#B93832] mt-1">
+        <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-4">
+          <p className="text-[#94A3B8]">Outstanding Balance</p>
+          <p className="text-lg font-mono font-semibold text-[#DC2626] mt-1">
             {formatINR(outstandingBalance)}
           </p>
         </div>
       </div>
 
-      <form onSubmit={handleSave} className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-4">
+      <form onSubmit={handleSave} className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold text-[#172333]">
+          <h2 className="text-base font-semibold text-[#F8FAFC]">
             Edit Client Profile & Portal Access
           </h2>
           {isDirty && (
-            <span className="text-[11px] font-semibold text-[#A96518]">Unsaved edits</span>
+            <span className="text-[11px] font-semibold text-[#D97706]">Unsaved edits</span>
           )}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -2258,7 +2258,7 @@ export const AdminClientDetailsPage: React.FC = () => {
               required
               value={client.fullName}
               onChange={(e) => updateField('fullName', e.target.value)}
-              className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             />
           </div>
           <div>
@@ -2268,7 +2268,7 @@ export const AdminClientDetailsPage: React.FC = () => {
               required
               value={client.email}
               onChange={(e) => updateField('email', e.target.value)}
-              className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             />
           </div>
           <div>
@@ -2277,7 +2277,7 @@ export const AdminClientDetailsPage: React.FC = () => {
               type="text"
               value={client.phone}
               onChange={(e) => updateField('phone', e.target.value)}
-              className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             />
           </div>
           <div>
@@ -2286,7 +2286,7 @@ export const AdminClientDetailsPage: React.FC = () => {
               type="text"
               value={client.companyName}
               onChange={(e) => updateField('companyName', e.target.value)}
-              className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             />
           </div>
           <div>
@@ -2295,7 +2295,7 @@ export const AdminClientDetailsPage: React.FC = () => {
               type="text"
               value={client.country || 'India'}
               onChange={(e) => updateField('country', e.target.value)}
-              className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             />
           </div>
           <div>
@@ -2308,7 +2308,7 @@ export const AdminClientDetailsPage: React.FC = () => {
                   e.target.value as 'Email' | 'WhatsApp' | 'Phone'
                 )
               }
-              className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             >
               <option value="WhatsApp">WhatsApp</option>
               <option value="Email">Email</option>
@@ -2322,7 +2322,7 @@ export const AdminClientDetailsPage: React.FC = () => {
               value={client.userId}
               onChange={(e) => updateField('userId', e.target.value)}
               placeholder="Authenticated Supabase User UUID"
-              className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              className="w-full px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             />
           </div>
           <div>
@@ -2335,7 +2335,7 @@ export const AdminClientDetailsPage: React.FC = () => {
                   e.target.value as 'active' | 'invited' | 'deactivated'
                 )
               }
-              className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             >
               <option value="active">Active</option>
               <option value="invited">Invited</option>
@@ -2349,14 +2349,14 @@ export const AdminClientDetailsPage: React.FC = () => {
             rows={3}
             value={client.adminNotes}
             onChange={(e) => updateField('adminNotes', e.target.value)}
-            className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+            className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
           />
         </div>
         <div className="flex items-center gap-3">
           <button
             type="submit"
             disabled={saving}
-            className="px-4 py-2 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg disabled:opacity-50"
+            className="px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg disabled:opacity-50"
           >
             {saving ? 'Saving...' : 'Save Changes'}
           </button>
@@ -2364,7 +2364,7 @@ export const AdminClientDetailsPage: React.FC = () => {
             <button
               type="button"
               onClick={() => loadData()}
-              className="px-3.5 py-2 text-xs font-medium text-[#6E7785] hover:text-[#172333]"
+              className="px-3.5 py-2 text-xs font-medium text-[#94A3B8] hover:text-[#F8FAFC]"
             >
               Discard Unsaved Edits
             </button>
@@ -2373,30 +2373,30 @@ export const AdminClientDetailsPage: React.FC = () => {
       </form>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white border border-[#E2E4DF] rounded-lg p-6">
+        <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-[#172333]">
+            <h3 className="text-sm font-semibold text-[#F8FAFC]">
               Associated Projects ({projects.length})
             </h3>
             <Link
               to="/admin/projects"
-              className="text-[11px] font-semibold text-[#172333] hover:text-[#F18A45]"
+              className="text-[11px] font-semibold text-[#F8FAFC] hover:text-[#10B981]"
             >
               + New Project
             </Link>
           </div>
           {projects.length === 0 ? (
-            <p className="text-xs text-[#6E7785]">No projects linked to this client.</p>
+            <p className="text-xs text-[#94A3B8]">No projects linked to this client.</p>
           ) : (
             projects.map((p) => (
               <div
                 key={p.id}
-                className="py-2 border-b border-[#E2E4DF] last:border-0 flex justify-between text-xs"
+                className="py-2 border-b border-[#1E3A5F] last:border-0 flex justify-between text-xs"
               >
-                <Link to={`/admin/projects/${p.id}`} className="font-semibold hover:text-[#F18A45]">
+                <Link to={`/admin/projects/${p.id}`} className="font-semibold hover:text-[#10B981]">
                   {p.title}
                 </Link>
-                <span className="text-[#6E7785] font-mono tabular-nums">
+                <span className="text-[#94A3B8] font-mono tabular-nums">
                   {p.status} · {formatINR(p.budget)}
                 </span>
               </div>
@@ -2404,34 +2404,34 @@ export const AdminClientDetailsPage: React.FC = () => {
           )}
         </div>
 
-        <div className="bg-white border border-[#E2E4DF] rounded-lg p-6">
+        <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-[#172333]">
+            <h3 className="text-sm font-semibold text-[#F8FAFC]">
               Quotations & Estimates ({quotations.length})
             </h3>
             <div className="flex items-center gap-2 text-[11px] font-semibold">
-              <Link to="/admin/quotations" className="text-[#172333] hover:text-[#F18A45]">
+              <Link to="/admin/quotations" className="text-[#F8FAFC] hover:text-[#10B981]">
                 + Quote
               </Link>
-              <span className="text-[#E2E4DF]">·</span>
-              <Link to="/admin/estimates" className="text-[#172333] hover:text-[#F18A45]">
+              <span className="text-[#1E3A5F]">·</span>
+              <Link to="/admin/estimates" className="text-[#F8FAFC] hover:text-[#10B981]">
                 + Estimate
               </Link>
             </div>
           </div>
           {quotations.length === 0 ? (
-            <p className="text-xs text-[#6E7785]">No quotations or estimates for this client.</p>
+            <p className="text-xs text-[#94A3B8]">No quotations or estimates for this client.</p>
           ) : (
             quotations.map((q) => {
               const docType = inferQuotationDocumentType(q);
               return (
                 <div
                   key={q.id}
-                  className="py-2 border-b border-[#E2E4DF] last:border-0 flex justify-between text-xs"
+                  className="py-2 border-b border-[#1E3A5F] last:border-0 flex justify-between text-xs"
                 >
                   <Link
                     to={docType === 'Estimate' ? '/admin/estimates' : '/admin/quotations'}
-                    className="font-mono font-semibold hover:text-[#F18A45]"
+                    className="font-mono font-semibold hover:text-[#10B981]"
                   >
                     {q.quotationNumber} ({docType})
                   </Link>
@@ -2444,29 +2444,29 @@ export const AdminClientDetailsPage: React.FC = () => {
           )}
         </div>
 
-        <div className="bg-white border border-[#E2E4DF] rounded-lg p-6">
+        <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-[#172333]">
+            <h3 className="text-sm font-semibold text-[#F8FAFC]">
               Client Invoices ({invoices.length})
             </h3>
             <Link
               to="/admin/invoices"
-              className="text-[11px] font-semibold text-[#172333] hover:text-[#F18A45]"
+              className="text-[11px] font-semibold text-[#F8FAFC] hover:text-[#10B981]"
             >
               + New Invoice
             </Link>
           </div>
           {invoices.length === 0 ? (
-            <p className="text-xs text-[#6E7785]">No invoices issued to this client.</p>
+            <p className="text-xs text-[#94A3B8]">No invoices issued to this client.</p>
           ) : (
             invoices.map((inv) => (
               <div
                 key={inv.id}
-                className="py-2 border-b border-[#E2E4DF] last:border-0 flex justify-between text-xs"
+                className="py-2 border-b border-[#1E3A5F] last:border-0 flex justify-between text-xs"
               >
                 <Link
                   to="/admin/invoices"
-                  className="font-mono font-semibold hover:text-[#F18A45]"
+                  className="font-mono font-semibold hover:text-[#10B981]"
                 >
                   {inv.invoiceNumber}
                 </Link>
@@ -2481,34 +2481,34 @@ export const AdminClientDetailsPage: React.FC = () => {
 
       {/* Connected Payments, Deliverables & Inquiries */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white border border-[#E2E4DF] rounded-lg p-6">
+        <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-[#172333]">
+            <h3 className="text-sm font-semibold text-[#F8FAFC]">
               Payment History ({payments.length})
             </h3>
             <Link
               to="/admin/payments"
-              className="text-[11px] font-semibold text-[#172333] hover:text-[#F18A45]"
+              className="text-[11px] font-semibold text-[#F8FAFC] hover:text-[#10B981]"
             >
               Payments Ledger →
             </Link>
           </div>
           {payments.length === 0 ? (
-            <p className="text-xs text-[#6E7785]">No recorded payments yet.</p>
+            <p className="text-xs text-[#94A3B8]">No recorded payments yet.</p>
           ) : (
             payments.map((pay) => (
               <div
                 key={pay.id}
-                className="py-2 border-b border-[#E2E4DF] last:border-0 flex justify-between text-xs"
+                className="py-2 border-b border-[#1E3A5F] last:border-0 flex justify-between text-xs"
               >
                 <div>
-                  <span className="font-semibold text-[#172333]">{pay.method}</span>
-                  <span className="text-[#6E7785]"> · {pay.paymentDate}</span>
+                  <span className="font-semibold text-[#F8FAFC]">{pay.method}</span>
+                  <span className="text-[#94A3B8]"> · {pay.paymentDate}</span>
                   {pay.transactionReference && (
-                    <p className="font-mono text-[10px] text-[#6E7785]">Ref: {pay.transactionReference}</p>
+                    <p className="font-mono text-[10px] text-[#94A3B8]">Ref: {pay.transactionReference}</p>
                   )}
                 </div>
-                <span className="font-mono font-semibold text-[#26734D] tabular-nums">
+                <span className="font-mono font-semibold text-[#16A34A] tabular-nums">
                   {formatINR(pay.amount)}
                 </span>
               </div>
@@ -2516,60 +2516,60 @@ export const AdminClientDetailsPage: React.FC = () => {
           )}
         </div>
 
-        <div className="bg-white border border-[#E2E4DF] rounded-lg p-6">
+        <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-[#172333]">
+            <h3 className="text-sm font-semibold text-[#F8FAFC]">
               Deliverable Files ({files.length})
             </h3>
             <Link
               to="/admin/files"
-              className="text-[11px] font-semibold text-[#172333] hover:text-[#F18A45]"
+              className="text-[11px] font-semibold text-[#F8FAFC] hover:text-[#10B981]"
             >
               Manage Files →
             </Link>
           </div>
           {files.length === 0 ? (
-            <p className="text-xs text-[#6E7785]">No deliverable files uploaded for this client.</p>
+            <p className="text-xs text-[#94A3B8]">No deliverable files uploaded for this client.</p>
           ) : (
             files.slice(0, 6).map((f) => (
               <div
                 key={f.id}
-                className="py-2 border-b border-[#E2E4DF] last:border-0 flex justify-between text-xs"
+                className="py-2 border-b border-[#1E3A5F] last:border-0 flex justify-between text-xs"
               >
-                <span className="font-medium text-[#172333] truncate max-w-[180px]">
+                <span className="font-medium text-[#F8FAFC] truncate max-w-[180px]">
                   {f.fileName} ({f.versionLabel})
                 </span>
-                <span className="text-[#6E7785] shrink-0">{f.category}</span>
+                <span className="text-[#94A3B8] shrink-0">{f.category}</span>
               </div>
             ))
           )}
         </div>
 
-        <div className="bg-white border border-[#E2E4DF] rounded-lg p-6">
+        <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-[#172333]">
+            <h3 className="text-sm font-semibold text-[#F8FAFC]">
               Website Inquiries ({inquiries.length})
             </h3>
             <Link
               to="/admin/inquiries"
-              className="text-[11px] font-semibold text-[#172333] hover:text-[#F18A45]"
+              className="text-[11px] font-semibold text-[#F8FAFC] hover:text-[#10B981]"
             >
               All Inquiries →
             </Link>
           </div>
           {inquiries.length === 0 ? (
-            <p className="text-xs text-[#6E7785]">No website inquiries matching this email.</p>
+            <p className="text-xs text-[#94A3B8]">No website inquiries matching this email.</p>
           ) : (
             inquiries.map((inq) => (
               <div
                 key={inq.id}
-                className="py-2 border-b border-[#E2E4DF] last:border-0 flex justify-between text-xs"
+                className="py-2 border-b border-[#1E3A5F] last:border-0 flex justify-between text-xs"
               >
                 <div>
-                  <span className="font-semibold text-[#172333]">{inq.serviceRequired}</span>
-                  <p className="text-[#6E7785] text-[11px]">{inq.budgetRange}</p>
+                  <span className="font-semibold text-[#F8FAFC]">{inq.serviceRequired}</span>
+                  <p className="text-[#94A3B8] text-[11px]">{inq.budgetRange}</p>
                 </div>
-                <span className="font-medium text-[#172333]">{inq.status}</span>
+                <span className="font-medium text-[#F8FAFC]">{inq.status}</span>
               </div>
             ))
           )}
@@ -2904,20 +2904,20 @@ export const AdminProjectsPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="font-editorial text-2xl font-semibold text-[#172333]">Projects</h1>
-          <p className="text-xs text-[#6E7785] mt-1">
+          <h1 className="font-editorial text-2xl font-semibold text-[#F8FAFC]">Projects</h1>
+          <p className="text-xs text-[#94A3B8] mt-1">
             Create, view, edit, duplicate, archive, and safely manage studio projects across Table & Kanban Board views.
           </p>
         </div>
         <div className="flex items-center gap-2.5">
-          <div className="inline-flex items-center p-1 bg-[#E2E4DF]/60 rounded-lg">
+          <div className="inline-flex items-center p-1 bg-[#1E3A5F]/60 rounded-lg">
             <button
               type="button"
               onClick={() => setViewMode('table')}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                 viewMode === 'table'
-                  ? 'bg-white text-[#172333] shadow-xs font-semibold'
-                  : 'text-[#6E7785] hover:text-[#172333]'
+                  ? 'bg-[#0D1F38] text-[#F8FAFC] shadow-xs font-semibold'
+                  : 'text-[#94A3B8] hover:text-[#F8FAFC]'
               }`}
             >
               <List className="w-3.5 h-3.5" />
@@ -2928,8 +2928,8 @@ export const AdminProjectsPage: React.FC = () => {
               onClick={() => setViewMode('kanban')}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                 viewMode === 'kanban'
-                  ? 'bg-white text-[#172333] shadow-xs font-semibold'
-                  : 'text-[#6E7785] hover:text-[#172333]'
+                  ? 'bg-[#0D1F38] text-[#F8FAFC] shadow-xs font-semibold'
+                  : 'text-[#94A3B8] hover:text-[#F8FAFC]'
               }`}
             >
               <LayoutGrid className="w-3.5 h-3.5" />
@@ -2939,7 +2939,7 @@ export const AdminProjectsPage: React.FC = () => {
           <button
             type="button"
             onClick={handleOpenCreate}
-            className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg"
+            className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg"
           >
             <FolderPlus className="w-4 h-4" />
             <span>+ Create Project</span>
@@ -2951,14 +2951,14 @@ export const AdminProjectsPage: React.FC = () => {
       {showBuilder && (
         <form
           onSubmit={handleSubmitForm}
-          className="bg-white border border-[#172333] rounded-lg p-6 space-y-4 shadow-sm"
+          className="bg-[#0D1F38] border border-[#040D1A] rounded-lg p-6 space-y-4 shadow-sm"
         >
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#E2E4DF] pb-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#1E3A5F] pb-3">
             <div>
-              <h2 className="text-base font-semibold text-[#172333]">
+              <h2 className="text-base font-semibold text-[#F8FAFC]">
                 {editingProject ? `Edit Project: ${editingProject.title}` : 'Create New Project'}
               </h2>
-              <p className="text-xs text-[#6E7785] mt-0.5">
+              <p className="text-xs text-[#94A3B8] mt-0.5">
                 {editingProject
                   ? 'Update project scope, client association, timeline, status, budget, or private admin notes.'
                   : 'Configure project details and optionally initialize production milestone tasks.'}
@@ -2966,13 +2966,13 @@ export const AdminProjectsPage: React.FC = () => {
             </div>
             {!editingProject && (
               <div className="flex items-center gap-2">
-                <label className="text-xs font-semibold text-[#172333]">
+                <label className="text-xs font-semibold text-[#F8FAFC]">
                   Milestone Template:
                 </label>
                 <select
                   value={milestoneTemplateId}
                   onChange={(e) => setMilestoneTemplateId(e.target.value)}
-                  className="px-3 py-1.5 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg font-medium text-[#172333]"
+                  className="px-3 py-1.5 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg font-medium text-[#F8FAFC]"
                 >
                   <option value="none">— No Milestone Template (Blank) —</option>
                   {PROJECT_MILESTONE_TEMPLATES.map((tpl) => (
@@ -2986,14 +2986,14 @@ export const AdminProjectsPage: React.FC = () => {
           </div>
 
           {!editingProject && milestoneTemplateId !== 'none' && (
-            <div className="p-3 bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg text-xs">
-              <p className="font-semibold text-[#172333]">
+            <div className="p-3 bg-[#132A4A] border border-[#1E3A5F] rounded-lg text-xs">
+              <p className="font-semibold text-[#F8FAFC]">
                 Auto-Populated Production Milestones:{' '}
-                <span className="text-[#F18A45]">
+                <span className="text-[#10B981]">
                   {PROJECT_MILESTONE_TEMPLATES.find((t) => t.id === milestoneTemplateId)?.name}
                 </span>
               </p>
-              <p className="text-[#6E7785] mt-1">
+              <p className="text-[#94A3B8] mt-1">
                 {PROJECT_MILESTONE_TEMPLATES.find((t) => t.id === milestoneTemplateId)
                   ?.tasks.map((t) => t.title)
                   .join(' → ')}
@@ -3008,7 +3008,7 @@ export const AdminProjectsPage: React.FC = () => {
                 required
                 value={form.clientId}
                 onChange={(e) => updateFormField('clientId', e.target.value)}
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               >
                 <option value="">Select client...</option>
                 {clients.map((c) => (
@@ -3026,7 +3026,7 @@ export const AdminProjectsPage: React.FC = () => {
                 value={form.title}
                 onChange={(e) => updateFormField('title', e.target.value)}
                 placeholder="YouTube Channel Rebrand & 5 Thumbnails"
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
             <div>
@@ -3036,7 +3036,7 @@ export const AdminProjectsPage: React.FC = () => {
                 required
                 value={form.serviceType}
                 onChange={(e) => updateFormField('serviceType', e.target.value)}
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
             <div>
@@ -3044,7 +3044,7 @@ export const AdminProjectsPage: React.FC = () => {
               <select
                 value={form.status}
                 onChange={(e) => updateFormField('status', e.target.value as ProjectStatus)}
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               >
                 {PROJECT_STATUSES.map((st) => (
                   <option key={st} value={st}>
@@ -3061,7 +3061,7 @@ export const AdminProjectsPage: React.FC = () => {
                 max={100}
                 value={form.progress}
                 onChange={(e) => updateFormField('progress', Number(e.target.value))}
-                className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
             <div>
@@ -3069,7 +3069,7 @@ export const AdminProjectsPage: React.FC = () => {
               <select
                 value={form.priority}
                 onChange={(e) => updateFormField('priority', e.target.value as PriorityLevel)}
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               >
                 <option value="Low">Low</option>
                 <option value="Medium">Medium</option>
@@ -3083,7 +3083,7 @@ export const AdminProjectsPage: React.FC = () => {
                 type="date"
                 value={form.startDate}
                 onChange={(e) => updateFormField('startDate', e.target.value)}
-                className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
             <div>
@@ -3092,7 +3092,7 @@ export const AdminProjectsPage: React.FC = () => {
                 type="date"
                 value={form.deadline}
                 onChange={(e) => updateFormField('deadline', e.target.value)}
-                className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
             <div>
@@ -3102,7 +3102,7 @@ export const AdminProjectsPage: React.FC = () => {
                 min={0}
                 value={form.budget}
                 onChange={(e) => updateFormField('budget', Number(e.target.value))}
-                className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
           </div>
@@ -3117,7 +3117,7 @@ export const AdminProjectsPage: React.FC = () => {
                 value={form.description}
                 onChange={(e) => updateFormField('description', e.target.value)}
                 placeholder="Short summary of project deliverables..."
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
             <div>
@@ -3129,7 +3129,7 @@ export const AdminProjectsPage: React.FC = () => {
                 value={form.latestUpdate}
                 onChange={(e) => updateFormField('latestUpdate', e.target.value)}
                 placeholder="Latest milestone update shown in Client Portal..."
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
           </div>
@@ -3143,7 +3143,7 @@ export const AdminProjectsPage: React.FC = () => {
                 rows={3}
                 value={form.brief}
                 onChange={(e) => updateFormField('brief', e.target.value)}
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
             <div>
@@ -3154,24 +3154,24 @@ export const AdminProjectsPage: React.FC = () => {
                 rows={3}
                 value={form.internalNotes}
                 onChange={(e) => updateFormField('internalNotes', e.target.value)}
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-2 border-t border-[#E2E4DF]">
+          <div className="flex items-center justify-end gap-3 pt-2 border-t border-[#1E3A5F]">
             <button
               type="button"
               disabled={savingProject}
               onClick={handleAttemptCloseBuilder}
-              className="px-4 py-2 text-xs font-medium text-[#6E7785] hover:text-[#172333]"
+              className="px-4 py-2 text-xs font-medium text-[#94A3B8] hover:text-[#F8FAFC]"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={savingProject}
-              className="px-5 py-2 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg disabled:opacity-50"
+              className="px-5 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg disabled:opacity-50"
             >
               {savingProject
                 ? 'Saving...'
@@ -3186,7 +3186,7 @@ export const AdminProjectsPage: React.FC = () => {
       {viewMode === 'table' ? (
         <>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex flex-wrap items-center gap-1 p-1 bg-[#E2E4DF]/60 rounded-lg w-fit">
+            <div className="flex flex-wrap items-center gap-1 p-1 bg-[#1E3A5F]/60 rounded-lg w-fit">
               {['All', ...PROJECT_STATUSES].map((st) => (
                 <button
                   key={st}
@@ -3194,8 +3194,8 @@ export const AdminProjectsPage: React.FC = () => {
                   onClick={() => setStatusFilter(st)}
                   className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap ${
                     statusFilter === st
-                      ? 'bg-white text-[#172333] shadow-sm font-semibold'
-                      : 'text-[#6E7785] hover:text-[#172333]'
+                      ? 'bg-[#0D1F38] text-[#F8FAFC] shadow-sm font-semibold'
+                      : 'text-[#94A3B8] hover:text-[#F8FAFC]'
                   }`}
                 >
                   {st}
@@ -3204,21 +3204,21 @@ export const AdminProjectsPage: React.FC = () => {
             </div>
 
             <div className="relative w-full sm:w-72">
-              <Search className="w-4 h-4 text-[#6E7785] absolute left-3 top-2.5" />
+              <Search className="w-4 h-4 text-[#94A3B8] absolute left-3 top-2.5" />
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search project, client, service..."
-                className="w-full pl-9 pr-3 py-2 text-xs bg-white border border-[#E2E4DF] rounded-lg"
+                className="w-full pl-9 pr-3 py-2 text-xs bg-[#0D1F38] border border-[#1E3A5F] rounded-lg"
               />
             </div>
           </div>
 
-          <div className="bg-white border border-[#E2E4DF] rounded-lg overflow-x-auto">
+          <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-[#E2E4DF] text-[11px] font-semibold text-[#6E7785]">
+                <tr className="border-b border-[#1E3A5F] text-[11px] font-semibold text-[#94A3B8]">
                   <th className="py-3 px-4">Project Title & Service</th>
                   <th className="py-3 px-4">Client</th>
                   <th className="py-3 px-4">Status</th>
@@ -3228,45 +3228,45 @@ export const AdminProjectsPage: React.FC = () => {
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#E2E4DF] text-xs">
+              <tbody className="divide-y divide-[#1E3A5F] text-xs">
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-8 text-center text-[#6E7785]">
+                    <td colSpan={7} className="py-8 text-center text-[#94A3B8]">
                       No projects match the current filter.
                     </td>
                   </tr>
                 ) : (
                   filtered.map((p) => (
-                    <tr key={p.id} className="hover:bg-[#F5F5F1]/50">
+                    <tr key={p.id} className="hover:bg-[#132A4A]/50">
                       <td className="py-3.5 px-4">
                         <Link
                           to={`/admin/projects/${p.id}`}
-                          className="font-semibold text-[#172333] hover:text-[#F18A45]"
+                          className="font-semibold text-[#F8FAFC] hover:text-[#10B981]"
                         >
                           {p.title}
                         </Link>
-                        <p className="text-[11px] text-[#6E7785]">
+                        <p className="text-[11px] text-[#94A3B8]">
                           {p.serviceType} · Priority: {p.priority}
                         </p>
                       </td>
-                      <td className="py-3.5 px-4 text-[#6E7785]">{p.clientName}</td>
+                      <td className="py-3.5 px-4 text-[#94A3B8]">{p.clientName}</td>
                       <td className="py-3.5 px-4">
                         <span
                           className={`font-semibold ${
                             p.status === 'Completed'
-                              ? 'text-[#26734D]'
+                              ? 'text-[#16A34A]'
                               : p.status === 'Cancelled'
-                              ? 'text-[#B93832]'
+                              ? 'text-[#DC2626]'
                               : p.status === 'Revision Requested' || p.status === 'On Hold'
-                              ? 'text-[#A96518]'
-                              : 'text-[#172333]'
+                              ? 'text-[#D97706]'
+                              : 'text-[#F8FAFC]'
                           }`}
                         >
                           {p.status}
                         </span>
                       </td>
                       <td className="py-3.5 px-4 font-mono tabular-nums">{p.progress}%</td>
-                      <td className="py-3.5 px-4 font-mono text-[#6E7785]">{p.deadline || '—'}</td>
+                      <td className="py-3.5 px-4 font-mono text-[#94A3B8]">{p.deadline || '—'}</td>
                       <td className="py-3.5 px-4 text-right font-mono tabular-nums">
                         {formatINR(p.budget)}
                       </td>
@@ -3302,63 +3302,63 @@ export const AdminProjectsPage: React.FC = () => {
             return (
               <div
                 key={col.label}
-                className="bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg p-3 flex flex-col min-h-[420px]"
+                className="bg-[#132A4A] border border-[#1E3A5F] rounded-lg p-3 flex flex-col min-h-[420px]"
               >
-                <div className="flex items-center justify-between pb-2.5 mb-3 border-b border-[#E2E4DF]">
-                  <span className="text-xs font-semibold text-[#172333]">{col.label}</span>
-                  <span className="text-[11px] font-mono font-semibold text-[#6E7785]">
+                <div className="flex items-center justify-between pb-2.5 mb-3 border-b border-[#1E3A5F]">
+                  <span className="text-xs font-semibold text-[#F8FAFC]">{col.label}</span>
+                  <span className="text-[11px] font-mono font-semibold text-[#94A3B8]">
                     {colProjects.length}
                   </span>
                 </div>
                 <div className="space-y-3 flex-1">
                   {colProjects.length === 0 ? (
-                    <p className="text-[11px] text-[#6E7785] text-center py-8">
+                    <p className="text-[11px] text-[#94A3B8] text-center py-8">
                       No projects in {col.label}
                     </p>
                   ) : (
                     colProjects.map((p) => (
                       <div
                         key={p.id}
-                        className="bg-white border border-[#E2E4DF] rounded-lg p-3.5 space-y-2.5 shadow-2xs"
+                        className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-3.5 space-y-2.5 shadow-2xs"
                       >
                         <div className="flex items-start justify-between gap-2">
                           <Link
                             to={`/admin/projects/${p.id}`}
-                            className="text-xs font-semibold text-[#172333] hover:text-[#F18A45] leading-snug"
+                            className="text-xs font-semibold text-[#F8FAFC] hover:text-[#10B981] leading-snug"
                           >
                             {p.title}
                           </Link>
-                          <span className="font-mono text-[10px] text-[#6E7785]">
+                          <span className="font-mono text-[10px] text-[#94A3B8]">
                             {p.progress}%
                           </span>
                         </div>
-                        <p className="text-[11px] text-[#6E7785]">
+                        <p className="text-[11px] text-[#94A3B8]">
                           {p.clientName} · {p.serviceType}
                         </p>
-                        <div className="w-full h-1 bg-[#F5F5F1] rounded-full overflow-hidden">
+                        <div className="w-full h-1 bg-[#132A4A] rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-[#F18A45]"
+                            className="h-full bg-[#10B981]"
                             style={{ width: `${Math.min(100, Math.max(0, p.progress))}%` }}
                           />
                         </div>
                         <div className="flex items-center justify-between text-[11px] pt-1">
-                          <span className="font-mono font-semibold text-[#172333]">
+                          <span className="font-mono font-semibold text-[#F8FAFC]">
                             {formatINR(p.budget)}
                           </span>
-                          <span className="font-mono text-[#6E7785]">Due {p.deadline || '—'}</span>
+                          <span className="font-mono text-[#94A3B8]">Due {p.deadline || '—'}</span>
                         </div>
-                        <div className="flex items-center justify-between gap-1 pt-2 border-t border-[#E2E4DF] text-[10px]">
+                        <div className="flex items-center justify-between gap-1 pt-2 border-t border-[#1E3A5F] text-[10px]">
                           <button
                             type="button"
                             onClick={() => handleOpenEdit(p)}
-                            className="font-semibold text-[#172333] hover:text-[#F18A45]"
+                            className="font-semibold text-[#F8FAFC] hover:text-[#10B981]"
                           >
                             Edit
                           </button>
                           <button
                             type="button"
                             onClick={() => handleTriggerDeleteProject(p)}
-                            className="font-semibold text-[#B93832] hover:underline"
+                            className="font-semibold text-[#DC2626] hover:underline"
                           >
                             Delete
                           </button>
@@ -3368,7 +3368,7 @@ export const AdminProjectsPage: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => handleQuickProjectStatusChange(p, prevCol.status)}
-                              className="text-[10px] font-semibold text-[#6E7785] hover:text-[#172333]"
+                              className="text-[10px] font-semibold text-[#94A3B8] hover:text-[#F8FAFC]"
                             >
                               ← {prevCol.label}
                             </button>
@@ -3379,7 +3379,7 @@ export const AdminProjectsPage: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => handleQuickProjectStatusChange(p, nextCol.status)}
-                              className="text-[10px] font-semibold text-[#F18A45] hover:underline"
+                              className="text-[10px] font-semibold text-[#10B981] hover:underline"
                             >
                               {nextCol.label} →
                             </button>
@@ -3400,18 +3400,18 @@ export const AdminProjectsPage: React.FC = () => {
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[#172333]/65 p-4 overflow-y-auto"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#040D1A]/65 p-4 overflow-y-auto"
         >
-          <div className="bg-white border border-[#E2E4DF] rounded-lg max-w-3xl w-full p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
-            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[#E2E4DF] pb-4">
+          <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg max-w-3xl w-full p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[#1E3A5F] pb-4">
               <div>
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#F18A45]">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#10B981]">
                   Project Overview · {viewingProject.serviceType}
                 </span>
-                <h2 className="font-editorial text-xl font-semibold text-[#172333] mt-0.5">
+                <h2 className="font-editorial text-xl font-semibold text-[#F8FAFC] mt-0.5">
                   {viewingProject.title}
                 </h2>
-                <p className="text-xs text-[#6E7785]">
+                <p className="text-xs text-[#94A3B8]">
                   Client: {viewingProject.clientName} ({viewingProject.clientEmail}) · Status:{' '}
                   <strong>{viewingProject.status}</strong> ({viewingProject.progress}%)
                 </p>
@@ -3424,20 +3424,20 @@ export const AdminProjectsPage: React.FC = () => {
                     setViewingProject(null);
                     handleOpenEdit(target);
                   }}
-                  className="px-3 py-1.5 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg"
+                  className="px-3 py-1.5 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg"
                 >
                   Edit Project
                 </button>
                 <Link
                   to={`/admin/projects/${viewingProject.id}`}
-                  className="px-3 py-1.5 text-xs font-semibold text-[#172333] bg-[#F5F5F1] hover:bg-[#E2E4DF] rounded-lg"
+                  className="px-3 py-1.5 text-xs font-semibold text-[#F8FAFC] bg-[#132A4A] hover:bg-[#1E3A5F] rounded-lg"
                 >
                   Full Workspace →
                 </Link>
                 <button
                   type="button"
                   onClick={() => setViewingProject(null)}
-                  className="px-2.5 py-1.5 text-xs text-[#6E7785] hover:text-[#172333]"
+                  className="px-2.5 py-1.5 text-xs text-[#94A3B8] hover:text-[#F8FAFC]"
                 >
                   Close
                 </button>
@@ -3452,43 +3452,43 @@ export const AdminProjectsPage: React.FC = () => {
               return (
                 <div className="space-y-4 text-xs">
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div className="p-3 bg-[#F5F5F1] rounded-lg">
-                      <p className="text-[#6E7785]">Budget (INR)</p>
-                      <p className="font-mono font-semibold text-[#172333] mt-0.5">
+                    <div className="p-3 bg-[#132A4A] rounded-lg">
+                      <p className="text-[#94A3B8]">Budget (INR)</p>
+                      <p className="font-mono font-semibold text-[#F8FAFC] mt-0.5">
                         {formatINR(viewingProject.budget)}
                       </p>
                     </div>
-                    <div className="p-3 bg-[#F5F5F1] rounded-lg">
-                      <p className="text-[#6E7785]">Timeline</p>
-                      <p className="font-mono text-[#172333] mt-0.5">
+                    <div className="p-3 bg-[#132A4A] rounded-lg">
+                      <p className="text-[#94A3B8]">Timeline</p>
+                      <p className="font-mono text-[#F8FAFC] mt-0.5">
                         {viewingProject.startDate || '—'} → {viewingProject.deadline || '—'}
                       </p>
                     </div>
-                    <div className="p-3 bg-[#F5F5F1] rounded-lg">
-                      <p className="text-[#6E7785]">Milestones / Tasks</p>
-                      <p className="font-mono font-semibold text-[#172333] mt-0.5">
+                    <div className="p-3 bg-[#132A4A] rounded-lg">
+                      <p className="text-[#94A3B8]">Milestones / Tasks</p>
+                      <p className="font-mono font-semibold text-[#F8FAFC] mt-0.5">
                         {pTasks.filter((t) => t.status === 'Done').length} / {pTasks.length} Done
                       </p>
                     </div>
-                    <div className="p-3 bg-[#F5F5F1] rounded-lg">
-                      <p className="text-[#6E7785]">Deliverables & Invoices</p>
-                      <p className="font-mono font-semibold text-[#172333] mt-0.5">
+                    <div className="p-3 bg-[#132A4A] rounded-lg">
+                      <p className="text-[#94A3B8]">Deliverables & Invoices</p>
+                      <p className="font-mono font-semibold text-[#F8FAFC] mt-0.5">
                         {pFiles.length} file(s) · {pInvoices.length} inv.
                       </p>
                     </div>
                   </div>
 
                   {viewingProject.brief && (
-                    <div className="p-3.5 bg-[#F5F5F1] rounded-lg">
-                      <p className="font-semibold text-[#172333] mb-1">Creative Brief:</p>
-                      <p className="text-[#6E7785] whitespace-pre-wrap">{viewingProject.brief}</p>
+                    <div className="p-3.5 bg-[#132A4A] rounded-lg">
+                      <p className="font-semibold text-[#F8FAFC] mb-1">Creative Brief:</p>
+                      <p className="text-[#94A3B8] whitespace-pre-wrap">{viewingProject.brief}</p>
                     </div>
                   )}
 
                   {viewingProject.latestUpdate && (
-                    <div className="p-3.5 bg-[#F5F5F1] rounded-lg">
-                      <p className="font-semibold text-[#172333] mb-1">Latest Client Status Update:</p>
-                      <p className="text-[#6E7785]">{viewingProject.latestUpdate}</p>
+                    <div className="p-3.5 bg-[#132A4A] rounded-lg">
+                      <p className="font-semibold text-[#F8FAFC] mb-1">Latest Client Status Update:</p>
+                      <p className="text-[#94A3B8]">{viewingProject.latestUpdate}</p>
                     </div>
                   )}
                 </div>
@@ -3566,7 +3566,7 @@ export const AdminProjectDetailsPage: React.FC = () => {
   }, [loadProject]);
 
   if (!project) {
-    return <div className="text-xs text-[#6E7785] py-12">Project not found.</div>;
+    return <div className="text-xs text-[#94A3B8] py-12">Project not found.</div>;
   }
 
   const updateProjectField = <K extends keyof ProjectRecord>(key: K, val: ProjectRecord[K]) => {
@@ -3661,13 +3661,13 @@ export const AdminProjectDetailsPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <Link to="/admin/projects" className="text-xs text-[#6E7785] hover:text-[#172333]">
+          <Link to="/admin/projects" className="text-xs text-[#94A3B8] hover:text-[#F8FAFC]">
             ← Back to Projects
           </Link>
-          <h1 className="font-editorial text-2xl font-semibold text-[#172333] mt-1">
+          <h1 className="font-editorial text-2xl font-semibold text-[#F8FAFC] mt-1">
             {project.title}
           </h1>
-          <p className="text-xs text-[#6E7785]">
+          <p className="text-xs text-[#94A3B8]">
             Client: {project.clientName} ({project.clientEmail}) · Service: {project.serviceType}
           </p>
         </div>
@@ -3675,14 +3675,14 @@ export const AdminProjectDetailsPage: React.FC = () => {
           <div className="text-right text-xs">
             <span
               className={`font-semibold ${
-                unlockInfo.isUnlocked ? 'text-[#26734D]' : 'text-[#A96518]'
+                unlockInfo.isUnlocked ? 'text-[#16A34A]' : 'text-[#D97706]'
               }`}
             >
               {unlockInfo.isUnlocked
                 ? 'Master Files Unlocked (Invoice Settled)'
                 : 'Watermarked Preview Mode Active'}
             </span>
-            <p className="text-[11px] text-[#6E7785]">{unlockInfo.reason}</p>
+            <p className="text-[11px] text-[#94A3B8]">{unlockInfo.reason}</p>
           </div>
           <button
             type="button"
@@ -3691,27 +3691,27 @@ export const AdminProjectDetailsPage: React.FC = () => {
               showToast('success', 'Project Duplicated');
               navigate(`/admin/projects/${newId}`);
             }}
-            className="px-3 py-2 text-xs font-semibold text-[#172333] bg-white border border-[#E2E4DF] hover:border-[#172333] rounded-lg"
+            className="px-3 py-2 text-xs font-semibold text-[#F8FAFC] bg-[#0D1F38] border border-[#1E3A5F] hover:border-[#10B981] rounded-lg"
           >
             Duplicate Project
           </button>
           <button
             type="button"
             onClick={handleOpenDelete}
-            className="px-3.5 py-2 text-xs font-semibold text-white bg-[#B93832] hover:bg-[#992B26] rounded-lg"
+            className="px-3.5 py-2 text-xs font-semibold text-white bg-[#DC2626] hover:bg-[#B91C1C] rounded-lg"
           >
             Delete / Archive Project
           </button>
         </div>
       </div>
 
-      <form onSubmit={handleSaveProject} className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-4">
+      <form onSubmit={handleSaveProject} className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold text-[#172333]">
+          <h2 className="text-base font-semibold text-[#F8FAFC]">
             Edit Project Details, Timeline & Scope
           </h2>
           {isDirty && (
-            <span className="text-[11px] font-semibold text-[#A96518]">Unsaved edits</span>
+            <span className="text-[11px] font-semibold text-[#D97706]">Unsaved edits</span>
           )}
         </div>
 
@@ -3723,7 +3723,7 @@ export const AdminProjectDetailsPage: React.FC = () => {
               required
               value={project.title}
               onChange={(e) => updateProjectField('title', e.target.value)}
-              className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             />
           </div>
           <div>
@@ -3743,7 +3743,7 @@ export const AdminProjectDetailsPage: React.FC = () => {
                   setIsDirty(true);
                 }
               }}
-              className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             >
               <option value={project.clientId}>{project.clientName}</option>
               {clients
@@ -3761,7 +3761,7 @@ export const AdminProjectDetailsPage: React.FC = () => {
               type="text"
               value={project.serviceType}
               onChange={(e) => updateProjectField('serviceType', e.target.value)}
-              className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             />
           </div>
         </div>
@@ -3772,7 +3772,7 @@ export const AdminProjectDetailsPage: React.FC = () => {
             <select
               value={project.status}
               onChange={(e) => updateProjectField('status', e.target.value as ProjectStatus)}
-              className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             >
               {PROJECT_STATUSES.map((st) => (
                 <option key={st} value={st}>
@@ -3786,7 +3786,7 @@ export const AdminProjectDetailsPage: React.FC = () => {
             <select
               value={project.priority}
               onChange={(e) => updateProjectField('priority', e.target.value as PriorityLevel)}
-              className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             >
               <option value="Low">Low</option>
               <option value="Medium">Medium</option>
@@ -3802,7 +3802,7 @@ export const AdminProjectDetailsPage: React.FC = () => {
               max={100}
               value={project.progress}
               onChange={(e) => updateProjectField('progress', Number(e.target.value))}
-              className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              className="w-full px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             />
           </div>
           <div>
@@ -3811,7 +3811,7 @@ export const AdminProjectDetailsPage: React.FC = () => {
               type="date"
               value={project.startDate}
               onChange={(e) => updateProjectField('startDate', e.target.value)}
-              className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              className="w-full px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             />
           </div>
           <div>
@@ -3820,7 +3820,7 @@ export const AdminProjectDetailsPage: React.FC = () => {
               type="date"
               value={project.deadline}
               onChange={(e) => updateProjectField('deadline', e.target.value)}
-              className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              className="w-full px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             />
           </div>
           <div>
@@ -3830,7 +3830,7 @@ export const AdminProjectDetailsPage: React.FC = () => {
               min={0}
               value={project.budget}
               onChange={(e) => updateProjectField('budget', Number(e.target.value))}
-              className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              className="w-full px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             />
           </div>
         </div>
@@ -3844,7 +3844,7 @@ export const AdminProjectDetailsPage: React.FC = () => {
               type="text"
               value={project.description}
               onChange={(e) => updateProjectField('description', e.target.value)}
-              className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             />
           </div>
           <div>
@@ -3855,7 +3855,7 @@ export const AdminProjectDetailsPage: React.FC = () => {
               type="text"
               value={project.latestUpdate}
               onChange={(e) => updateProjectField('latestUpdate', e.target.value)}
-              className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             />
           </div>
         </div>
@@ -3867,11 +3867,11 @@ export const AdminProjectDetailsPage: React.FC = () => {
               rows={3}
               value={project.brief}
               onChange={(e) => updateProjectField('brief', e.target.value)}
-              className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             />
           </div>
           <div>
-            <label className="flex items-center gap-1.5 text-xs font-semibold text-[#A96518] mb-1">
+            <label className="flex items-center gap-1.5 text-xs font-semibold text-[#D97706] mb-1">
               <Lock className="w-3.5 h-3.5" />
               <span>Private Admin Notes (Stored in isolated /projectInternalNotes)</span>
             </label>
@@ -3882,7 +3882,7 @@ export const AdminProjectDetailsPage: React.FC = () => {
                 setInternalNotes(e.target.value);
                 setIsDirty(true);
               }}
-              className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             />
           </div>
         </div>
@@ -3891,7 +3891,7 @@ export const AdminProjectDetailsPage: React.FC = () => {
           <button
             type="submit"
             disabled={saving}
-            className="px-4 py-2 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg disabled:opacity-50"
+            className="px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg disabled:opacity-50"
           >
             {saving ? 'Saving...' : 'Save Project Changes'}
           </button>
@@ -3899,7 +3899,7 @@ export const AdminProjectDetailsPage: React.FC = () => {
             <button
               type="button"
               onClick={() => loadProject()}
-              className="px-3.5 py-2 text-xs font-medium text-[#6E7785] hover:text-[#172333]"
+              className="px-3.5 py-2 text-xs font-medium text-[#94A3B8] hover:text-[#F8FAFC]"
             >
               Discard Unsaved Edits
             </button>
@@ -3909,9 +3909,9 @@ export const AdminProjectDetailsPage: React.FC = () => {
 
       {/* Project Milestones & Proofing Pins */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-4">
+        <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-base font-semibold text-[#172333]">
+            <h2 className="text-base font-semibold text-[#F8FAFC]">
               Production Milestones ({tasks.length})
             </h2>
             <select
@@ -3936,7 +3936,7 @@ export const AdminProjectDetailsPage: React.FC = () => {
                 );
                 await loadProject();
               }}
-              className="px-2.5 py-1.5 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg font-medium text-[#172333]"
+              className="px-2.5 py-1.5 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg font-medium text-[#F8FAFC]"
             >
               <option value="">+ Load Milestone Template...</option>
               {PROJECT_MILESTONE_TEMPLATES.map((tpl) => (
@@ -3947,25 +3947,25 @@ export const AdminProjectDetailsPage: React.FC = () => {
             </select>
           </div>
           {tasks.length === 0 ? (
-            <p className="text-xs text-[#6E7785]">
+            <p className="text-xs text-[#94A3B8]">
               No milestone tasks yet. Select a template above to populate standard studio tasks in one click.
             </p>
           ) : (
-            <div className="divide-y divide-[#E2E4DF] text-xs">
+            <div className="divide-y divide-[#1E3A5F] text-xs">
               {tasks.map((t) => (
                 <div key={t.id} className="py-2.5 flex items-center justify-between gap-3">
                   <div>
                     <p
                       className={
                         t.status === 'Done'
-                          ? 'line-through text-[#6E7785]'
-                          : 'font-semibold text-[#172333]'
+                          ? 'line-through text-[#94A3B8]'
+                          : 'font-semibold text-[#F8FAFC]'
                       }
                     >
                       {t.title}
                     </p>
                     {t.description && (
-                      <p className="text-[11px] text-[#6E7785]">{t.description}</p>
+                      <p className="text-[11px] text-[#94A3B8]">{t.description}</p>
                     )}
                   </div>
                   <select
@@ -3977,7 +3977,7 @@ export const AdminProjectDetailsPage: React.FC = () => {
                       );
                       await loadProject();
                     }}
-                    className="px-2 py-1 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded"
+                    className="px-2 py-1 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded"
                   >
                     <option value="To Do">To Do</option>
                     <option value="In Progress">In Progress</option>
@@ -3990,15 +3990,15 @@ export const AdminProjectDetailsPage: React.FC = () => {
           )}
         </div>
 
-        <div className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-4">
+        <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-base font-semibold text-[#172333] inline-flex items-center gap-1.5">
-              <MapPin className="w-4 h-4 text-[#F18A45]" />
+            <h2 className="text-base font-semibold text-[#F8FAFC] inline-flex items-center gap-1.5">
+              <MapPin className="w-4 h-4 text-[#10B981]" />
               <span>Client Visual Proofing Pins ({proofingPins.length})</span>
             </h2>
           </div>
           {proofingPins.length === 0 ? (
-            <p className="text-xs text-[#6E7785]">
+            <p className="text-xs text-[#94A3B8]">
               When clients click on design proofs or video timestamps in the Client Portal, their coordinate pins and revision notes appear here.
             </p>
           ) : (
@@ -4006,19 +4006,19 @@ export const AdminProjectDetailsPage: React.FC = () => {
               {proofingPins.map((pin, idx) => (
                 <div
                   key={pin.id}
-                  className="p-3 bg-[#F5F5F1] rounded-lg text-xs flex items-start justify-between gap-3"
+                  className="p-3 bg-[#132A4A] rounded-lg text-xs flex items-start justify-between gap-3"
                 >
                   <div>
-                    <span className="font-mono font-semibold text-[#F18A45]">#{idx + 1}</span>{' '}
-                    <span className="font-semibold text-[#172333]">{pin.authorName}:</span>{' '}
-                    <span className={pin.resolved ? 'line-through text-[#6E7785]' : 'text-[#172333]'}>
+                    <span className="font-mono font-semibold text-[#10B981]">#{idx + 1}</span>{' '}
+                    <span className="font-semibold text-[#F8FAFC]">{pin.authorName}:</span>{' '}
+                    <span className={pin.resolved ? 'line-through text-[#94A3B8]' : 'text-[#F8FAFC]'}>
                       {pin.comment}
                     </span>
-                    <p className="text-[10px] font-mono text-[#6E7785] mt-0.5">
+                    <p className="text-[10px] font-mono text-[#94A3B8] mt-0.5">
                       {pin.deliverableTitle} · Coord ({pin.xPercent.toFixed(0)}%, {pin.yPercent.toFixed(0)}%)
                     </p>
                   </div>
-                  <span className="text-[10px] font-mono font-semibold text-[#6E7785]">
+                  <span className="text-[10px] font-mono font-semibold text-[#94A3B8]">
                     {pin.resolved ? 'Resolved' : 'Open'}
                   </span>
                 </div>
@@ -4029,16 +4029,16 @@ export const AdminProjectDetailsPage: React.FC = () => {
       </div>
 
       {/* Project Messages / Comments */}
-      <div className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-4">
-        <h2 className="text-base font-semibold text-[#172333]">Project Comments & Feedback Thread</h2>
+      <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 space-y-4">
+        <h2 className="text-base font-semibold text-[#F8FAFC]">Project Comments & Feedback Thread</h2>
         <div className="space-y-3 max-h-80 overflow-y-auto">
           {messages.length === 0 ? (
-            <p className="text-xs text-[#6E7785]">No messages posted on this project yet.</p>
+            <p className="text-xs text-[#94A3B8]">No messages posted on this project yet.</p>
           ) : (
             messages.map((m) => (
-              <div key={m.id} className="p-3 bg-[#F5F5F1] rounded-lg text-xs">
-                <div className="flex items-center justify-between text-[#6E7785] mb-1">
-                  <span className="font-semibold text-[#172333]">
+              <div key={m.id} className="p-3 bg-[#132A4A] rounded-lg text-xs">
+                <div className="flex items-center justify-between text-[#94A3B8] mb-1">
+                  <span className="font-semibold text-[#F8FAFC]">
                     {m.senderName} ({m.senderRole})
                   </span>
                   <span>
@@ -4046,7 +4046,7 @@ export const AdminProjectDetailsPage: React.FC = () => {
                     {formatDate(m.createdAt)}
                   </span>
                 </div>
-                <p className="text-[#172333]">{m.content}</p>
+                <p className="text-[#F8FAFC]">{m.content}</p>
               </div>
             ))
           )}
@@ -4058,19 +4058,19 @@ export const AdminProjectDetailsPage: React.FC = () => {
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder="Write a project update or comment..."
-            className="flex-1 px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+            className="flex-1 px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
           />
           <select
             value={msgVisibility}
             onChange={(e) => setMsgVisibility(e.target.value as 'client' | 'internal')}
-            className="px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+            className="px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
           >
             <option value="client">Client Visible</option>
             <option value="internal">Internal Only</option>
           </select>
           <button
             type="submit"
-            className="px-4 py-2 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg whitespace-nowrap"
+            className="px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg whitespace-nowrap"
           >
             Post Message
           </button>
@@ -4151,21 +4151,21 @@ export const AdminTasksPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="font-editorial text-2xl font-semibold text-[#172333]">
+          <h1 className="font-editorial text-2xl font-semibold text-[#F8FAFC]">
             Tasks & Milestones
           </h1>
-          <p className="text-xs text-[#6E7785] mt-1">
+          <p className="text-xs text-[#94A3B8] mt-1">
             Assign tasks to projects and switch between List & Kanban Board views.
           </p>
         </div>
-        <div className="inline-flex items-center p-1 bg-[#E2E4DF]/60 rounded-lg">
+        <div className="inline-flex items-center p-1 bg-[#1E3A5F]/60 rounded-lg">
           <button
             type="button"
             onClick={() => setViewMode('table')}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
               viewMode === 'table'
-                ? 'bg-white text-[#172333] shadow-xs font-semibold'
-                : 'text-[#6E7785] hover:text-[#172333]'
+                ? 'bg-[#0D1F38] text-[#F8FAFC] shadow-xs font-semibold'
+                : 'text-[#94A3B8] hover:text-[#F8FAFC]'
             }`}
           >
             <List className="w-3.5 h-3.5" />
@@ -4176,8 +4176,8 @@ export const AdminTasksPage: React.FC = () => {
             onClick={() => setViewMode('kanban')}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
               viewMode === 'kanban'
-                ? 'bg-white text-[#172333] shadow-xs font-semibold'
-                : 'text-[#6E7785] hover:text-[#172333]'
+                ? 'bg-[#0D1F38] text-[#F8FAFC] shadow-xs font-semibold'
+                : 'text-[#94A3B8] hover:text-[#F8FAFC]'
             }`}
           >
             <LayoutGrid className="w-3.5 h-3.5" />
@@ -4186,8 +4186,8 @@ export const AdminTasksPage: React.FC = () => {
         </div>
       </div>
 
-      <form onSubmit={handleCreateTask} className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-4">
-        <h2 className="text-sm font-semibold text-[#172333]">Add Project Task / Milestone</h2>
+      <form onSubmit={handleCreateTask} className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 space-y-4">
+        <h2 className="text-sm font-semibold text-[#F8FAFC]">Add Project Task / Milestone</h2>
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
           <div>
             <label className="block text-xs font-medium mb-1">Project *</label>
@@ -4195,7 +4195,7 @@ export const AdminTasksPage: React.FC = () => {
               required
               value={form.projectId}
               onChange={(e) => setForm({ ...form, projectId: e.target.value })}
-              className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             >
               <option value="">Select project...</option>
               {projects.map((p) => (
@@ -4213,7 +4213,7 @@ export const AdminTasksPage: React.FC = () => {
               value={form.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
               placeholder="First cut assembly & color pass"
-              className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             />
           </div>
           <div>
@@ -4222,7 +4222,7 @@ export const AdminTasksPage: React.FC = () => {
               type="date"
               value={form.dueDate}
               onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
-              className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             />
           </div>
           <div>
@@ -4230,7 +4230,7 @@ export const AdminTasksPage: React.FC = () => {
             <select
               value={form.visibility}
               onChange={(e) => setForm({ ...form, visibility: e.target.value as 'client' | 'internal' })}
-              className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             >
               <option value="client">Client Visible</option>
               <option value="internal">Internal Studio Only</option>
@@ -4239,24 +4239,24 @@ export const AdminTasksPage: React.FC = () => {
         </div>
         <button
           type="submit"
-          className="px-4 py-2 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg"
+          className="px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg"
         >
           Add Task
         </button>
       </form>
 
       {viewMode === 'table' ? (
-        <div className="bg-white border border-[#E2E4DF] rounded-lg divide-y divide-[#E2E4DF]">
+        <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg divide-y divide-[#1E3A5F]">
           {tasks.length === 0 ? (
-            <div className="p-8 text-center text-xs text-[#6E7785]">No tasks created yet.</div>
+            <div className="p-8 text-center text-xs text-[#94A3B8]">No tasks created yet.</div>
           ) : (
             tasks.map((t) => {
               const proj = projects.find((p) => p.id === t.projectId);
               return (
                 <div key={t.id} className="p-4 flex items-center justify-between gap-4 text-xs">
                   <div>
-                    <p className="font-semibold text-[#172333]">{t.title}</p>
-                    <p className="text-[#6E7785] mt-0.5">
+                    <p className="font-semibold text-[#F8FAFC]">{t.title}</p>
+                    <p className="text-[#94A3B8] mt-0.5">
                       {proj?.title || t.projectId} · Due {t.dueDate} ·{' '}
                       {t.visibility === 'client' ? 'Client Visible' : 'Internal Only'}
                     </p>
@@ -4265,7 +4265,7 @@ export const AdminTasksPage: React.FC = () => {
                     <select
                       value={t.status}
                       onChange={(e) => handleToggleStatus(t, e.target.value as TaskStatus)}
-                      className="px-2.5 py-1.5 bg-[#F5F5F1] border border-[#E2E4DF] rounded-md"
+                      className="px-2.5 py-1.5 bg-[#132A4A] border border-[#1E3A5F] rounded-md"
                     >
                       <option value="To Do">To Do</option>
                       <option value="In Progress">In Progress</option>
@@ -4278,7 +4278,7 @@ export const AdminTasksPage: React.FC = () => {
                         await deleteTaskAdmin(t.id);
                         await loadData();
                       }}
-                      className="text-[#B93832] hover:underline"
+                      className="text-[#DC2626] hover:underline"
                     >
                       Remove
                     </button>
@@ -4298,17 +4298,17 @@ export const AdminTasksPage: React.FC = () => {
             return (
               <div
                 key={colStatus}
-                className="bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg p-3 flex flex-col min-h-[380px]"
+                className="bg-[#132A4A] border border-[#1E3A5F] rounded-lg p-3 flex flex-col min-h-[380px]"
               >
-                <div className="flex items-center justify-between pb-2.5 mb-3 border-b border-[#E2E4DF]">
-                  <span className="text-xs font-semibold text-[#172333]">{colStatus}</span>
-                  <span className="text-[11px] font-mono font-semibold text-[#6E7785]">
+                <div className="flex items-center justify-between pb-2.5 mb-3 border-b border-[#1E3A5F]">
+                  <span className="text-xs font-semibold text-[#F8FAFC]">{colStatus}</span>
+                  <span className="text-[11px] font-mono font-semibold text-[#94A3B8]">
                     {colTasks.length}
                   </span>
                 </div>
                 <div className="space-y-2.5 flex-1">
                   {colTasks.length === 0 ? (
-                    <p className="text-[11px] text-[#6E7785] text-center py-8">
+                    <p className="text-[11px] text-[#94A3B8] text-center py-8">
                       No tasks in {colStatus}
                     </p>
                   ) : (
@@ -4317,26 +4317,26 @@ export const AdminTasksPage: React.FC = () => {
                       return (
                         <div
                           key={t.id}
-                          className="bg-white border border-[#E2E4DF] rounded-lg p-3 space-y-2 shadow-2xs"
+                          className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-3 space-y-2 shadow-2xs"
                         >
                           <p
                             className={`text-xs font-semibold leading-snug ${
-                              t.status === 'Done' ? 'line-through text-[#6E7785]' : 'text-[#172333]'
+                              t.status === 'Done' ? 'line-through text-[#94A3B8]' : 'text-[#F8FAFC]'
                             }`}
                           >
                             {t.title}
                           </p>
-                          <p className="text-[11px] text-[#6E7785]">{proj?.title || 'Project Task'}</p>
-                          <div className="flex items-center justify-between text-[10px] font-mono text-[#6E7785]">
+                          <p className="text-[11px] text-[#94A3B8]">{proj?.title || 'Project Task'}</p>
+                          <div className="flex items-center justify-between text-[10px] font-mono text-[#94A3B8]">
                             <span>Due {t.dueDate}</span>
                             <span>{t.priority}</span>
                           </div>
-                          <div className="flex items-center justify-between pt-2 border-t border-[#E2E4DF]">
+                          <div className="flex items-center justify-between pt-2 border-t border-[#1E3A5F]">
                             {prevStatus ? (
                               <button
                                 type="button"
                                 onClick={() => handleToggleStatus(t, prevStatus)}
-                                className="text-[10px] font-semibold text-[#6E7785] hover:text-[#172333]"
+                                className="text-[10px] font-semibold text-[#94A3B8] hover:text-[#F8FAFC]"
                               >
                                 ← {prevStatus}
                               </button>
@@ -4347,7 +4347,7 @@ export const AdminTasksPage: React.FC = () => {
                               <button
                                 type="button"
                                 onClick={() => handleToggleStatus(t, nextStatus)}
-                                className="text-[10px] font-semibold text-[#F18A45] hover:underline"
+                                className="text-[10px] font-semibold text-[#10B981] hover:underline"
                               >
                                 {nextStatus} →
                               </button>

@@ -613,26 +613,26 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
       {mode === 'full' ? (
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="font-editorial text-2xl font-semibold text-[#172333]">
+            <h1 className="font-editorial text-2xl font-semibold text-[#F8FAFC]">
               Studio Media Library & Supabase Storage
             </h1>
-            <p className="text-xs text-[#6E7785] mt-1">
+            <p className="text-xs text-[#94A3B8] mt-1">
               Upload, organize, tag, and preview images, videos, PDFs, and private client deliverables across isolated Supabase Storage buckets.
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <div className="bg-white border border-[#E2E4DF] rounded-lg px-3.5 py-2 text-right">
-              <span className="block text-[10px] text-[#6E7785] uppercase tracking-wider">
+            <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg px-3.5 py-2 text-right">
+              <span className="block text-[10px] text-[#94A3B8] uppercase tracking-wider">
                 Total Tracked Storage
               </span>
-              <span className="font-mono text-xs font-semibold text-[#172333]">
+              <span className="font-mono text-xs font-semibold text-[#F8FAFC]">
                 {assets.length} files · {formatFileSize(totalStorageUsed)}
               </span>
             </div>
             <button
               type="button"
               onClick={() => loadLibrary(activeFilters)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-[#172333] bg-white border border-[#E2E4DF] hover:bg-[#F5F5F1] rounded-lg"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-[#F8FAFC] bg-[#0D1F38] border border-[#1E3A5F] hover:bg-[#132A4A] rounded-lg"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isFiltering ? 'animate-spin' : ''}`} />
               <span>Refresh</span>
@@ -640,12 +640,12 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
           </div>
         </div>
       ) : (
-        <div className="flex items-center justify-between border-b border-[#E2E4DF] pb-3">
+        <div className="flex items-center justify-between border-b border-[#1E3A5F] pb-3">
           <div>
-            <h2 className="font-editorial text-lg font-semibold text-[#172333]">
+            <h2 className="font-editorial text-lg font-semibold text-[#F8FAFC]">
               Select or Upload Studio Media
             </h2>
-            <p className="text-xs text-[#6E7785]">
+            <p className="text-xs text-[#94A3B8]">
               Upload a new file to <code className="font-mono">{selectedBucket}</code> or pick an existing asset below.
             </p>
           </div>
@@ -653,7 +653,7 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
             <button
               type="button"
               onClick={onClosePicker}
-              className="p-1.5 text-[#6E7785] hover:text-[#172333] rounded-lg"
+              className="p-1.5 text-[#94A3B8] hover:text-[#F8FAFC] rounded-lg"
             >
               <X className="w-5 h-5" />
             </button>
@@ -662,12 +662,12 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
       )}
 
       {/* Multi-File Upload & Bucket Configuration Card */}
-      <div className="bg-white border border-[#E2E4DF] rounded-lg p-5 space-y-4">
+      <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-5 space-y-4">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
           {/* Bucket Selector & Optional Metadata */}
           <div className="lg:col-span-5 space-y-3">
             <div>
-              <label className="block text-xs font-semibold text-[#172333] mb-1">
+              <label className="block text-xs font-semibold text-[#F8FAFC] mb-1">
                 1. Target Supabase Storage Bucket
               </label>
               <select
@@ -677,7 +677,7 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
                     e.target.value as 'portfolio-media' | 'service-media' | 'private-project-files'
                   )
                 }
-                className="w-full px-3 py-2 text-xs font-medium bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs font-medium bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               >
                 <option value="portfolio-media">portfolio-media (Public Portfolio Assets)</option>
                 <option value="service-media">service-media (Public Service Examples)</option>
@@ -685,14 +685,14 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
                   private-project-files (Private Client Deliverables)
                 </option>
               </select>
-              <p className="text-[11px] text-[#6E7785] mt-1 leading-relaxed">
+              <p className="text-[11px] text-[#94A3B8] mt-1 leading-relaxed">
                 {activeBucketConfig.description}
               </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-[#172333] mb-1">
+                <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                   Batch Tags (comma-separated)
                 </label>
                 <input
@@ -700,19 +700,19 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
                   value={defaultTagsInput}
                   onChange={(e) => setDefaultTagsInput(e.target.value)}
                   placeholder="thumbnail, youtube, 4k"
-                  className="w-full px-3 py-1.5 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                  className="w-full px-3 py-1.5 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                 />
               </div>
 
               {selectedBucket === 'private-project-files' && (
                 <div>
-                  <label className="block text-xs font-medium text-[#172333] mb-1">
+                  <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                     Assign to Client Project
                   </label>
                   <select
                     value={linkedProjectId}
                     onChange={(e) => setLinkedProjectId(e.target.value)}
-                    className="w-full px-3 py-1.5 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                    className="w-full px-3 py-1.5 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                   >
                     <option value="">Unassigned / General Private</option>
                     {projects.map((p) => (
@@ -726,13 +726,13 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
 
               {selectedBucket === 'service-media' && (
                 <div>
-                  <label className="block text-xs font-medium text-[#172333] mb-1">
+                  <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                     Link to Service (Optional)
                   </label>
                   <select
                     value={linkedServiceId}
                     onChange={(e) => setLinkedServiceId(e.target.value)}
-                    className="w-full px-3 py-1.5 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                    className="w-full px-3 py-1.5 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                   >
                     <option value="">Any Service</option>
                     {services.map((s) => (
@@ -746,13 +746,13 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
 
               {selectedBucket === 'portfolio-media' && (
                 <div>
-                  <label className="block text-xs font-medium text-[#172333] mb-1">
+                  <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                     Link to Portfolio Item (Optional)
                   </label>
                   <select
                     value={linkedPortfolioId}
                     onChange={(e) => setLinkedPortfolioId(e.target.value)}
-                    className="w-full px-3 py-1.5 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                    className="w-full px-3 py-1.5 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                   >
                     <option value="">Any Portfolio Entry</option>
                     {portfolioItems.map((p) => (
@@ -767,7 +767,7 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
 
             {mode === 'full' && (
               <div>
-                <label className="block text-xs font-medium text-[#172333] mb-1">
+                <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                   Default Description / Notes (Optional)
                 </label>
                 <input
@@ -775,7 +775,7 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
                   value={defaultDescription}
                   onChange={(e) => setDefaultDescription(e.target.value)}
                   placeholder="Optional caption or deliverable notes applied to uploaded files..."
-                  className="w-full px-3 py-1.5 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                  className="w-full px-3 py-1.5 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                 />
               </div>
             )}
@@ -783,7 +783,7 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
 
           {/* Drag-and-Drop Multi-File Upload Zone */}
           <div className="lg:col-span-7">
-            <label className="block text-xs font-semibold text-[#172333] mb-1">
+            <label className="block text-xs font-semibold text-[#F8FAFC] mb-1">
               2. Drag & Drop Files or Browse Computer
             </label>
             <div
@@ -796,8 +796,8 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
               onClick={() => fileInputRef.current?.click()}
               className={`cursor-pointer border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
                 isDragging
-                  ? 'border-[#F18A45] bg-[#F18A45]/10'
-                  : 'border-[#E2E4DF] bg-[#F5F5F1]/60 hover:border-[#172333]'
+                  ? 'border-[#10B981] bg-[#10B981]/10'
+                  : 'border-[#1E3A5F] bg-[#132A4A]/60 hover:border-[#10B981]'
               }`}
             >
               <input
@@ -813,21 +813,21 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
                 className="hidden"
                 accept="image/*,video/*,application/pdf,.zip,.psd,.ai,.fig,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv"
               />
-              <Upload className="w-7 h-7 mx-auto text-[#172333] mb-2" />
-              <p className="text-xs font-semibold text-[#172333]">
-                Drop one or multiple files here, or <span className="text-[#F18A45] underline">browse files</span>
+              <Upload className="w-7 h-7 mx-auto text-[#F8FAFC] mb-2" />
+              <p className="text-xs font-semibold text-[#F8FAFC]">
+                Drop one or multiple files here, or <span className="text-[#10B981] underline">browse files</span>
               </p>
-              <p className="text-[11px] text-[#6E7785] mt-1">
+              <p className="text-[11px] text-[#94A3B8] mt-1">
                 Supports Images (JPG, PNG, WEBP, SVG), Videos (MP4, WEBM, MOV), PDFs, and Project Documents.
               </p>
-              <div className="mt-2.5 flex flex-wrap items-center justify-center gap-3 text-[11px] font-mono text-[#6E7785]">
+              <div className="mt-2.5 flex flex-wrap items-center justify-center gap-3 text-[11px] font-mono text-[#94A3B8]">
                 <span>
-                  Target: <strong className="text-[#172333]">{selectedBucket}</strong>
+                  Target: <strong className="text-[#F8FAFC]">{selectedBucket}</strong>
                 </span>
                 <span>·</span>
                 <span>
                   Access:{' '}
-                  <strong className="text-[#172333]">
+                  <strong className="text-[#F8FAFC]">
                     {activeBucketConfig.isPublic ? 'Public Read / Admin Write' : 'Private Signed URL'}
                   </strong>
                 </span>
@@ -838,9 +838,9 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
 
         {/* Active & Recent Upload Queue */}
         {uploadQueue.length > 0 && (
-          <div className="pt-3 border-t border-[#E2E4DF] space-y-2">
+          <div className="pt-3 border-t border-[#1E3A5F] space-y-2">
             <div className="flex items-center justify-between text-xs">
-              <span className="font-semibold text-[#172333]">
+              <span className="font-semibold text-[#F8FAFC]">
                 Upload Queue ({uploadQueue.filter((q) => q.status === 'success').length}/
                 {uploadQueue.length} completed)
               </span>
@@ -849,7 +849,7 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
                   <button
                     type="button"
                     onClick={handleRetryAllFailed}
-                    className="text-xs font-semibold text-[#F18A45] hover:underline"
+                    className="text-xs font-semibold text-[#10B981] hover:underline"
                   >
                     Retry All Failed
                   </button>
@@ -859,14 +859,14 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
                   onClick={() =>
                     setUploadQueue((prev) => prev.filter((q) => q.status === 'uploading'))
                   }
-                  className="text-xs text-[#6E7785] hover:text-[#172333]"
+                  className="text-xs text-[#94A3B8] hover:text-[#F8FAFC]"
                 >
                   Clear Finished
                 </button>
               </div>
             </div>
 
-            <div className="max-h-48 overflow-y-auto divide-y divide-[#E2E4DF] bg-[#F5F5F1] rounded-lg border border-[#E2E4DF]">
+            <div className="max-h-48 overflow-y-auto divide-y divide-[#1E3A5F] bg-[#132A4A] rounded-lg border border-[#1E3A5F]">
               {uploadQueue.map((item) => (
                 <div
                   key={item.queueId}
@@ -875,31 +875,31 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       {item.status === 'success' && (
-                        <CheckCircle2 className="w-4 h-4 text-[#26734D] shrink-0" />
+                        <CheckCircle2 className="w-4 h-4 text-[#16A34A] shrink-0" />
                       )}
                       {item.status === 'error' && (
-                        <AlertCircle className="w-4 h-4 text-[#B93832] shrink-0" />
+                        <AlertCircle className="w-4 h-4 text-[#DC2626] shrink-0" />
                       )}
                       {(item.status === 'uploading' || item.status === 'pending') && (
-                        <RefreshCw className="w-4 h-4 text-[#F18A45] animate-spin shrink-0" />
+                        <RefreshCw className="w-4 h-4 text-[#10B981] animate-spin shrink-0" />
                       )}
-                      <span className="font-semibold text-[#172333] truncate">
+                      <span className="font-semibold text-[#F8FAFC] truncate">
                         {item.file.name}
                       </span>
-                      <span className="font-mono text-[11px] text-[#6E7785] shrink-0">
+                      <span className="font-mono text-[11px] text-[#94A3B8] shrink-0">
                         ({formatFileSize(item.file.size)})
                       </span>
-                      <span className="font-mono text-[10px] px-1.5 py-0.5 bg-white border border-[#E2E4DF] rounded">
+                      <span className="font-mono text-[10px] px-1.5 py-0.5 bg-[#0D1F38] border border-[#1E3A5F] rounded">
                         {item.targetBucket}
                       </span>
                     </div>
                     {item.errorMessage && (
-                      <p className="text-[11px] text-[#B93832] mt-1">{item.errorMessage}</p>
+                      <p className="text-[11px] text-[#DC2626] mt-1">{item.errorMessage}</p>
                     )}
                     {item.status === 'uploading' && (
-                      <div className="w-full h-1.5 bg-[#E2E4DF] rounded-full overflow-hidden mt-1.5">
+                      <div className="w-full h-1.5 bg-[#1E3A5F] rounded-full overflow-hidden mt-1.5">
                         <div
-                          className="h-full bg-[#F18A45] transition-all duration-200"
+                          className="h-full bg-[#10B981] transition-all duration-200"
                           style={{ width: `${item.progress}%` }}
                         />
                       </div>
@@ -911,7 +911,7 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
                       <button
                         type="button"
                         onClick={() => handleRetryFailed(item)}
-                        className="px-2.5 py-1 text-[11px] font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded"
+                        className="px-2.5 py-1 text-[11px] font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded"
                       >
                         Retry
                       </button>
@@ -923,7 +923,7 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
                         <button
                           type="button"
                           onClick={() => onSelectAsset(item.uploadedAsset!)}
-                          className="px-2.5 py-1 text-[11px] font-semibold text-[#172333] bg-[#F18A45] rounded"
+                          className="px-2.5 py-1 text-[11px] font-semibold text-white bg-[#10B981] rounded"
                         >
                           Use This File
                         </button>
@@ -955,15 +955,15 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
           {[1, 2, 3, 4, 5, 6].map((n) => (
             <div
               key={n}
-              className="h-64 bg-white border border-[#E2E4DF] rounded-lg animate-pulse"
+              className="h-64 bg-[#0D1F38] border border-[#1E3A5F] rounded-lg animate-pulse"
             />
           ))}
         </div>
       ) : filteredAssets.length === 0 ? (
-        <div className="bg-white border border-[#E2E4DF] rounded-lg p-12 text-center space-y-2">
-          <HardDrive className="w-7 h-7 mx-auto text-[#6E7785]" />
-          <p className="text-sm font-semibold text-[#172333]">No media assets match your filter</p>
-          <p className="text-xs text-[#6E7785]">
+        <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-12 text-center space-y-2">
+          <HardDrive className="w-7 h-7 mx-auto text-[#94A3B8]" />
+          <p className="text-sm font-semibold text-[#F8FAFC]">No media assets match your filter</p>
+          <p className="text-xs text-[#94A3B8]">
             Drag and drop files into the upload zone above to store them in Supabase Storage.
           </p>
         </div>
@@ -977,13 +977,13 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
             return (
               <div
                 key={asset.id}
-                className="bg-white border border-[#E2E4DF] rounded-lg overflow-hidden flex flex-col justify-between hover:border-[#172333] transition-colors"
+                className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg overflow-hidden flex flex-col justify-between hover:border-[#10B981] transition-colors"
               >
                 <div>
                   {/* Thumbnail Preview Box */}
                   <div
                     onClick={() => setPreviewItem(toPreviewableItem(asset))}
-                    className="cursor-pointer relative aspect-[16/10] bg-[#172333] overflow-hidden border-b border-[#E2E4DF] flex items-center justify-center group"
+                    className="cursor-pointer relative aspect-[16/10] bg-[#040D1A] overflow-hidden border-b border-[#1E3A5F] flex items-center justify-center group"
                   >
                     {asset.mediaCategory === 'image' && asset.publicUrl ? (
                       <img
@@ -993,7 +993,7 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                       />
                     ) : asset.mediaCategory === 'video' && asset.publicUrl ? (
-                      <div className="relative w-full h-full flex items-center justify-center bg-[#0F1722]">
+                      <div className="relative w-full h-full flex items-center justify-center bg-[#040D1A]">
                         <video
                           src={asset.publicUrl}
                           preload="metadata"
@@ -1002,21 +1002,21 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
                           className="w-full h-full object-cover opacity-85"
                         />
                         <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                          <div className="w-10 h-10 rounded-full bg-[#F18A45] text-[#172333] flex items-center justify-center shadow-md">
+                          <div className="w-10 h-10 rounded-full bg-[#10B981] text-white flex items-center justify-center shadow-md">
                             <Film className="w-5 h-5" />
                           </div>
                         </div>
                       </div>
                     ) : asset.mediaCategory === 'pdf' ? (
                       <div className="text-center space-y-1.5 p-4">
-                        <FileText className="w-9 h-9 mx-auto text-[#F18A45]" />
+                        <FileText className="w-9 h-9 mx-auto text-[#10B981]" />
                         <span className="block font-mono text-xs text-white font-semibold">
                           PDF DOCUMENT
                         </span>
                       </div>
                     ) : (
                       <div className="text-center space-y-1.5 p-4">
-                        <FileArchive className="w-9 h-9 mx-auto text-[#F18A45]" />
+                        <FileArchive className="w-9 h-9 mx-auto text-[#10B981]" />
                         <span className="block font-mono text-xs text-white font-semibold">
                           {ext} FILE
                         </span>
@@ -1024,17 +1024,17 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
                     )}
 
                     {/* Top-Left Bucket Badge */}
-                    <div className="absolute top-2.5 left-2.5 flex items-center gap-1 px-2 py-0.5 rounded bg-[#172333]/90 text-[10px] font-mono text-white border border-white/10">
+                    <div className="absolute top-2.5 left-2.5 flex items-center gap-1 px-2 py-0.5 rounded bg-[#040D1A]/90 text-[10px] font-mono text-white border border-white/10">
                       {asset.storageBucket === 'private-project-files' ? (
-                        <Lock className="w-3 h-3 text-[#F18A45]" />
+                        <Lock className="w-3 h-3 text-[#10B981]" />
                       ) : (
-                        <Globe className="w-3 h-3 text-[#26734D]" />
+                        <Globe className="w-3 h-3 text-[#16A34A]" />
                       )}
                       <span>{asset.storageBucket}</span>
                     </div>
 
                     {/* Top-Right Extension Badge */}
-                    <span className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded bg-[#172333]/90 text-[10px] font-mono font-semibold text-[#F18A45] border border-white/10">
+                    <span className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded bg-[#040D1A]/90 text-[10px] font-mono font-semibold text-[#10B981] border border-white/10">
                       {ext}
                     </span>
                   </div>
@@ -1043,25 +1043,25 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
                   <div className="p-4 space-y-2">
                     <div className="flex items-start justify-between gap-2">
                       <h3
-                        className="text-sm font-semibold text-[#172333] truncate"
+                        className="text-sm font-semibold text-[#F8FAFC] truncate"
                         title={asset.title}
                       >
                         {asset.title}
                       </h3>
-                      <span className="font-mono text-[11px] text-[#6E7785] shrink-0">
+                      <span className="font-mono text-[11px] text-[#94A3B8] shrink-0">
                         {formatFileSize(asset.fileSize)}
                       </span>
                     </div>
 
                     <p
-                      className="text-[11px] font-mono text-[#6E7785] truncate"
+                      className="text-[11px] font-mono text-[#94A3B8] truncate"
                       title={asset.storagePath}
                     >
                       {asset.storagePath || asset.originalFilename}
                     </p>
 
                     {asset.description && (
-                      <p className="text-xs text-[#6E7785] line-clamp-2">{asset.description}</p>
+                      <p className="text-xs text-[#94A3B8] line-clamp-2">{asset.description}</p>
                     )}
 
                     {asset.tags.length > 0 && (
@@ -1078,8 +1078,8 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
                             }
                             className={`px-1.5 py-0.5 text-[10px] font-mono rounded border transition-colors ${
                               activeFilters.tag === tag
-                                ? 'bg-[#F18A45] text-[#172333] border-[#F18A45] font-semibold'
-                                : 'bg-[#F5F5F1] text-[#172333] border-[#E2E4DF] hover:border-[#172333]'
+                                ? 'bg-[#10B981] text-white border-[#10B981] font-semibold'
+                                : 'bg-[#132A4A] text-[#F8FAFC] border-[#1E3A5F] hover:border-[#10B981]'
                             }`}
                             title={`Filter by #${tag}`}
                           >
@@ -1092,14 +1092,14 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
                 </div>
 
                 {/* Card Actions Footer */}
-                <div className="px-4 py-2.5 bg-[#F5F5F1]/60 border-t border-[#E2E4DF] flex items-center justify-between gap-2 text-xs">
-                  <span className="text-[11px] text-[#6E7785]">{formatDate(asset.createdAt)}</span>
+                <div className="px-4 py-2.5 bg-[#132A4A]/60 border-t border-[#1E3A5F] flex items-center justify-between gap-2 text-xs">
+                  <span className="text-[11px] text-[#94A3B8]">{formatDate(asset.createdAt)}</span>
                   <div className="flex items-center gap-2">
                     {mode === 'picker' && onSelectAsset ? (
                       <button
                         type="button"
                         onClick={() => onSelectAsset(asset)}
-                        className="px-3 py-1 text-xs font-semibold text-[#172333] bg-[#F18A45] hover:bg-[#e07934] rounded-md"
+                        className="px-3 py-1 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-md"
                       >
                         Select
                       </button>
@@ -1107,7 +1107,7 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
                     <button
                       type="button"
                       onClick={() => setPreviewItem(toPreviewableItem(asset))}
-                      className="p-1 text-[#172333] hover:text-[#F18A45]"
+                      className="p-1 text-[#F8FAFC] hover:text-[#10B981]"
                       title="Interactive Preview"
                     >
                       <Eye className="w-4 h-4" />
@@ -1115,11 +1115,11 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
                     <button
                       type="button"
                       onClick={() => handleCopyUrl(asset)}
-                      className="p-1 text-[#172333] hover:text-[#F18A45]"
+                      className="p-1 text-[#F8FAFC] hover:text-[#10B981]"
                       title="Copy URL / Signed Link"
                     >
                       {copiedId === asset.id ? (
-                        <Check className="w-4 h-4 text-[#26734D]" />
+                        <Check className="w-4 h-4 text-[#16A34A]" />
                       ) : (
                         <Copy className="w-4 h-4" />
                       )}
@@ -1127,7 +1127,7 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
                     <button
                       type="button"
                       onClick={() => openEditModal(asset)}
-                      className="p-1 text-[#172333] hover:text-[#F18A45]"
+                      className="p-1 text-[#F8FAFC] hover:text-[#10B981]"
                       title="Edit Title, Tags & Description"
                     >
                       <Edit3 className="w-4 h-4" />
@@ -1135,7 +1135,7 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
                     <button
                       type="button"
                       onClick={() => handleDeleteAsset(asset)}
-                      className="p-1 text-[#B93832] hover:opacity-80"
+                      className="p-1 text-[#DC2626] hover:opacity-80"
                       title="Delete Asset"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -1148,10 +1148,10 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
         </div>
       ) : (
         /* Table View */
-        <div className="bg-white border border-[#E2E4DF] rounded-lg overflow-x-auto">
+        <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-[#E2E4DF] text-[11px] font-semibold text-[#6E7785]">
+              <tr className="border-b border-[#1E3A5F] text-[11px] font-semibold text-[#94A3B8]">
                 <th className="py-3 px-4">Asset Title & File</th>
                 <th className="py-3 px-4">Type</th>
                 <th className="py-3 px-4">Size</th>
@@ -1160,32 +1160,32 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
                 <th className="py-3 px-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#E2E4DF] text-xs">
+            <tbody className="divide-y divide-[#1E3A5F] text-xs">
               {paginatedAssets.map((asset) => (
-                <tr key={asset.id} className="hover:bg-[#F5F5F1]/50">
+                <tr key={asset.id} className="hover:bg-[#132A4A]/50">
                   <td className="py-3 px-4">
-                    <p className="font-semibold text-[#172333]">{asset.title}</p>
-                    <p className="text-[11px] text-[#6E7785] font-mono">
+                    <p className="font-semibold text-[#F8FAFC]">{asset.title}</p>
+                    <p className="text-[11px] text-[#94A3B8] font-mono">
                       {asset.originalFilename}
                     </p>
                   </td>
-                  <td className="py-3 px-4 font-mono uppercase text-[#172333]">
+                  <td className="py-3 px-4 font-mono uppercase text-[#F8FAFC]">
                     {asset.fileExtension || asset.mediaCategory}
                   </td>
-                  <td className="py-3 px-4 font-mono text-[#6E7785]">
+                  <td className="py-3 px-4 font-mono text-[#94A3B8]">
                     {formatFileSize(asset.fileSize)}
                   </td>
-                  <td className="py-3 px-4 font-mono text-[11px] text-[#6E7785]">
-                    <span className="font-semibold text-[#172333]">{asset.storageBucket}</span>
+                  <td className="py-3 px-4 font-mono text-[11px] text-[#94A3B8]">
+                    <span className="font-semibold text-[#F8FAFC]">{asset.storageBucket}</span>
                     <span className="block truncate max-w-xs">{asset.storagePath}</span>
                   </td>
-                  <td className="py-3 px-4 text-[#6E7785]">{formatDate(asset.createdAt)}</td>
+                  <td className="py-3 px-4 text-[#94A3B8]">{formatDate(asset.createdAt)}</td>
                   <td className="py-3 px-4 text-right space-x-2.5 whitespace-nowrap">
                     {mode === 'picker' && onSelectAsset && (
                       <button
                         type="button"
                         onClick={() => onSelectAsset(asset)}
-                        className="px-2.5 py-1 font-semibold text-[#172333] bg-[#F18A45] rounded"
+                        className="px-2.5 py-1 font-semibold text-white bg-[#10B981] rounded"
                       >
                         Select
                       </button>
@@ -1193,21 +1193,21 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
                     <button
                       type="button"
                       onClick={() => setPreviewItem(toPreviewableItem(asset))}
-                      className="font-semibold text-[#172333] hover:text-[#F18A45]"
+                      className="font-semibold text-[#F8FAFC] hover:text-[#10B981]"
                     >
                       Preview
                     </button>
                     <button
                       type="button"
                       onClick={() => openEditModal(asset)}
-                      className="font-semibold text-[#172333] hover:text-[#F18A45]"
+                      className="font-semibold text-[#F8FAFC] hover:text-[#10B981]"
                     >
                       Edit
                     </button>
                     <button
                       type="button"
                       onClick={() => handleDeleteAsset(asset)}
-                      className="text-[#B93832] hover:underline"
+                      className="text-[#DC2626] hover:underline"
                     >
                       Delete
                     </button>
@@ -1221,17 +1221,17 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
 
       {/* Pagination Bar */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between bg-white border border-[#E2E4DF] rounded-lg px-4 py-3 text-xs">
-          <span className="text-[#6E7785]">
-            Showing page <strong className="text-[#172333]">{currentPage}</strong> of{' '}
-            <strong className="text-[#172333]">{totalPages}</strong> ({filteredAssets.length} total assets)
+        <div className="flex items-center justify-between bg-[#0D1F38] border border-[#1E3A5F] rounded-lg px-4 py-3 text-xs">
+          <span className="text-[#94A3B8]">
+            Showing page <strong className="text-[#F8FAFC]">{currentPage}</strong> of{' '}
+            <strong className="text-[#F8FAFC]">{totalPages}</strong> ({filteredAssets.length} total assets)
           </span>
           <div className="flex items-center gap-2">
             <button
               type="button"
               disabled={currentPage <= 1}
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              className="inline-flex items-center gap-1 px-3 py-1.5 font-medium bg-[#F5F5F1] rounded-md disabled:opacity-40"
+              className="inline-flex items-center gap-1 px-3 py-1.5 font-medium bg-[#132A4A] rounded-md disabled:opacity-40"
             >
               <ChevronLeft className="w-3.5 h-3.5" />
               <span>Prev</span>
@@ -1240,7 +1240,7 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
               type="button"
               disabled={currentPage >= totalPages}
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              className="inline-flex items-center gap-1 px-3 py-1.5 font-medium bg-[#F5F5F1] rounded-md disabled:opacity-40"
+              className="inline-flex items-center gap-1 px-3 py-1.5 font-medium bg-[#132A4A] rounded-md disabled:opacity-40"
             >
               <span>Next</span>
               <ChevronRight className="w-3.5 h-3.5" />
@@ -1259,19 +1259,19 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
 
       {/* Edit Metadata Modal */}
       {editingAsset && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#172333]/65 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#040D1A]/65 p-4">
           <form
             onSubmit={handleSaveEdit}
-            className="bg-white border border-[#E2E4DF] rounded-lg max-w-lg w-full p-6 space-y-4 shadow-xl"
+            className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg max-w-lg w-full p-6 space-y-4 shadow-xl"
           >
-            <div className="flex items-center justify-between border-b border-[#E2E4DF] pb-3">
-              <h3 className="text-base font-semibold text-[#172333]">
+            <div className="flex items-center justify-between border-b border-[#1E3A5F] pb-3">
+              <h3 className="text-base font-semibold text-[#F8FAFC]">
                 Edit Media Asset Metadata
               </h3>
               <button
                 type="button"
                 onClick={() => setEditingAsset(null)}
-                className="text-[#6E7785] hover:text-[#172333]"
+                className="text-[#94A3B8] hover:text-[#F8FAFC]"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1284,7 +1284,7 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
                 required
                 value={editForm.title}
                 onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
 
@@ -1294,7 +1294,7 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
                 rows={3}
                 value={editForm.description}
                 onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
 
@@ -1306,7 +1306,7 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
                 type="text"
                 value={editForm.tagsText}
                 onChange={(e) => setEditForm({ ...editForm, tagsText: e.target.value })}
-                className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
 
@@ -1316,7 +1316,7 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
                 <select
                   value={editForm.serviceId}
                   onChange={(e) => setEditForm({ ...editForm, serviceId: e.target.value })}
-                  className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                  className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                 >
                   <option value="">None</option>
                   {services.map((s) => (
@@ -1331,7 +1331,7 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
                 <select
                   value={editForm.projectId}
                   onChange={(e) => setEditForm({ ...editForm, projectId: e.target.value })}
-                  className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                  className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                 >
                   <option value="">None</option>
                   {projects.map((p) => (
@@ -1354,17 +1354,17 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
               </label>
             )}
 
-            <div className="flex justify-end gap-2 pt-2 border-t border-[#E2E4DF]">
+            <div className="flex justify-end gap-2 pt-2 border-t border-[#1E3A5F]">
               <button
                 type="button"
                 onClick={() => setEditingAsset(null)}
-                className="px-4 py-2 text-xs font-medium bg-[#F5F5F1] rounded-lg"
+                className="px-4 py-2 text-xs font-medium bg-[#132A4A] rounded-lg"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg"
+                className="px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg"
               >
                 Save Metadata
               </button>

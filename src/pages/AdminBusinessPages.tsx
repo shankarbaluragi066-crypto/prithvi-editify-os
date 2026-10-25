@@ -384,7 +384,7 @@ export const AdminServicesPage: React.FC = () => {
     e.preventDefault();
     try {
       const imageUrl =
-        form.imageUrl || createStudioArtworkDataUri(form.title, form.category, '#F18A45');
+        form.imageUrl || createStudioArtworkDataUri(form.title, form.category, '#10B981');
       await saveServiceItem({ ...form, imageUrl }, editing || undefined);
       showToast('success', editing ? 'Service Updated' : 'Service Created');
       setShowForm(false);
@@ -410,17 +410,17 @@ export const AdminServicesPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="font-editorial text-2xl font-semibold text-[#172333]">
+          <h1 className="font-editorial text-2xl font-semibold text-[#F8FAFC]">
             Services & INR Pricing Management
           </h1>
-          <p className="text-xs text-[#6E7785] mt-1">
+          <p className="text-xs text-[#94A3B8] mt-1">
             Create and manage creative services, gallery samples, deliverables, and Basic / Standard / Premium packages.
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Link
             to="/services"
-            className="px-3.5 py-2 text-xs font-semibold text-[#172333] bg-white border border-[#E2E4DF] hover:border-[#172333] rounded-lg transition-colors"
+            className="px-3.5 py-2 text-xs font-semibold text-[#F8FAFC] bg-[#0D1F38] border border-[#1E3A5F] hover:border-[#10B981] rounded-lg transition-colors"
           >
             View Public Services Page →
           </Link>
@@ -428,7 +428,7 @@ export const AdminServicesPage: React.FC = () => {
             <button
               type="button"
               onClick={handleSeedIfEmpty}
-              className="px-3.5 py-2 text-xs font-semibold text-[#172333] bg-white border border-[#E2E4DF] rounded-lg"
+              className="px-3.5 py-2 text-xs font-semibold text-[#F8FAFC] bg-[#0D1F38] border border-[#1E3A5F] rounded-lg"
             >
               Seed 10 Starting-Price Services
             </button>
@@ -465,7 +465,7 @@ export const AdminServicesPage: React.FC = () => {
               });
               setShowForm(!showForm);
             }}
-            className="px-4 py-2 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg"
+            className="px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg"
           >
             {showForm ? 'Close Editor' : '+ Add Service'}
           </button>
@@ -475,14 +475,14 @@ export const AdminServicesPage: React.FC = () => {
       {showForm && (
         <form
           onSubmit={handleSave}
-          className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-6 shadow-xs"
+          className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 space-y-6 shadow-xs"
         >
-          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#E2E4DF] pb-4">
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#1E3A5F] pb-4">
             <div>
-              <h2 className="text-base font-semibold text-[#172333]">
+              <h2 className="text-base font-semibold text-[#F8FAFC]">
                 {editing ? `Edit Service: ${editing.title}` : 'New Creative Service Listing'}
               </h2>
-              <p className="text-xs text-[#6E7785] mt-0.5">
+              <p className="text-xs text-[#94A3B8] mt-0.5">
                 Configure service overview, media gallery, deliverables, and 3-tier packages (Basic, Standard, Premium).
               </p>
             </div>
@@ -491,9 +491,9 @@ export const AdminServicesPage: React.FC = () => {
                 type="button"
                 disabled={aiBusyAction !== null}
                 onClick={handleContextualGenerateServiceAI}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#172333] bg-[#F18A45]/20 hover:bg-[#F18A45]/30 border border-[#F18A45]/40 rounded-lg transition-colors disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-[#10B981]/20 hover:bg-[#10B981]/30 border border-[#10B981]/40 rounded-lg transition-colors disabled:opacity-50"
               >
-                <Sparkles className="w-3.5 h-3.5 text-[#B85D1D]" />
+                <Sparkles className="w-3.5 h-3.5 text-[#0EA5E9]" />
                 <span>
                   {aiBusyAction === 'generate' ? 'Generating with AI...' : 'Generate with AI'}
                 </span>
@@ -502,7 +502,7 @@ export const AdminServicesPage: React.FC = () => {
                 type="button"
                 disabled={aiBusyAction !== null}
                 onClick={handleContextualImproveServiceDescription}
-                className="px-3 py-1.5 text-xs font-semibold text-[#172333] bg-[#F5F5F1] hover:bg-[#E2E4DF] rounded-lg transition-colors disabled:opacity-50"
+                className="px-3 py-1.5 text-xs font-semibold text-[#F8FAFC] bg-[#132A4A] hover:bg-[#1E3A5F] rounded-lg transition-colors disabled:opacity-50"
               >
                 {aiBusyAction === 'improve' ? 'Improving...' : 'Improve Description'}
               </button>
@@ -510,14 +510,14 @@ export const AdminServicesPage: React.FC = () => {
                 type="button"
                 disabled={aiBusyAction !== null}
                 onClick={handleContextualGenerateServiceSEO}
-                className="px-3 py-1.5 text-xs font-semibold text-[#172333] bg-[#F5F5F1] hover:bg-[#E2E4DF] rounded-lg transition-colors disabled:opacity-50"
+                className="px-3 py-1.5 text-xs font-semibold text-[#F8FAFC] bg-[#132A4A] hover:bg-[#1E3A5F] rounded-lg transition-colors disabled:opacity-50"
               >
                 {aiBusyAction === 'seo' ? 'Generating SEO...' : 'Generate SEO Content'}
               </button>
               <button
                 type="button"
                 onClick={() => navigate('/admin/ai-assistant')}
-                className="px-3 py-1.5 text-xs font-semibold text-[#172333] bg-white border border-[#E2E4DF] hover:border-[#172333] rounded-lg transition-colors"
+                className="px-3 py-1.5 text-xs font-semibold text-[#F8FAFC] bg-[#0D1F38] border border-[#1E3A5F] hover:border-[#10B981] rounded-lg transition-colors"
               >
                 Generate Cover Image →
               </button>
@@ -525,27 +525,27 @@ export const AdminServicesPage: React.FC = () => {
           </div>
 
           {seoSuggestion && (
-            <div className="p-4 bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg space-y-1.5 text-xs">
+            <div className="p-4 bg-[#132A4A] border border-[#1E3A5F] rounded-lg space-y-1.5 text-xs">
               <div className="flex items-center justify-between">
-                <span className="font-semibold text-[#172333]">
+                <span className="font-semibold text-[#F8FAFC]">
                   AI SEO Suggestions (Ready to Copy or Reference)
                 </span>
                 <button
                   type="button"
                   onClick={() => setSeoSuggestion(null)}
-                  className="text-[11px] text-[#6E7785] hover:text-[#172333]"
+                  className="text-[11px] text-[#94A3B8] hover:text-[#F8FAFC]"
                 >
                   Dismiss
                 </button>
               </div>
-              <p className="text-[#172333]">
+              <p className="text-[#F8FAFC]">
                 <strong>SEO Title:</strong> {seoSuggestion.seoTitle}
               </p>
-              <p className="text-[#6E7785]">
+              <p className="text-[#94A3B8]">
                 <strong>Meta Description:</strong> {seoSuggestion.seoMetaDescription}
               </p>
               {seoSuggestion.keywords && (
-                <p className="font-mono text-[11px] text-[#6E7785]">
+                <p className="font-mono text-[11px] text-[#94A3B8]">
                   Keywords: {seoSuggestion.keywords}
                 </p>
               )}
@@ -555,7 +555,7 @@ export const AdminServicesPage: React.FC = () => {
           {/* Row 1: Title, Category, Pricing Unit */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="sm:col-span-1">
-              <label className="block text-xs font-medium text-[#172333] mb-1">
+              <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                 Service Title *
               </label>
               <input
@@ -564,12 +564,12 @@ export const AdminServicesPage: React.FC = () => {
                 placeholder="e.g. High-CTR YouTube Thumbnail Design"
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg focus:outline-none focus:border-[#172333]"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg focus:outline-none focus:border-[#10B981]"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-[#172333] mb-1">Category *</label>
+              <label className="block text-xs font-medium text-[#F8FAFC] mb-1">Category *</label>
               <select
                 value={
                   ADMIN_SERVICE_CATEGORIES.includes(form.category) ? form.category : '__custom__'
@@ -579,7 +579,7 @@ export const AdminServicesPage: React.FC = () => {
                     setForm({ ...form, category: e.target.value });
                   }
                 }}
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg focus:outline-none focus:border-[#172333]"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg focus:outline-none focus:border-[#10B981]"
               >
                 {ADMIN_SERVICE_CATEGORIES.map((cat) => (
                   <option key={cat} value={cat}>
@@ -593,7 +593,7 @@ export const AdminServicesPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-[#172333] mb-1">
+              <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                 Pricing Unit (e.g. design, thumbnail, video, reel)
               </label>
               <input
@@ -610,7 +610,7 @@ export const AdminServicesPage: React.FC = () => {
                   });
                 }}
                 placeholder="design"
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg focus:outline-none focus:border-[#172333]"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg focus:outline-none focus:border-[#10B981]"
               />
             </div>
           </div>
@@ -618,7 +618,7 @@ export const AdminServicesPage: React.FC = () => {
           {/* Row 2: Starting Price, Display Price, Turnaround, Revisions, Sort Order */}
           <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
             <div>
-              <label className="block text-xs font-medium text-[#172333] mb-1">
+              <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                 Starting Price (INR)
               </label>
               <input
@@ -635,12 +635,12 @@ export const AdminServicesPage: React.FC = () => {
                       : `₹${num.toLocaleString('en-IN')}/${form.pricingUnit || 'design'}`,
                   });
                 }}
-                className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-[#172333] mb-1">
+              <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                 Display Price *
               </label>
               <input
@@ -648,12 +648,12 @@ export const AdminServicesPage: React.FC = () => {
                 required
                 value={form.priceDisplay}
                 onChange={(e) => setForm({ ...form, priceDisplay: e.target.value })}
-                className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-[#172333] mb-1">
+              <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                 Delivery Time
               </label>
               <input
@@ -661,12 +661,12 @@ export const AdminServicesPage: React.FC = () => {
                 value={form.turnaroundTime}
                 onChange={(e) => setForm({ ...form, turnaroundTime: e.target.value })}
                 placeholder="24–48 hours"
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-[#172333] mb-1">
+              <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                 Revisions Included
               </label>
               <input
@@ -674,17 +674,17 @@ export const AdminServicesPage: React.FC = () => {
                 value={form.revisions}
                 onChange={(e) => setForm({ ...form, revisions: e.target.value })}
                 placeholder="2 Revisions"
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-[#172333] mb-1">Sort Order</label>
+              <label className="block text-xs font-medium text-[#F8FAFC] mb-1">Sort Order</label>
               <input
                 type="number"
                 value={form.sortOrder}
                 onChange={(e) => setForm({ ...form, sortOrder: Number(e.target.value) })}
-                className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
           </div>
@@ -692,7 +692,7 @@ export const AdminServicesPage: React.FC = () => {
           {/* Row 3: Full Description & Deliverables Summary */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-[#172333] mb-1">
+              <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                 About This Service (Full Description) *
               </label>
               <textarea
@@ -701,12 +701,12 @@ export const AdminServicesPage: React.FC = () => {
                 placeholder="Describe what you will design or edit, your creative approach, and why brands choose this service..."
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-[#172333] mb-1">
+              <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
                 What’s Included / Deliverables (comma-separated) *
               </label>
               <textarea
@@ -715,32 +715,32 @@ export const AdminServicesPage: React.FC = () => {
                 placeholder="High-resolution PNG/JPG/PDF export, 2 revision rounds, Custom typography & color grading, Commercial usage rights"
                 value={form.deliverablesSummary}
                 onChange={(e) => setForm({ ...form, deliverablesSummary: e.target.value })}
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
           </div>
 
           {/* Row 4: Service Packages Builder (Basic / Standard / Premium) */}
-          <div className="border border-[#E2E4DF] rounded-lg p-5 bg-[#F5F5F1]/60 space-y-4">
+          <div className="border border-[#1E3A5F] rounded-lg p-5 bg-[#132A4A]/60 space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h3 className="text-sm font-semibold text-[#172333]">
+                <h3 className="text-sm font-semibold text-[#F8FAFC]">
                   Service Packages (Basic · Standard · Premium)
                 </h3>
-                <p className="text-xs text-[#6E7785]">
+                <p className="text-xs text-[#94A3B8]">
                   Visitors can switch between Basic, Standard, and Premium tabs on the Service Detail page.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={handleAutoRegeneratePackages}
-                className="px-3 py-1.5 text-xs font-semibold text-[#172333] bg-white border border-[#E2E4DF] hover:border-[#172333] rounded-lg transition-colors"
+                className="px-3 py-1.5 text-xs font-semibold text-[#F8FAFC] bg-[#0D1F38] border border-[#1E3A5F] hover:border-[#10B981] rounded-lg transition-colors"
               >
                 Auto-Calculate Tiers from ₹{form.startingPrice}
               </button>
             </div>
 
-            <div className="flex items-center gap-2 border-b border-[#E2E4DF] pb-3">
+            <div className="flex items-center gap-2 border-b border-[#1E3A5F] pb-3">
               {(['Basic', 'Standard', 'Premium'] as const).map((tier) => {
                 const pkg = form.packages.find((p) => p.tier === tier);
                 const isAct = activePackageTab === tier;
@@ -751,8 +751,8 @@ export const AdminServicesPage: React.FC = () => {
                     onClick={() => setActivePackageTab(tier)}
                     className={`px-4 py-2 text-xs font-semibold rounded-lg border transition-colors ${
                       isAct
-                        ? 'bg-[#172333] text-white border-[#172333]'
-                        : 'bg-white text-[#6E7785] border-[#E2E4DF] hover:text-[#172333]'
+                        ? 'bg-gradient-to-r from-[#0EA5E9] to-[#10B981] text-white border-[#10B981]'
+                        : 'bg-[#0D1F38] text-[#94A3B8] border-[#1E3A5F] hover:text-[#F8FAFC]'
                     }`}
                   >
                     {tier} ({pkg?.priceDisplay || '₹0'})
@@ -762,20 +762,20 @@ export const AdminServicesPage: React.FC = () => {
             </div>
 
             {currentPkg && (
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 bg-white p-4 rounded-lg border border-[#E2E4DF]">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 bg-[#0D1F38] p-4 rounded-lg border border-[#1E3A5F]">
                 <div>
-                  <label className="block text-[11px] font-semibold text-[#6E7785] mb-1">
+                  <label className="block text-[11px] font-semibold text-[#94A3B8] mb-1">
                     {currentPkg.tier} Package Title
                   </label>
                   <input
                     type="text"
                     value={currentPkg.name}
                     onChange={(e) => updatePackageField(currentPkg.tier, 'name', e.target.value)}
-                    className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                    className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-[#6E7785] mb-1">
+                  <label className="block text-[11px] font-semibold text-[#94A3B8] mb-1">
                     {currentPkg.tier} Price (INR)
                   </label>
                   <input
@@ -785,11 +785,11 @@ export const AdminServicesPage: React.FC = () => {
                     onChange={(e) =>
                       updatePackageField(currentPkg.tier, 'price', Number(e.target.value))
                     }
-                    className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                    className="w-full px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-[#6E7785] mb-1">
+                  <label className="block text-[11px] font-semibold text-[#94A3B8] mb-1">
                     Delivery Time
                   </label>
                   <input
@@ -798,11 +798,11 @@ export const AdminServicesPage: React.FC = () => {
                     onChange={(e) =>
                       updatePackageField(currentPkg.tier, 'deliveryTime', e.target.value)
                     }
-                    className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                    className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-[#6E7785] mb-1">
+                  <label className="block text-[11px] font-semibold text-[#94A3B8] mb-1">
                     Revisions
                   </label>
                   <input
@@ -811,11 +811,11 @@ export const AdminServicesPage: React.FC = () => {
                     onChange={(e) =>
                       updatePackageField(currentPkg.tier, 'revisions', e.target.value)
                     }
-                    className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                    className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                   />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block text-[11px] font-semibold text-[#6E7785] mb-1">
+                  <label className="block text-[11px] font-semibold text-[#94A3B8] mb-1">
                     Short Package Summary
                   </label>
                   <input
@@ -824,11 +824,11 @@ export const AdminServicesPage: React.FC = () => {
                     onChange={(e) =>
                       updatePackageField(currentPkg.tier, 'description', e.target.value)
                     }
-                    className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                    className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                   />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block text-[11px] font-semibold text-[#6E7785] mb-1">
+                  <label className="block text-[11px] font-semibold text-[#94A3B8] mb-1">
                     Included Deliverables (comma-separated)
                   </label>
                   <input
@@ -844,7 +844,7 @@ export const AdminServicesPage: React.FC = () => {
                           .filter(Boolean)
                       )
                     }
-                    className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                    className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                   />
                 </div>
               </div>
@@ -855,13 +855,13 @@ export const AdminServicesPage: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-medium text-[#172333]">
+                <label className="text-xs font-medium text-[#F8FAFC]">
                   Primary Cover Image URL (service-media)
                 </label>
                 <button
                   type="button"
                   onClick={() => setShowMediaPicker('image')}
-                  className="text-[11px] font-semibold text-[#F18A45] hover:underline"
+                  className="text-[11px] font-semibold text-[#10B981] hover:underline"
                 >
                   + Upload / Pick Cover Image
                 </button>
@@ -871,19 +871,19 @@ export const AdminServicesPage: React.FC = () => {
                 value={form.imageUrl}
                 onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
                 placeholder="https://... or select from service-media bucket"
-                className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
 
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-medium text-[#172333]">
+                <label className="text-xs font-medium text-[#F8FAFC]">
                   Sample Video / Reel Preview URL (Optional)
                 </label>
                 <button
                   type="button"
                   onClick={() => setShowMediaPicker('video')}
-                  className="text-[11px] font-semibold text-[#F18A45] hover:underline"
+                  className="text-[11px] font-semibold text-[#10B981] hover:underline"
                 >
                   + Upload / Pick Video
                 </button>
@@ -893,19 +893,19 @@ export const AdminServicesPage: React.FC = () => {
                 value={form.videoPreviewUrl}
                 onChange={(e) => setForm({ ...form, videoPreviewUrl: e.target.value })}
                 placeholder="https://... (.mp4 / .webm)"
-                className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
 
             <div className="sm:col-span-2">
               <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-medium text-[#172333]">
+                <label className="text-xs font-medium text-[#F8FAFC]">
                   Additional Gallery Preview Images (comma-separated URLs)
                 </label>
                 <button
                   type="button"
                   onClick={() => setShowMediaPicker('gallery')}
-                  className="text-[11px] font-semibold text-[#F18A45] hover:underline"
+                  className="text-[11px] font-semibold text-[#10B981] hover:underline"
                 >
                   + Add Image to Gallery
                 </button>
@@ -923,12 +923,12 @@ export const AdminServicesPage: React.FC = () => {
                   })
                 }
                 placeholder="Add 2–4 extra sample images so clients can browse a gallery carousel on the service page"
-                className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-6 pt-2 border-t border-[#E2E4DF]">
+          <div className="flex flex-wrap items-center justify-between gap-6 pt-2 border-t border-[#1E3A5F]">
             <div className="flex flex-wrap items-center gap-6 text-xs">
               <label className="inline-flex items-center gap-2">
                 <input
@@ -955,13 +955,13 @@ export const AdminServicesPage: React.FC = () => {
                   setShowForm(false);
                   setEditing(null);
                 }}
-                className="px-4 py-2 text-xs font-medium text-[#6E7785] hover:text-[#172333]"
+                className="px-4 py-2 text-xs font-medium text-[#94A3B8] hover:text-[#F8FAFC]"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-5 py-2.5 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg"
+                className="px-5 py-2.5 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg"
               >
                 {editing ? 'Update Service Listing' : 'Publish Service Listing'}
               </button>
@@ -970,10 +970,10 @@ export const AdminServicesPage: React.FC = () => {
         </form>
       )}
 
-      <div className="bg-white border border-[#E2E4DF] rounded-lg overflow-x-auto">
+      <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="border-b border-[#E2E4DF] text-[11px] font-semibold text-[#6E7785]">
+            <tr className="border-b border-[#1E3A5F] text-[11px] font-semibold text-[#94A3B8]">
               <th className="py-3 px-4">#</th>
               <th className="py-3 px-4">Service Listing</th>
               <th className="py-3 px-4">Category</th>
@@ -983,43 +983,43 @@ export const AdminServicesPage: React.FC = () => {
               <th className="py-3 px-4 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#E2E4DF] text-xs">
+          <tbody className="divide-y divide-[#1E3A5F] text-xs">
             {services.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-8 text-center text-[#6E7785]">
+                <td colSpan={7} className="py-8 text-center text-[#94A3B8]">
                   No services stored in Supabase yet. Click "Seed 10 Starting-Price Services" above.
                 </td>
               </tr>
             ) : (
               services.map((srv) => (
-                <tr key={srv.id} className="hover:bg-[#F5F5F1]/50">
+                <tr key={srv.id} className="hover:bg-[#132A4A]/50">
                   <td className="py-3.5 px-4 font-mono">{srv.sortOrder}</td>
                   <td className="py-3.5 px-4">
                     <div className="flex items-center gap-3">
                       <img
                         src={
                           srv.imageUrl ||
-                          createStudioArtworkDataUri(srv.title, srv.category, '#F18A45')
+                          createStudioArtworkDataUri(srv.title, srv.category, '#10B981')
                         }
                         alt={srv.title}
                         referrerPolicy="no-referrer"
-                        className="w-12 h-9 rounded object-cover bg-[#172333] border border-[#E2E4DF] shrink-0"
+                        className="w-12 h-9 rounded object-cover bg-[#040D1A] border border-[#1E3A5F] shrink-0"
                       />
                       <div>
-                        <p className="font-semibold text-[#172333]">{srv.title}</p>
-                        <p className="text-[11px] text-[#6E7785] line-clamp-1 max-w-xs">
+                        <p className="font-semibold text-[#F8FAFC]">{srv.title}</p>
+                        <p className="text-[11px] text-[#94A3B8] line-clamp-1 max-w-xs">
                           {srv.deliverablesSummary}
                         </p>
                       </div>
                     </div>
                   </td>
-                  <td className="py-3.5 px-4 text-[#6E7785]">{srv.category}</td>
-                  <td className="py-3.5 px-4 font-mono font-semibold text-[#172333] tabular-nums">
+                  <td className="py-3.5 px-4 text-[#94A3B8]">{srv.category}</td>
+                  <td className="py-3.5 px-4 font-mono font-semibold text-[#F8FAFC] tabular-nums">
                     {srv.priceDisplay}
                   </td>
-                  <td className="py-3.5 px-4 text-[#6E7785]">
+                  <td className="py-3.5 px-4 text-[#94A3B8]">
                     <span>{srv.turnaroundTime || '24–48 hours'}</span>
-                    <span className="block text-[11px] text-[#26734D]">
+                    <span className="block text-[11px] text-[#16A34A]">
                       3 Packages (Basic · Std · Prem)
                     </span>
                   </td>
@@ -1029,7 +1029,7 @@ export const AdminServicesPage: React.FC = () => {
                   <td className="py-3.5 px-4 text-right space-x-3 whitespace-nowrap">
                     <Link
                       to={`/services/${encodeURIComponent(srv.slug || srv.id)}`}
-                      className="font-semibold text-[#26734D] hover:underline"
+                      className="font-semibold text-[#16A34A] hover:underline"
                     >
                       View Page
                     </Link>
@@ -1046,7 +1046,7 @@ export const AdminServicesPage: React.FC = () => {
                           storageBucket: 'service-media',
                         })
                       }
-                      className="font-semibold text-[#172333] hover:text-[#F18A45]"
+                      className="font-semibold text-[#F8FAFC] hover:text-[#10B981]"
                     >
                       Preview
                     </button>
@@ -1083,7 +1083,7 @@ export const AdminServicesPage: React.FC = () => {
                         });
                         setShowForm(true);
                       }}
-                      className="font-semibold text-[#172333] hover:text-[#F18A45]"
+                      className="font-semibold text-[#F8FAFC] hover:text-[#10B981]"
                     >
                       Edit
                     </button>
@@ -1100,7 +1100,7 @@ export const AdminServicesPage: React.FC = () => {
                           },
                         })
                       }
-                      className="text-[#B93832] hover:underline"
+                      className="text-[#DC2626] hover:underline"
                     >
                       Delete
                     </button>
@@ -1113,8 +1113,8 @@ export const AdminServicesPage: React.FC = () => {
       </div>
 
       {showMediaPicker && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#172333]/75 p-4 overflow-y-auto">
-          <div className="bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#040D1A]/75 p-4 overflow-y-auto">
+          <div className="bg-[#132A4A] border border-[#1E3A5F] rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl">
             <MediaLibraryManager
               mode="picker"
               defaultBucket="service-media"
@@ -1351,7 +1351,7 @@ export const AdminPortfolioPage: React.FC = () => {
     e.preventDefault();
     try {
       const coverImage =
-        form.coverImage || createStudioArtworkDataUri(form.title, form.category, '#F18A45');
+        form.coverImage || createStudioArtworkDataUri(form.title, form.category, '#10B981');
       const tags = form.tagsInput
         .split(',')
         .map((t) => t.trim().toLowerCase())
@@ -1387,10 +1387,10 @@ export const AdminPortfolioPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="font-editorial text-2xl font-semibold text-[#172333]">
+          <h1 className="font-editorial text-2xl font-semibold text-[#F8FAFC]">
             Portfolio Management
           </h1>
-          <p className="text-xs text-[#6E7785] mt-1">
+          <p className="text-xs text-[#94A3B8] mt-1">
             Publish, feature, reorder, or upload live studio artwork and video reels to <code className="font-mono">portfolio-media</code>.
           </p>
         </div>
@@ -1414,16 +1414,16 @@ export const AdminPortfolioPage: React.FC = () => {
             });
             setShowForm(!showForm);
           }}
-          className="px-4 py-2 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg"
+          className="px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg"
         >
           {showForm ? 'Close Editor' : '+ Add Portfolio Entry'}
         </button>
       </div>
 
       {showForm && (
-        <form onSubmit={handleSave} className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E2E4DF] pb-3">
-            <h2 className="text-base font-semibold text-[#172333]">
+        <form onSubmit={handleSave} className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#1E3A5F] pb-3">
+            <h2 className="text-base font-semibold text-[#F8FAFC]">
               {editing ? `Edit Entry: ${editing.title}` : 'Create Portfolio Entry'}
             </h2>
             <div className="flex flex-wrap items-center gap-2">
@@ -1431,9 +1431,9 @@ export const AdminPortfolioPage: React.FC = () => {
                 type="button"
                 disabled={aiBusyAction !== null}
                 onClick={handleContextualGeneratePortfolioAI}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#172333] bg-[#F18A45]/20 hover:bg-[#F18A45]/30 border border-[#F18A45]/40 rounded-lg transition-colors disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-[#10B981]/20 hover:bg-[#10B981]/30 border border-[#10B981]/40 rounded-lg transition-colors disabled:opacity-50"
               >
-                <Sparkles className="w-3.5 h-3.5 text-[#B85D1D]" />
+                <Sparkles className="w-3.5 h-3.5 text-[#0EA5E9]" />
                 <span>
                   {aiBusyAction === 'generate' ? 'Generating...' : 'Generate with AI'}
                 </span>
@@ -1442,7 +1442,7 @@ export const AdminPortfolioPage: React.FC = () => {
                 type="button"
                 disabled={aiBusyAction !== null}
                 onClick={handleContextualImprovePortfolioDesc}
-                className="px-3 py-1.5 text-xs font-semibold text-[#172333] bg-[#F5F5F1] hover:bg-[#E2E4DF] rounded-lg transition-colors disabled:opacity-50"
+                className="px-3 py-1.5 text-xs font-semibold text-[#F8FAFC] bg-[#132A4A] hover:bg-[#1E3A5F] rounded-lg transition-colors disabled:opacity-50"
               >
                 {aiBusyAction === 'improve' ? 'Improving...' : 'Improve Description'}
               </button>
@@ -1450,14 +1450,14 @@ export const AdminPortfolioPage: React.FC = () => {
                 type="button"
                 disabled={aiBusyAction !== null}
                 onClick={handleContextualPortfolioSEO}
-                className="px-3 py-1.5 text-xs font-semibold text-[#172333] bg-[#F5F5F1] hover:bg-[#E2E4DF] rounded-lg transition-colors disabled:opacity-50"
+                className="px-3 py-1.5 text-xs font-semibold text-[#F8FAFC] bg-[#132A4A] hover:bg-[#1E3A5F] rounded-lg transition-colors disabled:opacity-50"
               >
                 {aiBusyAction === 'seo' ? 'Generating SEO...' : 'Generate SEO Content'}
               </button>
               <button
                 type="button"
                 onClick={() => navigate('/admin/ai-assistant')}
-                className="px-3 py-1.5 text-xs font-semibold text-[#172333] bg-white border border-[#E2E4DF] hover:border-[#172333] rounded-lg transition-colors"
+                className="px-3 py-1.5 text-xs font-semibold text-[#F8FAFC] bg-[#0D1F38] border border-[#1E3A5F] hover:border-[#10B981] rounded-lg transition-colors"
               >
                 Generate Cover Image →
               </button>
@@ -1465,27 +1465,27 @@ export const AdminPortfolioPage: React.FC = () => {
           </div>
 
           {portfolioSeoSuggestion && (
-            <div className="p-4 bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg space-y-1.5 text-xs">
+            <div className="p-4 bg-[#132A4A] border border-[#1E3A5F] rounded-lg space-y-1.5 text-xs">
               <div className="flex items-center justify-between">
-                <span className="font-semibold text-[#172333]">
+                <span className="font-semibold text-[#F8FAFC]">
                   AI Portfolio SEO & Caption Suggestions
                 </span>
                 <button
                   type="button"
                   onClick={() => setPortfolioSeoSuggestion(null)}
-                  className="text-[11px] text-[#6E7785] hover:text-[#172333]"
+                  className="text-[11px] text-[#94A3B8] hover:text-[#F8FAFC]"
                 >
                   Dismiss
                 </button>
               </div>
-              <p className="text-[#172333]">
+              <p className="text-[#F8FAFC]">
                 <strong>SEO Title:</strong> {portfolioSeoSuggestion.seoTitle}
               </p>
-              <p className="text-[#6E7785]">
+              <p className="text-[#94A3B8]">
                 <strong>Meta Description:</strong> {portfolioSeoSuggestion.seoMetaDescription}
               </p>
               {portfolioSeoSuggestion.caption && (
-                <p className="text-[#6E7785]">
+                <p className="text-[#94A3B8]">
                   <strong>Social Caption:</strong> {portfolioSeoSuggestion.caption}
                 </p>
               )}
@@ -1499,7 +1499,7 @@ export const AdminPortfolioPage: React.FC = () => {
                 required
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
             <div>
@@ -1507,7 +1507,7 @@ export const AdminPortfolioPage: React.FC = () => {
               <select
                 value={form.category}
                 onChange={(e) => setForm({ ...form, category: e.target.value as PortfolioCategory })}
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               >
                 {CATEGORIES.map((c) => (
                   <option key={c} value={c}>
@@ -1522,7 +1522,7 @@ export const AdminPortfolioPage: React.FC = () => {
                 type="text"
                 value={form.metricsSummary}
                 onChange={(e) => setForm({ ...form, metricsSummary: e.target.value })}
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
           </div>
@@ -1534,7 +1534,7 @@ export const AdminPortfolioPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowMediaPicker('cover')}
-                  className="text-[11px] font-semibold text-[#F18A45] hover:underline"
+                  className="text-[11px] font-semibold text-[#10B981] hover:underline"
                 >
                   + Upload / Pick Cover
                 </button>
@@ -1544,7 +1544,7 @@ export const AdminPortfolioPage: React.FC = () => {
                 value={form.coverImage}
                 onChange={(e) => setForm({ ...form, coverImage: e.target.value })}
                 placeholder="https://... (from portfolio-media)"
-                className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
 
@@ -1554,7 +1554,7 @@ export const AdminPortfolioPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowMediaPicker('video')}
-                  className="text-[11px] font-semibold text-[#F18A45] hover:underline"
+                  className="text-[11px] font-semibold text-[#10B981] hover:underline"
                 >
                   + Upload / Pick Video
                 </button>
@@ -1564,7 +1564,7 @@ export const AdminPortfolioPage: React.FC = () => {
                 value={form.videoUrl}
                 onChange={(e) => setForm({ ...form, videoUrl: e.target.value })}
                 placeholder="https://... (.mp4 / .webm)"
-                className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
 
@@ -1575,7 +1575,7 @@ export const AdminPortfolioPage: React.FC = () => {
                 value={form.tagsInput}
                 onChange={(e) => setForm({ ...form, tagsInput: e.target.value })}
                 placeholder="youtube, thumbnail, ctr, reel"
-                className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
           </div>
@@ -1587,7 +1587,7 @@ export const AdminPortfolioPage: React.FC = () => {
               required
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
-              className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             />
           </div>
 
@@ -1620,7 +1620,7 @@ export const AdminPortfolioPage: React.FC = () => {
 
           <button
             type="submit"
-            className="px-4 py-2 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg"
+            className="px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg"
           >
             Save Portfolio Entry
           </button>
@@ -1631,7 +1631,7 @@ export const AdminPortfolioPage: React.FC = () => {
         {items.map((item) => (
           <div
             key={item.id}
-            className="bg-white border border-[#E2E4DF] rounded-lg overflow-hidden flex flex-col justify-between"
+            className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg overflow-hidden flex flex-col justify-between"
           >
             <div>
               <div
@@ -1641,7 +1641,7 @@ export const AdminPortfolioPage: React.FC = () => {
                     title: item.title,
                     url:
                       item.coverImage ||
-                      createStudioArtworkDataUri(item.title, item.category, '#F18A45'),
+                      createStudioArtworkDataUri(item.title, item.category, '#10B981'),
                     videoUrl: item.videoUrl || undefined,
                     description: item.description,
                     tags: item.tags,
@@ -1649,34 +1649,34 @@ export const AdminPortfolioPage: React.FC = () => {
                     storageBucket: 'portfolio-media',
                   })
                 }
-                className="cursor-pointer relative aspect-[4/3] bg-[#172333] overflow-hidden border-b border-[#E2E4DF] group"
+                className="cursor-pointer relative aspect-[4/3] bg-[#040D1A] overflow-hidden border-b border-[#1E3A5F] group"
               >
                 <img
                   src={
                     item.coverImage ||
-                    createStudioArtworkDataUri(item.title, item.category, '#F18A45')
+                    createStudioArtworkDataUri(item.title, item.category, '#10B981')
                   }
                   alt={item.title}
                   referrerPolicy="no-referrer"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                 />
                 {item.videoUrl && (
-                  <span className="absolute top-2.5 right-2.5 inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#172333]/90 text-[10px] font-mono text-[#F18A45] border border-white/10">
+                  <span className="absolute top-2.5 right-2.5 inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#040D1A]/90 text-[10px] font-mono text-[#10B981] border border-white/10">
                     <Film className="w-3 h-3" />
                     VIDEO
                   </span>
                 )}
               </div>
               <div className="p-5">
-                <p className="text-xs text-[#6E7785]">
+                <p className="text-xs text-[#94A3B8]">
                   {item.category} · {item.published ? 'Published' : 'Hidden'}
                   {item.isSampleContent ? ' · Sample' : ''}
                 </p>
-                <h3 className="text-base font-semibold text-[#172333] mt-1">{item.title}</h3>
-                <p className="text-xs text-[#6E7785] mt-1.5 line-clamp-2">{item.description}</p>
+                <h3 className="text-base font-semibold text-[#F8FAFC] mt-1">{item.title}</h3>
+                <p className="text-xs text-[#94A3B8] mt-1.5 line-clamp-2">{item.description}</p>
               </div>
             </div>
-            <div className="px-5 py-3 border-t border-[#E2E4DF] flex items-center justify-between text-xs">
+            <div className="px-5 py-3 border-t border-[#1E3A5F] flex items-center justify-between text-xs">
               <div className="flex items-center gap-3">
                 <button
                   type="button"
@@ -1686,7 +1686,7 @@ export const AdminPortfolioPage: React.FC = () => {
                       title: item.title,
                       url:
                         item.coverImage ||
-                        createStudioArtworkDataUri(item.title, item.category, '#F18A45'),
+                        createStudioArtworkDataUri(item.title, item.category, '#10B981'),
                       videoUrl: item.videoUrl || undefined,
                       description: item.description,
                       tags: item.tags,
@@ -1694,7 +1694,7 @@ export const AdminPortfolioPage: React.FC = () => {
                       storageBucket: 'portfolio-media',
                     })
                   }
-                  className="font-semibold text-[#172333] hover:text-[#F18A45]"
+                  className="font-semibold text-[#F8FAFC] hover:text-[#10B981]"
                 >
                   Preview
                 </button>
@@ -1718,7 +1718,7 @@ export const AdminPortfolioPage: React.FC = () => {
                     });
                     setShowForm(true);
                   }}
-                  className="font-semibold text-[#172333] hover:text-[#F18A45]"
+                  className="font-semibold text-[#F8FAFC] hover:text-[#10B981]"
                 >
                   Edit Entry
                 </button>
@@ -1736,7 +1736,7 @@ export const AdminPortfolioPage: React.FC = () => {
                     },
                   })
                 }
-                className="text-[#B93832] hover:underline"
+                className="text-[#DC2626] hover:underline"
               >
                 Delete
               </button>
@@ -1746,8 +1746,8 @@ export const AdminPortfolioPage: React.FC = () => {
       </div>
 
       {showMediaPicker && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#172333]/75 p-4 overflow-y-auto">
-          <div className="bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#040D1A]/75 p-4 overflow-y-auto">
+          <div className="bg-[#132A4A] border border-[#1E3A5F] rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl">
             <MediaLibraryManager
               mode="picker"
               defaultBucket="portfolio-media"
@@ -2199,17 +2199,17 @@ export const AdminInvoicesPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4 no-print">
         <div>
-          <h1 className="font-editorial text-2xl font-semibold text-[#172333]">
+          <h1 className="font-editorial text-2xl font-semibold text-[#F8FAFC]">
             Invoices, GST & INR Billing
           </h1>
-          <p className="text-xs text-[#6E7785] mt-1">
+          <p className="text-xs text-[#94A3B8] mt-1">
             Create, edit, duplicate, void, or delete INR invoices with itemized HSN/SAC 9983 billing, UPI QR codes, and payment protection.
           </p>
         </div>
         <button
           type="button"
           onClick={() => (showBuilder ? handleRequestCloseBuilder() : handleOpenCreateInvoice())}
-          className="px-4 py-2 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg"
+          className="px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg"
         >
           {showBuilder ? 'Close Invoice Editor' : '+ Create Invoice'}
         </button>
@@ -2218,20 +2218,20 @@ export const AdminInvoicesPage: React.FC = () => {
       {showBuilder && (
         <form
           onSubmit={handleSaveInvoiceSubmit}
-          className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-5 no-print shadow-xs"
+          className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 space-y-5 no-print shadow-xs"
         >
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E2E4DF] pb-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#1E3A5F] pb-3">
             <div>
-              <h2 className="text-base font-semibold text-[#172333]">
+              <h2 className="text-base font-semibold text-[#F8FAFC]">
                 {editingInvoice
                   ? `Edit Invoice · ${editingInvoice.invoiceNumber}`
                   : 'Create New INR Invoice'}
               </h2>
-              <p className="text-[11px] text-[#6E7785]">
+              <p className="text-[11px] text-[#94A3B8]">
                 All line item quantities, discounts, and GST rates recalculate totals and balance due automatically.
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-1.5 bg-[#F5F5F1] p-1 rounded-lg border border-[#E2E4DF] text-xs">
+            <div className="flex flex-wrap items-center gap-1.5 bg-[#132A4A] p-1 rounded-lg border border-[#1E3A5F] text-xs">
               {(
                 [
                   { id: 'non_gst', label: 'Non-GST (0% Default)' },
@@ -2249,8 +2249,8 @@ export const AdminInvoicesPage: React.FC = () => {
                   }}
                   className={`px-2.5 py-1 rounded font-medium transition-colors ${
                     gstMode === opt.id
-                      ? 'bg-[#172333] text-white font-semibold'
-                      : 'text-[#6E7785] hover:text-[#172333]'
+                      ? 'bg-[#132A4A] text-[#F8FAFC] font-semibold'
+                      : 'text-[#94A3B8] hover:text-[#F8FAFC]'
                   }`}
                 >
                   {opt.label}
@@ -2261,13 +2261,13 @@ export const AdminInvoicesPage: React.FC = () => {
 
           {/* Controlled Editing Notice for Paid / Partially Paid / Sent Invoices */}
           {editingInvoice && editingInvoice.amountPaid > 0 && (
-            <div className="p-3.5 bg-[#B87514]/10 border border-[#B87514]/30 rounded-lg flex items-start gap-2.5 text-xs text-[#172333]">
+            <div className="p-3.5 bg-[#B87514]/10 border border-[#B87514]/30 rounded-lg flex items-start gap-2.5 text-xs text-[#F8FAFC]">
               <AlertTriangle className="w-4 h-4 text-[#B87514] shrink-0 mt-0.5" />
               <div>
                 <p className="font-semibold text-[#B87514]">
                   Controlled Editing Mode — Verified Payments Recorded ({formatINR(editingInvoice.amountPaid)})
                 </p>
-                <p className="text-[#6E7785] mt-0.5">
+                <p className="text-[#94A3B8] mt-0.5">
                   Existing payment history is protected. Saving changes to line items, discounts, or tax will automatically recalculate the remaining Balance Due ({formatINR(totals.balanceDue)}) and update status accordingly.
                 </p>
               </div>
@@ -2282,7 +2282,7 @@ export const AdminInvoicesPage: React.FC = () => {
                 required
                 value={invForm.invoiceNumber}
                 onChange={(e) => updateInvForm({ invoiceNumber: e.target.value })}
-                className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
             <div>
@@ -2291,7 +2291,7 @@ export const AdminInvoicesPage: React.FC = () => {
                 required
                 value={invForm.clientId}
                 onChange={(e) => updateInvForm({ clientId: e.target.value })}
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               >
                 <option value="">Select client...</option>
                 {clients.map((c) => (
@@ -2306,7 +2306,7 @@ export const AdminInvoicesPage: React.FC = () => {
               <select
                 value={invForm.projectId}
                 onChange={(e) => updateInvForm({ projectId: e.target.value })}
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               >
                 <option value="">General Creative Services</option>
                 {clientProjects.map((p) => (
@@ -2321,7 +2321,7 @@ export const AdminInvoicesPage: React.FC = () => {
               <select
                 value={invForm.status}
                 onChange={(e) => updateInvForm({ status: e.target.value as InvoiceStatus })}
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               >
                 {INVOICE_STATUS_OPTIONS.map((st) => (
                   <option key={st} value={st}>
@@ -2336,7 +2336,7 @@ export const AdminInvoicesPage: React.FC = () => {
                 type="date"
                 value={invForm.issueDate}
                 onChange={(e) => updateInvForm({ issueDate: e.target.value })}
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
             <div>
@@ -2345,7 +2345,7 @@ export const AdminInvoicesPage: React.FC = () => {
                 type="date"
                 value={invForm.dueDate}
                 onChange={(e) => updateInvForm({ dueDate: e.target.value })}
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
           </div>
@@ -2353,7 +2353,7 @@ export const AdminInvoicesPage: React.FC = () => {
           {/* Line Items */}
           <div className="space-y-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-xs font-semibold text-[#172333]">
+              <span className="text-xs font-semibold text-[#F8FAFC]">
                 Itemized Line Items (HSN/SAC 9983)
               </span>
               <div className="flex items-center gap-2">
@@ -2375,7 +2375,7 @@ export const AdminInvoicesPage: React.FC = () => {
                       });
                       e.target.value = '';
                     }}
-                    className="px-2.5 py-1 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-md"
+                    className="px-2.5 py-1 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-md"
                   >
                     <option value="">+ Add from Services Catalog...</option>
                     {services.map((s) => (
@@ -2395,14 +2395,14 @@ export const AdminInvoicesPage: React.FC = () => {
                       ],
                     })
                   }
-                  className="text-xs font-semibold text-[#F18A45] hover:underline"
+                  className="text-xs font-semibold text-[#10B981] hover:underline"
                 >
                   + Add Line Item
                 </button>
               </div>
             </div>
 
-            <div className="hidden sm:grid grid-cols-12 gap-2 px-1 text-[11px] font-semibold text-[#6E7785]">
+            <div className="hidden sm:grid grid-cols-12 gap-2 px-1 text-[11px] font-semibold text-[#94A3B8]">
               <div className="col-span-5">Description</div>
               <div className="col-span-2">Quantity</div>
               <div className="col-span-2">Unit Price (₹)</div>
@@ -2424,7 +2424,7 @@ export const AdminInvoicesPage: React.FC = () => {
                       updateInvForm({ lineItems: next });
                     }}
                     placeholder="Service / Deliverable description"
-                    className="col-span-12 sm:col-span-5 px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                    className="col-span-12 sm:col-span-5 px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                   />
                   <input
                     type="number"
@@ -2436,7 +2436,7 @@ export const AdminInvoicesPage: React.FC = () => {
                       next[idx] = { ...next[idx], quantity: Number(e.target.value) };
                       updateInvForm({ lineItems: next });
                     }}
-                    className="col-span-4 sm:col-span-2 px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                    className="col-span-4 sm:col-span-2 px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                   />
                   <input
                     type="number"
@@ -2448,9 +2448,9 @@ export const AdminInvoicesPage: React.FC = () => {
                       next[idx] = { ...next[idx], unitPrice: Number(e.target.value) };
                       updateInvForm({ lineItems: next });
                     }}
-                    className="col-span-4 sm:col-span-2 px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                    className="col-span-4 sm:col-span-2 px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                   />
-                  <div className="col-span-2 sm:col-span-2 text-right font-mono text-xs font-semibold text-[#172333] tabular-nums">
+                  <div className="col-span-2 sm:col-span-2 text-right font-mono text-xs font-semibold text-[#F8FAFC] tabular-nums">
                     {formatINR(lineTotal)}
                   </div>
                   <div className="col-span-2 sm:col-span-1 flex items-center justify-end gap-1">
@@ -2463,7 +2463,7 @@ export const AdminInvoicesPage: React.FC = () => {
                         updateInvForm({ lineItems: next });
                       }}
                       title="Move Up"
-                      className="p-1 text-[#6E7785] hover:text-[#172333] disabled:opacity-25"
+                      className="p-1 text-[#94A3B8] hover:text-[#F8FAFC] disabled:opacity-25"
                     >
                       <ArrowUp className="w-3.5 h-3.5" />
                     </button>
@@ -2476,7 +2476,7 @@ export const AdminInvoicesPage: React.FC = () => {
                         updateInvForm({ lineItems: next });
                       }}
                       title="Move Down"
-                      className="p-1 text-[#6E7785] hover:text-[#172333] disabled:opacity-25"
+                      className="p-1 text-[#94A3B8] hover:text-[#F8FAFC] disabled:opacity-25"
                     >
                       <ArrowDown className="w-3.5 h-3.5" />
                     </button>
@@ -2489,7 +2489,7 @@ export const AdminInvoicesPage: React.FC = () => {
                         })
                       }
                       title="Remove Line Item"
-                      className="p-1 text-xs font-bold text-[#B93832] disabled:opacity-30"
+                      className="p-1 text-xs font-bold text-[#DC2626] disabled:opacity-30"
                     >
                       ×
                     </button>
@@ -2499,14 +2499,14 @@ export const AdminInvoicesPage: React.FC = () => {
             })}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-[#E2E4DF]">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-[#1E3A5F]">
             <div>
               <label className="block text-xs font-medium mb-1">Payment Instructions</label>
               <textarea
                 rows={2}
                 value={invForm.paymentInstructions}
                 onChange={(e) => updateInvForm({ paymentInstructions: e.target.value })}
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
             <div>
@@ -2515,12 +2515,12 @@ export const AdminInvoicesPage: React.FC = () => {
                 rows={2}
                 value={invForm.notes}
                 onChange={(e) => updateInvForm({ notes: e.target.value })}
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-[#E2E4DF]">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-[#1E3A5F]">
             <div>
               <label className="block text-xs font-medium mb-1">Discount (INR)</label>
               <input
@@ -2528,7 +2528,7 @@ export const AdminInvoicesPage: React.FC = () => {
                 min={0}
                 value={invForm.discount}
                 onChange={(e) => updateInvForm({ discount: Number(e.target.value) })}
-                className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
             <div>
@@ -2542,23 +2542,23 @@ export const AdminInvoicesPage: React.FC = () => {
                   max={100}
                   value={invForm.taxRate}
                   onChange={(e) => updateInvForm({ taxRate: Number(e.target.value) })}
-                  className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                  className="w-full px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                 />
               ) : (
-                <div className="px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg text-[#172333]">
+                <div className="px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg text-[#F8FAFC]">
                   {gstDetails.label} ({formatINR(totals.taxAmount)})
                 </div>
               )}
             </div>
-            <div className="bg-[#F5F5F1] rounded-lg p-3 text-right space-y-0.5">
-              <div className="flex justify-between text-[11px] text-[#6E7785]">
+            <div className="bg-[#132A4A] rounded-lg p-3 text-right space-y-0.5">
+              <div className="flex justify-between text-[11px] text-[#94A3B8]">
                 <span>Subtotal: {formatINR(totals.subtotal)}</span>
                 <span>Tax: {formatINR(totals.taxAmount)}</span>
               </div>
-              <p className="text-lg font-mono font-semibold text-[#172333] tabular-nums">
+              <p className="text-lg font-mono font-semibold text-[#F8FAFC] tabular-nums">
                 Total: {formatINR(totals.total)}
               </p>
-              <p className="text-[11px] font-mono text-[#B93832]">
+              <p className="text-[11px] font-mono text-[#DC2626]">
                 Paid: {formatINR(totals.amountPaid)} · Balance Due: {formatINR(totals.balanceDue)}
               </p>
             </div>
@@ -2568,7 +2568,7 @@ export const AdminInvoicesPage: React.FC = () => {
             <button
               type="submit"
               disabled={savingInvoice}
-              className="px-5 py-2.5 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg disabled:opacity-50"
+              className="px-5 py-2.5 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg disabled:opacity-50"
             >
               {savingInvoice
                 ? 'Saving Invoice...'
@@ -2579,7 +2579,7 @@ export const AdminInvoicesPage: React.FC = () => {
             <button
               type="button"
               onClick={handleRequestCloseBuilder}
-              className="px-4 py-2 text-xs font-medium text-[#6E7785] hover:text-[#172333]"
+              className="px-4 py-2 text-xs font-medium text-[#94A3B8] hover:text-[#F8FAFC]"
             >
               Cancel
             </button>
@@ -2589,33 +2589,33 @@ export const AdminInvoicesPage: React.FC = () => {
 
       {/* Printable / Inspector Invoice Preview */}
       {printInvoice && (
-        <div className="bg-white border border-[#172333] rounded-lg p-8 space-y-6">
-          <div className="flex items-start justify-between border-b border-[#E2E4DF] pb-6">
+        <div className="bg-[#0D1F38] border border-[#040D1A] rounded-lg p-8 space-y-6">
+          <div className="flex items-start justify-between border-b border-[#1E3A5F] pb-6">
             <div>
-              <span className="text-[11px] font-semibold text-[#F18A45]">
+              <span className="text-[11px] font-semibold text-[#10B981]">
                 OFFICIAL STUDIO INVOICE · SAC 9983
               </span>
-              <h2 className="font-editorial text-2xl font-semibold text-[#172333]">
+              <h2 className="font-editorial text-2xl font-semibold text-[#F8FAFC]">
                 Prithvi Editify
               </h2>
-              <p className="text-xs text-[#6E7785]">
+              <p className="text-xs text-[#94A3B8]">
                 Shankar Baluragi · Creative Design & Video Studio
               </p>
             </div>
             <div className="text-right">
-              <p className="font-mono text-lg font-semibold text-[#172333]">
+              <p className="font-mono text-lg font-semibold text-[#F8FAFC]">
                 {printInvoice.invoiceNumber}
               </p>
-              <p className="text-xs text-[#6E7785]">
+              <p className="text-xs text-[#94A3B8]">
                 Issued: {printInvoice.issueDate} · Due: {printInvoice.dueDate}
               </p>
               <p
                 className={`text-xs font-semibold mt-1 ${
                   printInvoice.status === 'Paid'
-                    ? 'text-[#26734D]'
+                    ? 'text-[#16A34A]'
                     : printInvoice.status === 'Void'
-                    ? 'text-[#B93832]'
-                    : 'text-[#172333]'
+                    ? 'text-[#DC2626]'
+                    : 'text-[#F8FAFC]'
                 }`}
               >
                 Status: {printInvoice.status}
@@ -2625,15 +2625,15 @@ export const AdminInvoicesPage: React.FC = () => {
 
           <div className="grid grid-cols-2 gap-6 text-xs">
             <div>
-              <p className="font-semibold text-[#6E7785]">Billed To:</p>
-              <p className="text-sm font-semibold text-[#172333] mt-0.5">
+              <p className="font-semibold text-[#94A3B8]">Billed To:</p>
+              <p className="text-sm font-semibold text-[#F8FAFC] mt-0.5">
                 {printInvoice.clientName}
               </p>
-              <p className="text-[#6E7785]">{printInvoice.clientEmail}</p>
+              <p className="text-[#94A3B8]">{printInvoice.clientEmail}</p>
             </div>
             <div className="text-right">
-              <p className="font-semibold text-[#6E7785]">Project Scope (SAC 9983):</p>
-              <p className="text-[#172333] font-medium mt-0.5">{printInvoice.projectTitle}</p>
+              <p className="font-semibold text-[#94A3B8]">Project Scope (SAC 9983):</p>
+              <p className="text-[#F8FAFC] font-medium mt-0.5">{printInvoice.projectTitle}</p>
             </div>
           </div>
 
@@ -2641,17 +2641,17 @@ export const AdminInvoicesPage: React.FC = () => {
           {printLineItems.length > 0 ? (
             <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="border-b border-[#E2E4DF] text-[#6E7785]">
+                <tr className="border-b border-[#1E3A5F] text-[#94A3B8]">
                   <th className="py-2">Description</th>
                   <th className="py-2 text-right">Qty</th>
                   <th className="py-2 text-right">Unit Price</th>
                   <th className="py-2 text-right">Amount</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#E2E4DF]">
+              <tbody className="divide-y divide-[#1E3A5F]">
                 {printLineItems.map((li, i) => (
                   <tr key={li.id || i}>
-                    <td className="py-2.5 font-medium text-[#172333]">{li.description}</td>
+                    <td className="py-2.5 font-medium text-[#F8FAFC]">{li.description}</td>
                     <td className="py-2.5 text-right font-mono">{li.quantity}</td>
                     <td className="py-2.5 text-right font-mono">{formatINR(li.unitPrice)}</td>
                     <td className="py-2.5 text-right font-mono font-semibold">
@@ -2662,32 +2662,32 @@ export const AdminInvoicesPage: React.FC = () => {
               </tbody>
             </table>
           ) : (
-            <div className="p-4 bg-[#F5F5F1] rounded-lg text-xs">
-              <p className="font-semibold text-[#172333] mb-1">Line Items Summary:</p>
-              <p className="text-[#6E7785]">{printInvoice.itemsSummary}</p>
+            <div className="p-4 bg-[#132A4A] rounded-lg text-xs">
+              <p className="font-semibold text-[#F8FAFC] mb-1">Line Items Summary:</p>
+              <p className="text-[#94A3B8]">{printInvoice.itemsSummary}</p>
             </div>
           )}
 
           <div className="flex justify-end">
             <div className="w-72 space-y-1.5 text-xs">
               <div className="flex justify-between">
-                <span className="text-[#6E7785]">Subtotal:</span>
+                <span className="text-[#94A3B8]">Subtotal:</span>
                 <span className="font-mono tabular-nums">{formatINR(printInvoice.subtotal)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#6E7785]">Discount:</span>
+                <span className="text-[#94A3B8]">Discount:</span>
                 <span className="font-mono tabular-nums">-{formatINR(printInvoice.discount)}</span>
               </div>
               {printInvoice.taxRate === 18 && !printInvoice.notes?.includes('IGST') ? (
                 <>
                   <div className="flex justify-between">
-                    <span className="text-[#6E7785]">CGST (9% · SAC 9983):</span>
+                    <span className="text-[#94A3B8]">CGST (9% · SAC 9983):</span>
                     <span className="font-mono tabular-nums">
                       {formatINR(Math.round(printInvoice.taxAmount / 2))}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-[#6E7785]">SGST (9% · SAC 9983):</span>
+                    <span className="text-[#94A3B8]">SGST (9% · SAC 9983):</span>
                     <span className="font-mono tabular-nums">
                       {formatINR(printInvoice.taxAmount - Math.round(printInvoice.taxAmount / 2))}
                     </span>
@@ -2695,21 +2695,21 @@ export const AdminInvoicesPage: React.FC = () => {
                 </>
               ) : (
                 <div className="flex justify-between">
-                  <span className="text-[#6E7785]">
+                  <span className="text-[#94A3B8]">
                     {printInvoice.notes?.includes('IGST') ? 'IGST' : 'Tax'} ({printInvoice.taxRate}% · SAC 9983):
                   </span>
                   <span className="font-mono tabular-nums">{formatINR(printInvoice.taxAmount)}</span>
                 </div>
               )}
-              <div className="flex justify-between pt-2 border-t border-[#E2E4DF] font-semibold text-sm">
+              <div className="flex justify-between pt-2 border-t border-[#1E3A5F] font-semibold text-sm">
                 <span>Total (INR):</span>
                 <span className="font-mono tabular-nums">{formatINR(printInvoice.total)}</span>
               </div>
-              <div className="flex justify-between text-[#26734D]">
+              <div className="flex justify-between text-[#16A34A]">
                 <span>Amount Paid:</span>
                 <span className="font-mono tabular-nums">{formatINR(printInvoice.amountPaid)}</span>
               </div>
-              <div className="flex justify-between font-semibold text-[#B93832]">
+              <div className="flex justify-between font-semibold text-[#DC2626]">
                 <span>Balance Due:</span>
                 <span className="font-mono tabular-nums">{formatINR(printInvoice.balanceDue)}</span>
               </div>
@@ -2721,17 +2721,17 @@ export const AdminInvoicesPage: React.FC = () => {
             const invPayments = payments.filter((p) => p.invoiceId === printInvoice.id);
             if (invPayments.length === 0) return null;
             return (
-              <div className="p-4 bg-[#F5F5F1] rounded-lg space-y-2 text-xs">
-                <p className="font-semibold text-[#172333]">
+              <div className="p-4 bg-[#132A4A] rounded-lg space-y-2 text-xs">
+                <p className="font-semibold text-[#F8FAFC]">
                   Verified Payment History ({invPayments.length})
                 </p>
-                <div className="divide-y divide-[#E2E4DF]">
+                <div className="divide-y divide-[#1E3A5F]">
                   {invPayments.map((p) => (
                     <div key={p.id} className="py-1.5 flex items-center justify-between">
                       <span>
                         {p.paymentDate} · {p.method} (UTR: {p.transactionReference || 'N/A'})
                       </span>
-                      <span className="font-mono font-semibold text-[#26734D]">
+                      <span className="font-mono font-semibold text-[#16A34A]">
                         {formatINR(p.amount)}
                       </span>
                     </div>
@@ -2749,8 +2749,8 @@ export const AdminInvoicesPage: React.FC = () => {
             />
           )}
 
-          <div className="pt-4 border-t border-[#E2E4DF] text-xs text-[#6E7785]">
-            <p className="font-semibold text-[#172333]">Payment Instructions & Notes:</p>
+          <div className="pt-4 border-t border-[#1E3A5F] text-xs text-[#94A3B8]">
+            <p className="font-semibold text-[#F8FAFC]">Payment Instructions & Notes:</p>
             <p className="mt-1">{printInvoice.paymentInstructions}</p>
             {printInvoice.notes && <p className="mt-1">{printInvoice.notes}</p>}
           </div>
@@ -2759,7 +2759,7 @@ export const AdminInvoicesPage: React.FC = () => {
             <button
               type="button"
               onClick={() => window.print()}
-              className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-[#172333] rounded-lg"
+              className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-[#040D1A] rounded-lg"
             >
               <Printer className="w-3.5 h-3.5" />
               <span>Print / Save as PDF</span>
@@ -2771,7 +2771,7 @@ export const AdminInvoicesPage: React.FC = () => {
                 setPrintInvoice(null);
                 handleOpenEditInvoice(target);
               }}
-              className="px-4 py-2 text-xs font-semibold text-[#172333] bg-[#F5F5F1] hover:bg-[#E2E4DF] rounded-lg"
+              className="px-4 py-2 text-xs font-semibold text-[#F8FAFC] bg-[#132A4A] hover:bg-[#1E3A5F] rounded-lg"
             >
               Edit Invoice
             </button>
@@ -2782,14 +2782,14 @@ export const AdminInvoicesPage: React.FC = () => {
               )}
               target="_blank"
               rel="noopener noreferrer"
-              className="px-4 py-2 text-xs font-semibold text-[#172333] bg-[#F18A45] hover:bg-[#e07934] rounded-lg"
+              className="px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg"
             >
               Send on WhatsApp →
             </a>
             <button
               type="button"
               onClick={() => setPrintInvoice(null)}
-              className="px-4 py-2 text-xs font-semibold text-[#6E7785] hover:text-[#172333]"
+              className="px-4 py-2 text-xs font-semibold text-[#94A3B8] hover:text-[#F8FAFC]"
             >
               Close Preview
             </button>
@@ -2799,7 +2799,7 @@ export const AdminInvoicesPage: React.FC = () => {
 
       {/* Search & Status Filter Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 no-print">
-        <div className="flex flex-wrap items-center gap-1 p-1 bg-[#E2E4DF]/60 rounded-lg w-fit">
+        <div className="flex flex-wrap items-center gap-1 p-1 bg-[#1E3A5F]/60 rounded-lg w-fit">
           {['All', ...INVOICE_STATUS_OPTIONS].map((st) => (
             <button
               key={st}
@@ -2807,8 +2807,8 @@ export const AdminInvoicesPage: React.FC = () => {
               onClick={() => setStatusFilter(st)}
               className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                 statusFilter === st
-                  ? 'bg-white text-[#172333] shadow-xs font-semibold'
-                  : 'text-[#6E7785] hover:text-[#172333]'
+                  ? 'bg-[#0D1F38] text-[#F8FAFC] shadow-xs font-semibold'
+                  : 'text-[#94A3B8] hover:text-[#F8FAFC]'
               }`}
             >
               {st}
@@ -2820,15 +2820,15 @@ export const AdminInvoicesPage: React.FC = () => {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search invoice #, client, project..."
-          className="px-3.5 py-2 text-xs bg-white border border-[#E2E4DF] rounded-lg w-full sm:w-72"
+          className="px-3.5 py-2 text-xs bg-[#0D1F38] border border-[#1E3A5F] rounded-lg w-full sm:w-72"
         />
       </div>
 
       {/* Invoices Table */}
-      <div className="bg-white border border-[#E2E4DF] rounded-lg overflow-x-auto no-print">
+      <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg overflow-x-auto no-print">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="border-b border-[#E2E4DF] text-[11px] font-semibold text-[#6E7785]">
+            <tr className="border-b border-[#1E3A5F] text-[11px] font-semibold text-[#94A3B8]">
               <th className="py-3 px-4">Invoice #</th>
               <th className="py-3 px-4">Client & Project</th>
               <th className="py-3 px-4">Due Date</th>
@@ -2838,10 +2838,10 @@ export const AdminInvoicesPage: React.FC = () => {
               <th className="py-3 px-4 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#E2E4DF] text-xs">
+          <tbody className="divide-y divide-[#1E3A5F] text-xs">
             {filteredInvoices.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-8 text-center text-[#6E7785]">
+                <td colSpan={7} className="py-8 text-center text-[#94A3B8]">
                   No invoices match the current filter.
                 </td>
               </tr>
@@ -2849,25 +2849,25 @@ export const AdminInvoicesPage: React.FC = () => {
               filteredInvoices.map((inv) => {
                 const clientObj = clients.find((c) => c.id === inv.clientId);
                 return (
-                  <tr key={inv.id} className="hover:bg-[#F5F5F1]/50">
-                    <td className="py-3.5 px-4 font-mono font-semibold text-[#172333]">
+                  <tr key={inv.id} className="hover:bg-[#132A4A]/50">
+                    <td className="py-3.5 px-4 font-mono font-semibold text-[#F8FAFC]">
                       {inv.invoiceNumber}
                     </td>
                     <td className="py-3.5 px-4">
-                      <p className="font-semibold text-[#172333]">{inv.clientName}</p>
-                      <p className="text-[11px] text-[#6E7785]">{inv.projectTitle}</p>
+                      <p className="font-semibold text-[#F8FAFC]">{inv.clientName}</p>
+                      <p className="text-[11px] text-[#94A3B8]">{inv.projectTitle}</p>
                     </td>
-                    <td className="py-3.5 px-4 font-mono text-[#6E7785]">{inv.dueDate}</td>
+                    <td className="py-3.5 px-4 font-mono text-[#94A3B8]">{inv.dueDate}</td>
                     <td className="py-3.5 px-4">
                       <span
                         className={`font-semibold ${
                           inv.status === 'Paid'
-                            ? 'text-[#26734D]'
+                            ? 'text-[#16A34A]'
                             : inv.status === 'Void' || inv.status === 'Overdue'
-                            ? 'text-[#B93832]'
+                            ? 'text-[#DC2626]'
                             : inv.status === 'Partially Paid'
                             ? 'text-[#B87514]'
-                            : 'text-[#172333]'
+                            : 'text-[#F8FAFC]'
                         }`}
                       >
                         {inv.status}
@@ -2894,7 +2894,7 @@ export const AdminInvoicesPage: React.FC = () => {
                                 notes: 'Manual payment verified by Admin',
                               });
                             }}
-                            className="px-2 py-1 text-[11px] font-semibold text-white bg-[#26734D] hover:bg-[#1f5f3f] rounded-md"
+                            className="px-2 py-1 text-[11px] font-semibold text-white bg-[#16A34A] hover:bg-[#1f5f3f] rounded-md"
                           >
                             + Payment
                           </button>
@@ -2903,7 +2903,7 @@ export const AdminInvoicesPage: React.FC = () => {
                           href={buildWhatsAppInvoiceShareLink(inv, clientObj?.phone)}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="px-2 py-1 text-[11px] font-semibold text-[#26734D] bg-[#26734D]/10 hover:bg-[#26734D]/20 rounded-md"
+                          className="px-2 py-1 text-[11px] font-semibold text-[#16A34A] bg-[#16A34A]/10 hover:bg-[#16A34A]/20 rounded-md"
                         >
                           WhatsApp
                         </a>
@@ -2932,16 +2932,16 @@ export const AdminInvoicesPage: React.FC = () => {
 
       {/* Record Payment Modal */}
       {payModalInvoice && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#172333]/60 p-4 no-print">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#040D1A]/60 p-4 no-print">
           <form
             onSubmit={handleRecordPayment}
-            className="bg-white border border-[#E2E4DF] rounded-lg max-w-md w-full p-6 space-y-4"
+            className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg max-w-md w-full p-6 space-y-4"
           >
-            <h3 className="text-base font-semibold text-[#172333]">
+            <h3 className="text-base font-semibold text-[#F8FAFC]">
               Record Verified Payment ({payModalInvoice.invoiceNumber})
             </h3>
-            <p className="text-xs text-[#6E7785]">
-              Recorded as <span className="font-semibold text-[#172333]">Admin Recorded</span> after verifying UPI/Bank transfer receipt.
+            <p className="text-xs text-[#94A3B8]">
+              Recorded as <span className="font-semibold text-[#F8FAFC]">Admin Recorded</span> after verifying UPI/Bank transfer receipt.
             </p>
             <div>
               <label className="block text-xs font-medium mb-1">Amount Received (INR) *</label>
@@ -2952,7 +2952,7 @@ export const AdminInvoicesPage: React.FC = () => {
                 max={payModalInvoice.balanceDue}
                 value={payForm.amount}
                 onChange={(e) => setPayForm({ ...payForm, amount: Number(e.target.value) })}
-                className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
             <div>
@@ -2962,7 +2962,7 @@ export const AdminInvoicesPage: React.FC = () => {
                 onChange={(e) =>
                   setPayForm({ ...payForm, method: e.target.value as PaymentRecord['method'] })
                 }
-                className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               >
                 <option value="UPI">UPI</option>
                 <option value="Bank Transfer (NEFT/IMPS)">Bank Transfer (NEFT/IMPS)</option>
@@ -2979,20 +2979,20 @@ export const AdminInvoicesPage: React.FC = () => {
                 value={payForm.transactionReference}
                 onChange={(e) => setPayForm({ ...payForm, transactionReference: e.target.value })}
                 placeholder="UTR / Reference ID"
-                className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <button
                 type="button"
                 onClick={() => setPayModalInvoice(null)}
-                className="px-4 py-2 text-xs font-medium bg-[#F5F5F1] rounded-lg"
+                className="px-4 py-2 text-xs font-medium bg-[#132A4A] rounded-lg"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 text-xs font-semibold text-white bg-[#26734D] rounded-lg"
+                className="px-4 py-2 text-xs font-semibold text-white bg-[#16A34A] rounded-lg"
               >
                 Confirm Payment Received
               </button>
@@ -3089,53 +3089,53 @@ export const AdminPaymentsPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-editorial text-2xl font-semibold text-[#172333]">
+          <h1 className="font-editorial text-2xl font-semibold text-[#F8FAFC]">
             Recorded Payments & UTR Verification Queue
           </h1>
-          <p className="text-xs text-[#6E7785] mt-1">
+          <p className="text-xs text-[#94A3B8] mt-1">
             Approve client UTR payment proofs in one click and inspect all verified INR settlements.
           </p>
         </div>
-        <div className="bg-white border border-[#E2E4DF] rounded-lg px-4 py-2.5 text-right">
-          <p className="text-[11px] text-[#6E7785]">Total Revenue Received</p>
-          <p className="font-mono text-lg font-semibold text-[#26734D] tabular-nums">
+        <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg px-4 py-2.5 text-right">
+          <p className="text-[11px] text-[#94A3B8]">Total Revenue Received</p>
+          <p className="font-mono text-lg font-semibold text-[#16A34A] tabular-nums">
             {formatINR(totalReceived)}
           </p>
         </div>
       </div>
 
       {/* Pending Client UTR / Screenshot Verification Queue */}
-      <div className="bg-white border border-[#E2E4DF] rounded-lg overflow-hidden">
-        <div className="px-5 py-3.5 bg-[#F5F5F1] border-b border-[#E2E4DF] flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-[#172333]">
+      <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg overflow-hidden">
+        <div className="px-5 py-3.5 bg-[#132A4A] border-b border-[#1E3A5F] flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-[#F8FAFC]">
             Pending Client Payment Verifications ({pendingProofs.length})
           </h2>
-          <span className="text-[11px] font-mono text-[#6E7785]">
+          <span className="text-[11px] font-mono text-[#94A3B8]">
             Submitted from /portal/invoices
           </span>
         </div>
         {pendingProofs.length === 0 ? (
-          <div className="p-6 text-xs text-[#6E7785]">
+          <div className="p-6 text-xs text-[#94A3B8]">
             No client UTR payment proofs waiting for verification right now.
           </div>
         ) : (
-          <div className="divide-y divide-[#E2E4DF] text-xs">
+          <div className="divide-y divide-[#1E3A5F] text-xs">
             {pendingProofs.map((proof) => (
               <div
                 key={proof.id}
-                className="p-4 flex flex-wrap items-center justify-between gap-4 bg-[#F18A45]/5"
+                className="p-4 flex flex-wrap items-center justify-between gap-4 bg-[#10B981]/5"
               >
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="font-mono font-bold text-[#172333]">{proof.invoiceNumber}</span>
-                    <span className="font-semibold text-[#172333]">{proof.clientName}</span>
-                    <span className="px-2 py-0.5 rounded bg-[#F18A45]/20 text-[#B85D1D] font-mono text-[10px] font-semibold">
+                    <span className="font-mono font-bold text-[#F8FAFC]">{proof.invoiceNumber}</span>
+                    <span className="font-semibold text-[#F8FAFC]">{proof.clientName}</span>
+                    <span className="px-2 py-0.5 rounded bg-[#10B981]/20 text-[#0EA5E9] font-mono text-[10px] font-semibold">
                       UTR: {proof.utrNumber}
                     </span>
                   </div>
-                  <p className="text-[#6E7785]">
+                  <p className="text-[#94A3B8]">
                     Method: {proof.method} · Amount:{' '}
-                    <strong className="font-mono text-[#172333]">{formatINR(proof.amount)}</strong>
+                    <strong className="font-mono text-[#F8FAFC]">{formatINR(proof.amount)}</strong>
                     {proof.notes ? ` · Note: "${proof.notes}"` : ''}
                   </p>
                 </div>
@@ -3145,7 +3145,7 @@ export const AdminPaymentsPage: React.FC = () => {
                       href={proof.receiptScreenshotDataUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-3 py-1.5 font-semibold text-[#172333] bg-white border border-[#E2E4DF] rounded-md"
+                      className="px-3 py-1.5 font-semibold text-[#F8FAFC] bg-[#0D1F38] border border-[#1E3A5F] rounded-md"
                     >
                       View Screenshot
                     </a>
@@ -3153,14 +3153,14 @@ export const AdminPaymentsPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => handleApproveProof(proof)}
-                    className="px-3.5 py-1.5 font-semibold text-white bg-[#26734D] hover:bg-[#1e5c3d] rounded-md"
+                    className="px-3.5 py-1.5 font-semibold text-white bg-[#16A34A] hover:bg-[#15803D] rounded-md"
                   >
                     Approve & Record Payment
                   </button>
                   <button
                     type="button"
                     onClick={() => handleRejectProof(proof.id)}
-                    className="px-3 py-1.5 font-semibold text-[#B93832] bg-[#B93832]/10 rounded-md"
+                    className="px-3 py-1.5 font-semibold text-[#DC2626] bg-[#DC2626]/10 rounded-md"
                   >
                     Reject
                   </button>
@@ -3171,10 +3171,10 @@ export const AdminPaymentsPage: React.FC = () => {
         )}
       </div>
 
-      <div className="bg-white border border-[#E2E4DF] rounded-lg overflow-x-auto">
+      <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="border-b border-[#E2E4DF] text-[11px] font-semibold text-[#6E7785]">
+            <tr className="border-b border-[#1E3A5F] text-[11px] font-semibold text-[#94A3B8]">
               <th className="py-3 px-4">Date</th>
               <th className="py-3 px-4">Invoice #</th>
               <th className="py-3 px-4">Client</th>
@@ -3184,25 +3184,25 @@ export const AdminPaymentsPage: React.FC = () => {
               <th className="py-3 px-4 text-right">Amount (INR)</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#E2E4DF] text-xs">
+          <tbody className="divide-y divide-[#1E3A5F] text-xs">
             {payments.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-8 text-center text-[#6E7785]">
+                <td colSpan={7} className="py-8 text-center text-[#94A3B8]">
                   No payments recorded yet.
                 </td>
               </tr>
             ) : (
               payments.map((pay) => (
                 <tr key={pay.id}>
-                  <td className="py-3.5 px-4 font-mono text-[#6E7785]">{pay.paymentDate}</td>
+                  <td className="py-3.5 px-4 font-mono text-[#94A3B8]">{pay.paymentDate}</td>
                   <td className="py-3.5 px-4 font-mono font-semibold">{pay.invoiceNumber}</td>
                   <td className="py-3.5 px-4">{pay.clientName}</td>
                   <td className="py-3.5 px-4">{pay.method}</td>
-                  <td className="py-3.5 px-4 font-mono text-[#6E7785]">
+                  <td className="py-3.5 px-4 font-mono text-[#94A3B8]">
                     {pay.transactionReference || '—'}
                   </td>
                   <td className="py-3.5 px-4 font-medium">{pay.verificationMode}</td>
-                  <td className="py-3.5 px-4 text-right font-mono font-semibold text-[#26734D] tabular-nums">
+                  <td className="py-3.5 px-4 text-right font-mono font-semibold text-[#16A34A] tabular-nums">
                     {formatINR(pay.amount)}
                   </td>
                 </tr>
@@ -3231,10 +3231,10 @@ export const AdminMediaLibraryPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Quick Search & Category/MIME-Type Filter Navigation Bar */}
-      <div className="bg-white border border-[#E2E4DF] rounded-lg p-4 flex flex-wrap items-center justify-between gap-4">
+      <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-4 flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-3 flex-1 min-w-[260px]">
           <div className="relative flex-1 min-w-[220px] max-w-md">
-            <Search className="w-4 h-4 text-[#6E7785] absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-[#94A3B8] absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={filters.searchQuery}
@@ -3242,18 +3242,18 @@ export const AdminMediaLibraryPage: React.FC = () => {
                 setFilters((prev) => ({ ...prev, searchQuery: e.target.value }))
               }
               placeholder="Search media by file title (.ilike('title', ...)) or #tag..."
-              className="w-full pl-9 pr-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg focus:outline-none focus:border-[#172333]"
+              className="w-full pl-9 pr-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg focus:outline-none focus:border-[#10B981]"
             />
           </div>
 
           <div className="relative min-w-[210px]">
-            <Filter className="w-3.5 h-3.5 text-[#6E7785] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Filter className="w-3.5 h-3.5 text-[#94A3B8] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <select
               value={filters.mimeType}
               onChange={(e) =>
                 setFilters((prev) => ({ ...prev, mimeType: e.target.value }))
               }
-              className="w-full pl-8 pr-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg font-mono"
+              className="w-full pl-8 pr-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg font-mono"
             >
               <option value="all">All Categories & MIME Types</option>
               <optgroup label="Exact MIME Types (.eq('mime_type'))">
@@ -3281,7 +3281,7 @@ export const AdminMediaLibraryPage: React.FC = () => {
             onClick={() =>
               setFilters((prev) => ({ ...prev, searchQuery: '', mimeType: 'all' }))
             }
-            className="px-3 py-1.5 text-xs font-semibold text-[#B93832] bg-[#B93832]/10 hover:bg-[#B93832]/15 rounded-md"
+            className="px-3 py-1.5 text-xs font-semibold text-[#DC2626] bg-[#DC2626]/10 hover:bg-[#DC2626]/15 rounded-md"
           >
             Clear Search & MIME Filter
           </button>
@@ -3389,16 +3389,16 @@ export const AdminFilesPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-editorial text-2xl font-semibold text-[#172333]">
+        <h1 className="font-editorial text-2xl font-semibold text-[#F8FAFC]">
           Deliverables & Private Client File Vault
         </h1>
-        <p className="text-xs text-[#6E7785] mt-1">
+        <p className="text-xs text-[#94A3B8] mt-1">
           Upload project deliverables, design previews, and reference assets to <code className="font-mono">private-project-files</code> with short-lived signed URLs and interactive previews.
         </p>
       </div>
 
-      <form onSubmit={handleUpload} className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-4">
-        <h2 className="text-sm font-semibold text-[#172333]">Upload Deliverable or Preview</h2>
+      <form onSubmit={handleUpload} className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 space-y-4">
+        <h2 className="text-sm font-semibold text-[#F8FAFC]">Upload Deliverable or Preview</h2>
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
           <div>
             <label className="block text-xs font-medium mb-1">Project *</label>
@@ -3406,7 +3406,7 @@ export const AdminFilesPage: React.FC = () => {
               required
               value={form.projectId}
               onChange={(e) => setForm({ ...form, projectId: e.target.value })}
-              className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             >
               <option value="">Select project...</option>
               {projects.map((p) => (
@@ -3424,7 +3424,7 @@ export const AdminFilesPage: React.FC = () => {
               value={form.fileName}
               onChange={(e) => setForm({ ...form, fileName: e.target.value })}
               placeholder="Thumbnail_Master_v1.png"
-              className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             />
           </div>
           <div>
@@ -3434,7 +3434,7 @@ export const AdminFilesPage: React.FC = () => {
               onChange={(e) =>
                 setForm({ ...form, category: e.target.value as DeliverableFile['category'] })
               }
-              className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             >
               <option value="Deliverable">Final Deliverable</option>
               <option value="Preview">Design / Video Preview</option>
@@ -3448,7 +3448,7 @@ export const AdminFilesPage: React.FC = () => {
               type="text"
               value={form.versionLabel}
               onChange={(e) => setForm({ ...form, versionLabel: e.target.value })}
-              className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              className="w-full px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             />
           </div>
         </div>
@@ -3467,7 +3467,7 @@ export const AdminFilesPage: React.FC = () => {
                   setForm((prev) => ({ ...prev, fileName: file.name }));
                 }
               }}
-              className="w-full text-xs text-[#6E7785]"
+              className="w-full text-xs text-[#94A3B8]"
             />
           </div>
           <div>
@@ -3479,7 +3479,7 @@ export const AdminFilesPage: React.FC = () => {
               value={form.externalUrl}
               onChange={(e) => setForm({ ...form, externalUrl: e.target.value })}
               placeholder="https://..."
-              className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             />
           </div>
         </div>
@@ -3492,7 +3492,7 @@ export const AdminFilesPage: React.FC = () => {
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
               placeholder="Color-graded 1080p master cut..."
-              className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             />
           </div>
           <div>
@@ -3502,17 +3502,17 @@ export const AdminFilesPage: React.FC = () => {
               value={form.tagsInput}
               onChange={(e) => setForm({ ...form, tagsInput: e.target.value })}
               placeholder="master, v1, reel"
-              className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              className="w-full px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             />
           </div>
         </div>
 
         {progress !== null && (
           <div className="space-y-1">
-            <div className="text-xs font-mono text-[#172333]">Uploading to Supabase Storage: {progress}%</div>
-            <div className="w-full h-1.5 bg-[#E2E4DF] rounded-full overflow-hidden">
+            <div className="text-xs font-mono text-[#F8FAFC]">Uploading to Supabase Storage: {progress}%</div>
+            <div className="w-full h-1.5 bg-[#1E3A5F] rounded-full overflow-hidden">
               <div
-                className="h-full bg-[#F18A45] transition-all duration-200"
+                className="h-full bg-[#10B981] transition-all duration-200"
                 style={{ width: `${progress}%` }}
               />
             </div>
@@ -3521,33 +3521,33 @@ export const AdminFilesPage: React.FC = () => {
 
         <button
           type="submit"
-          className="px-4 py-2 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg"
+          className="px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg"
         >
           Save Deliverable Record
         </button>
       </form>
 
-      <div className="bg-white border border-[#E2E4DF] rounded-lg divide-y divide-[#E2E4DF]">
+      <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg divide-y divide-[#1E3A5F]">
         {files.length === 0 ? (
-          <div className="p-8 text-center text-xs text-[#6E7785]">No files uploaded yet.</div>
+          <div className="p-8 text-center text-xs text-[#94A3B8]">No files uploaded yet.</div>
         ) : (
           files.map((f) => (
             <div key={f.id} className="p-4 flex flex-wrap items-center justify-between gap-4 text-xs">
               <div>
                 <div className="flex items-center gap-2">
-                  <p className="font-semibold text-[#172333]">
+                  <p className="font-semibold text-[#F8FAFC]">
                     {f.fileName} ({f.versionLabel})
                   </p>
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded">
-                    <Lock className="w-2.5 h-2.5 text-[#F18A45]" />
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-mono bg-[#132A4A] border border-[#1E3A5F] rounded">
+                    <Lock className="w-2.5 h-2.5 text-[#10B981]" />
                     {f.storageBucket || 'private-project-files'}
                   </span>
                 </div>
-                <p className="text-[#6E7785] mt-0.5">
+                <p className="text-[#94A3B8] mt-0.5">
                   {f.category} · {formatFileSize(f.fileSize)} · Uploaded by {f.uploaderName}
                   {f.storagePath ? ` · ${f.storagePath}` : ''}
                 </p>
-                {f.description && <p className="text-[#6E7785] mt-1">{f.description}</p>}
+                {f.description && <p className="text-[#94A3B8] mt-1">{f.description}</p>}
               </div>
               <div className="flex items-center gap-3">
                 {(f.downloadUrl || f.storagePath) && (
@@ -3570,7 +3570,7 @@ export const AdminFilesPage: React.FC = () => {
                           uploaderName: f.uploaderName,
                         })
                       }
-                      className="inline-flex items-center gap-1 font-semibold text-[#172333] hover:text-[#F18A45]"
+                      className="inline-flex items-center gap-1 font-semibold text-[#F8FAFC] hover:text-[#10B981]"
                     >
                       <Eye className="w-3.5 h-3.5" />
                       <span>Preview</span>
@@ -3578,7 +3578,7 @@ export const AdminFilesPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => handleSecureDownload(f)}
-                      className="font-semibold text-[#172333] hover:text-[#F18A45]"
+                      className="font-semibold text-[#F8FAFC] hover:text-[#10B981]"
                     >
                       Download
                     </button>
@@ -3597,7 +3597,7 @@ export const AdminFilesPage: React.FC = () => {
                       },
                     })
                   }
-                  className="text-[#B93832] hover:underline"
+                  className="text-[#DC2626] hover:underline"
                 >
                   Delete
                 </button>
@@ -3658,64 +3658,64 @@ export const AdminReportsPage: React.FC = () => {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="font-editorial text-2xl font-semibold text-[#172333]">
+        <h1 className="font-editorial text-2xl font-semibold text-[#F8FAFC]">
           Reports, Financial Separation & Audit Logs
         </h1>
-        <p className="text-xs text-[#6E7785] mt-1">
+        <p className="text-xs text-[#94A3B8] mt-1">
           Clearly separates Total Invoiced amounts from Actual Revenue Received (recorded payments).
         </p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white border border-[#E2E4DF] rounded-lg p-5">
-          <p className="text-xs text-[#6E7785]">Total Invoiced (Billed)</p>
-          <p className="text-2xl font-mono font-semibold text-[#172333] mt-1 tabular-nums">
+        <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-5">
+          <p className="text-xs text-[#94A3B8]">Total Invoiced (Billed)</p>
+          <p className="text-2xl font-mono font-semibold text-[#F8FAFC] mt-1 tabular-nums">
             {formatINR(totalInvoiced)}
           </p>
-          <p className="text-[11px] text-[#6E7785] mt-1">Excludes drafts & cancelled</p>
+          <p className="text-[11px] text-[#94A3B8] mt-1">Excludes drafts & cancelled</p>
         </div>
 
-        <div className="bg-white border border-[#E2E4DF] rounded-lg p-5">
-          <p className="text-xs text-[#6E7785]">Actual Revenue Received</p>
-          <p className="text-2xl font-mono font-semibold text-[#26734D] mt-1 tabular-nums">
+        <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-5">
+          <p className="text-xs text-[#94A3B8]">Actual Revenue Received</p>
+          <p className="text-2xl font-mono font-semibold text-[#16A34A] mt-1 tabular-nums">
             {formatINR(totalRevenueReceived)}
           </p>
-          <p className="text-[11px] text-[#6E7785] mt-1">Based strictly on recorded payments</p>
+          <p className="text-[11px] text-[#94A3B8] mt-1">Based strictly on recorded payments</p>
         </div>
 
-        <div className="bg-white border border-[#E2E4DF] rounded-lg p-5">
-          <p className="text-xs text-[#6E7785]">Outstanding Balance</p>
-          <p className="text-2xl font-mono font-semibold text-[#A96518] mt-1 tabular-nums">
+        <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-5">
+          <p className="text-xs text-[#94A3B8]">Outstanding Balance</p>
+          <p className="text-2xl font-mono font-semibold text-[#D97706] mt-1 tabular-nums">
             {formatINR(outstandingBalance)}
           </p>
-          <p className="text-[11px] text-[#6E7785] mt-1">Awaiting client settlement</p>
+          <p className="text-[11px] text-[#94A3B8] mt-1">Awaiting client settlement</p>
         </div>
 
-        <div className="bg-white border border-[#E2E4DF] rounded-lg p-5">
-          <p className="text-xs text-[#6E7785]">Overdue Balance</p>
-          <p className="text-2xl font-mono font-semibold text-[#B93832] mt-1 tabular-nums">
+        <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-5">
+          <p className="text-xs text-[#94A3B8]">Overdue Balance</p>
+          <p className="text-2xl font-mono font-semibold text-[#DC2626] mt-1 tabular-nums">
             {formatINR(overdueBalance)}
           </p>
-          <p className="text-[11px] text-[#6E7785] mt-1">Lead Conversion Rate: {conversionRate}%</p>
+          <p className="text-[11px] text-[#94A3B8] mt-1">Lead Conversion Rate: {conversionRate}%</p>
         </div>
       </div>
 
       {/* Audit Activity Trail */}
-      <div className="bg-white border border-[#E2E4DF] rounded-lg p-6">
-        <h2 className="text-base font-semibold text-[#172333] mb-4">
+      <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6">
+        <h2 className="text-base font-semibold text-[#F8FAFC] mb-4">
           Administrative Audit Trail (/activityLogs)
         </h2>
         {logs.length === 0 ? (
-          <p className="text-xs text-[#6E7785]">No administrative actions logged yet.</p>
+          <p className="text-xs text-[#94A3B8]">No administrative actions logged yet.</p>
         ) : (
-          <div className="divide-y divide-[#E2E4DF] max-h-96 overflow-y-auto text-xs">
+          <div className="divide-y divide-[#1E3A5F] max-h-96 overflow-y-auto text-xs">
             {logs.slice(0, 25).map((log) => (
               <div key={log.id} className="py-2.5 flex items-center justify-between gap-4">
                 <div>
-                  <span className="font-semibold text-[#172333]">{log.action}</span>
-                  <span className="text-[#6E7785]"> · {log.details}</span>
+                  <span className="font-semibold text-[#F8FAFC]">{log.action}</span>
+                  <span className="text-[#94A3B8]"> · {log.details}</span>
                 </div>
-                <span className="font-mono text-[11px] text-[#6E7785] shrink-0">
+                <span className="font-mono text-[11px] text-[#94A3B8] shrink-0">
                   {formatDate(log.createdAt)}
                 </span>
               </div>
@@ -3780,50 +3780,50 @@ export const AdminSettingsPage: React.FC = () => {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="font-editorial text-2xl font-semibold text-[#172333]">Studio Settings</h1>
-        <p className="text-xs text-[#6E7785] mt-1">
+        <h1 className="font-editorial text-2xl font-semibold text-[#F8FAFC]">Studio Settings</h1>
+        <p className="text-xs text-[#94A3B8] mt-1">
           Public contact settings (/settings/public) are separated from private billing settings (/settings/private).
         </p>
       </div>
 
       {/* Complete A-to-Z Website Customizer Callout */}
-      <div className="bg-white border-2 border-[#F18A45] rounded-xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-[#0D1F38] border-2 border-[#10B981] rounded-xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="space-y-1">
-          <span className="inline-block px-2.5 py-0.5 rounded bg-[#F18A45]/15 text-[#B85D1D] text-[10px] font-semibold uppercase tracking-wider">
+          <span className="inline-block px-2.5 py-0.5 rounded bg-[#10B981]/15 text-[#0EA5E9] text-[10px] font-semibold uppercase tracking-wider">
             Full Site Builder & Visual Editor
           </span>
-          <h2 className="font-editorial text-lg font-semibold text-[#172333]">
+          <h2 className="font-editorial text-lg font-semibold text-[#F8FAFC]">
             Complete A-to-Z Website Customizer Studio
           </h2>
-          <p className="text-xs text-[#6E7785] max-w-xl">
+          <p className="text-xs text-[#94A3B8] max-w-xl">
             Customize your logo, brand colors, announcement bar, header navigation, hero artwork, homepage sections, 4-step workflow, founder story, contact form budget ranges, SEO metadata, and legal policies.
           </p>
         </div>
         <Link
           to="/admin/website-customizer"
-          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-semibold text-[#172333] bg-[#F18A45] hover:bg-[#e07934] rounded-lg transition-colors shrink-0"
+          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-colors shrink-0"
         >
           <span>Open A–Z Website Customizer</span>
         </Link>
       </div>
 
       {/* Private Studio Owner Security & Unlisted Admin Login Link */}
-      <div className="bg-[#172333] text-[#F5F5F1] border border-[#24364A] rounded-lg p-6 space-y-4">
+      <div className="bg-[#040D1A] text-[#132A4A] border border-[#132A4A] rounded-lg p-6 space-y-4">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-2">
-            <Lock className="w-4 h-4 text-[#F18A45]" />
+            <Lock className="w-4 h-4 text-[#10B981]" />
             <h2 className="text-sm font-semibold text-white">
               Private Role Security & Studio Owner Login Link (Hidden from Public)
             </h2>
           </div>
-          <span className="px-2.5 py-0.5 rounded bg-[#26734D] text-[11px] font-mono text-white">
+          <span className="px-2.5 py-0.5 rounded bg-[#16A34A] text-[11px] font-mono text-white">
             RLS ENFORCED · OWNER VERIFIED
           </span>
         </div>
-        <div className="text-xs text-[#9BA3B0] space-y-1.5 leading-relaxed">
+        <div className="text-xs text-[#94A3B8] space-y-1.5 leading-relaxed">
           <p>
             <strong className="text-white">Role Security:</strong> All self-registered accounts on the public portal receive the{' '}
-            <code className="font-mono text-[#F18A45]">client</code> role enforced by Supabase Row Level Security (RLS).
+            <code className="font-mono text-[#10B981]">client</code> role enforced by Supabase Row Level Security (RLS).
           </p>
           <p>
             Studio Administrator access is strictly restricted to verified studio owner{' '}
@@ -3835,20 +3835,20 @@ export const AdminSettingsPage: React.FC = () => {
             type="text"
             readOnly
             value={privateAdminLoginUrl}
-            className="flex-1 px-3 py-2 text-xs font-mono bg-[#24364A] text-white border border-[#354B63] rounded-lg select-all"
+            className="flex-1 px-3 py-2 text-xs font-mono bg-[#132A4A] text-white border border-[#354B63] rounded-lg select-all"
           />
           <button
             type="button"
             onClick={handleCopyAdminLink}
-            className="px-4 py-2 text-xs font-semibold text-[#172333] bg-[#F18A45] hover:bg-[#e07934] rounded-lg transition-colors shrink-0"
+            className="px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-colors shrink-0"
           >
             Copy Private Admin Login Link
           </button>
         </div>
       </div>
 
-      <form onSubmit={handleSavePublic} className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-4">
-        <h2 className="text-base font-semibold text-[#172333]">Public Identity & WhatsApp Configuration</h2>
+      <form onSubmit={handleSavePublic} className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 space-y-4">
+        <h2 className="text-base font-semibold text-[#F8FAFC]">Public Identity & WhatsApp Configuration</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-medium mb-1">Business Name</label>
@@ -3856,7 +3856,7 @@ export const AdminSettingsPage: React.FC = () => {
               type="text"
               value={pub.businessName}
               onChange={(e) => setPub({ ...pub, businessName: e.target.value })}
-              className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             />
           </div>
           <div>
@@ -3865,7 +3865,7 @@ export const AdminSettingsPage: React.FC = () => {
               type="text"
               value={pub.ownerName}
               onChange={(e) => setPub({ ...pub, ownerName: e.target.value })}
-              className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             />
           </div>
           <div>
@@ -3874,7 +3874,7 @@ export const AdminSettingsPage: React.FC = () => {
               type="email"
               value={pub.businessEmail}
               onChange={(e) => setPub({ ...pub, businessEmail: e.target.value })}
-              className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             />
           </div>
           <div>
@@ -3886,7 +3886,7 @@ export const AdminSettingsPage: React.FC = () => {
               value={pub.whatsappNumber}
               onChange={(e) => setPub({ ...pub, whatsappNumber: e.target.value })}
               placeholder="91..."
-              className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              className="w-full px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             />
           </div>
         </div>
@@ -3896,7 +3896,7 @@ export const AdminSettingsPage: React.FC = () => {
             type="text"
             value={pub.whatsappDefaultMessage}
             onChange={(e) => setPub({ ...pub, whatsappDefaultMessage: e.target.value })}
-            className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+            className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
           />
         </div>
         <label className="inline-flex items-center gap-2 text-xs">
@@ -3910,15 +3910,15 @@ export const AdminSettingsPage: React.FC = () => {
         <div>
           <button
             type="submit"
-            className="px-4 py-2 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg"
+            className="px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg"
           >
             Save Public Settings
           </button>
         </div>
       </form>
 
-      <form onSubmit={handleSavePrivate} className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-4">
-        <h2 className="text-base font-semibold text-[#172333]">Private Invoicing & Tax Settings (Admin Only)</h2>
+      <form onSubmit={handleSavePrivate} className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 space-y-4">
+        <h2 className="text-base font-semibold text-[#F8FAFC]">Private Invoicing & Tax Settings (Admin Only)</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-medium mb-1">Invoice Number Prefix</label>
@@ -3926,7 +3926,7 @@ export const AdminSettingsPage: React.FC = () => {
               type="text"
               value={priv.invoicePrefix}
               onChange={(e) => setPriv({ ...priv, invoicePrefix: e.target.value })}
-              className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              className="w-full px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             />
           </div>
           <div>
@@ -3937,7 +3937,7 @@ export const AdminSettingsPage: React.FC = () => {
               max={100}
               value={priv.defaultTaxRate}
               onChange={(e) => setPriv({ ...priv, defaultTaxRate: Number(e.target.value) })}
-              className="w-full px-3 py-2 text-xs font-mono bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              className="w-full px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             />
           </div>
         </div>
@@ -3947,12 +3947,12 @@ export const AdminSettingsPage: React.FC = () => {
             rows={3}
             value={priv.defaultPaymentInstructions}
             onChange={(e) => setPriv({ ...priv, defaultPaymentInstructions: e.target.value })}
-            className="w-full px-3 py-2 text-xs bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+            className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
           />
         </div>
         <button
           type="submit"
-          className="px-4 py-2 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg"
+          className="px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg"
         >
           Save Private Settings
         </button>
@@ -3978,18 +3978,18 @@ export const SharedNotificationsPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="font-editorial text-2xl font-semibold text-[#172333]">Notifications</h1>
-      <div className="bg-white border border-[#E2E4DF] rounded-lg divide-y divide-[#E2E4DF]">
+      <h1 className="font-editorial text-2xl font-semibold text-[#F8FAFC]">Notifications</h1>
+      <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg divide-y divide-[#1E3A5F]">
         {items.length === 0 ? (
-          <div className="p-8 text-center text-xs text-[#6E7785]">
+          <div className="p-8 text-center text-xs text-[#94A3B8]">
             No notifications right now. Project updates, deliverables, and invoice alerts appear here.
           </div>
         ) : (
           items.map((n) => (
             <div key={n.id} className="p-4 flex items-center justify-between gap-4 text-xs">
               <div>
-                <p className="font-semibold text-[#172333]">{n.title}</p>
-                <p className="text-[#6E7785] mt-0.5">{n.message}</p>
+                <p className="font-semibold text-[#F8FAFC]">{n.title}</p>
+                <p className="text-[#94A3B8] mt-0.5">{n.message}</p>
               </div>
               {!n.read && (
                 <button
@@ -4000,7 +4000,7 @@ export const SharedNotificationsPage: React.FC = () => {
                       prev.map((item) => (item.id === n.id ? { ...item, read: true } : item))
                     );
                   }}
-                  className="font-semibold text-[#F18A45]"
+                  className="font-semibold text-[#10B981]"
                 >
                   Mark Read
                 </button>
@@ -4047,27 +4047,27 @@ export const SharedProfilePage: React.FC = () => {
   return (
     <div className="max-w-xl space-y-6">
       <div>
-        <h1 className="font-editorial text-2xl font-semibold text-[#172333]">
+        <h1 className="font-editorial text-2xl font-semibold text-[#F8FAFC]">
           Profile & Account Security
         </h1>
-        <p className="text-xs text-[#6E7785] mt-1">
+        <p className="text-xs text-[#94A3B8] mt-1">
           Your Supabase User UUID allows the studio to link your projects, deliverables, and invoices securely.
         </p>
       </div>
 
-      <div className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-4 text-xs">
+      <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 space-y-4 text-xs">
         <div>
-          <span className="text-[#6E7785]">Authenticated User UID:</span>
-          <p className="font-mono font-semibold text-[#172333] mt-0.5 select-all">{user?.uid}</p>
+          <span className="text-[#94A3B8]">Authenticated User UID:</span>
+          <p className="font-mono font-semibold text-[#F8FAFC] mt-0.5 select-all">{user?.uid}</p>
         </div>
         <div>
-          <span className="text-[#6E7785]">Email & Role:</span>
-          <p className="font-semibold text-[#172333] mt-0.5">
+          <span className="text-[#94A3B8]">Email & Role:</span>
+          <p className="font-semibold text-[#F8FAFC] mt-0.5">
             {profile?.email} · Role: <span className="font-mono uppercase">{profile?.role}</span>
           </p>
         </div>
 
-        <form onSubmit={handleSave} className="space-y-4 pt-4 border-t border-[#E2E4DF]">
+        <form onSubmit={handleSave} className="space-y-4 pt-4 border-t border-[#1E3A5F]">
           <div>
             <label className="block font-medium mb-1">Display Name</label>
             <input
@@ -4075,7 +4075,7 @@ export const SharedProfilePage: React.FC = () => {
               required
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              className="w-full px-3 py-2 bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              className="w-full px-3 py-2 bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             />
           </div>
           <div>
@@ -4084,7 +4084,7 @@ export const SharedProfilePage: React.FC = () => {
               type="text"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="w-full px-3 py-2 bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              className="w-full px-3 py-2 bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             />
           </div>
           <div>
@@ -4093,12 +4093,12 @@ export const SharedProfilePage: React.FC = () => {
               type="text"
               value={companyName}
               onChange={(e) => setCompanyName(e.target.value)}
-              className="w-full px-3 py-2 bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg"
+              className="w-full px-3 py-2 bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             />
           </div>
           <button
             type="submit"
-            className="px-4 py-2 font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg"
+            className="px-4 py-2 font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg"
           >
             Save Profile
           </button>

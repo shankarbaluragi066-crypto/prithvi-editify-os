@@ -36,6 +36,7 @@ import { MediaPreviewModal, PreviewableMediaItem } from '../components/MediaPrev
 import {
   BeforeAfterComparisonShowcase,
   InstantPriceCalculatorWidget,
+  StudioFaqSection,
 } from '../components/StudioEnhancements';
 import { buildWhatsAppLink } from '../utils/formatters';
 
@@ -269,10 +270,10 @@ const MarketplaceServiceCard: React.FC<MarketplaceServiceCardProps> = ({
   const studioName = settings.businessName || 'Prithvi Editify';
 
   return (
-    <article className="group bg-white border border-[#E2E4DF] rounded-xl overflow-hidden flex flex-col justify-between shadow-[0_1px_3px_rgba(23,35,51,0.04)] hover:-translate-y-0.5 hover:border-[#172333]/50 hover:shadow-[0_14px_32px_-8px_rgba(23,35,51,0.12)] transition-all duration-200">
+    <article className="pe-card-interactive group bg-[#0D1F38] border border-[#1E3A5F] rounded-xl overflow-hidden flex flex-col justify-between shadow-[0_1px_3px_rgba(0,0,0,0.35)]">
       <div>
         {/* 1. Consistent 16:10 Media Stage — Preserves full artwork without cropping */}
-        <div className="relative aspect-[16/10] w-full bg-[#0F1722] overflow-hidden border-b border-[#E2E4DF]">
+        <div className="relative aspect-[16/10] w-full bg-[#040D1A] overflow-hidden border-b border-[#1E3A5F]">
           <Link
             to={detailPath}
             className="relative flex items-center justify-center w-full h-full overflow-hidden"
@@ -299,7 +300,7 @@ const MarketplaceServiceCard: React.FC<MarketplaceServiceCardProps> = ({
           </Link>
 
           {/* Category Tag Overlay */}
-          <span className="absolute top-3 left-3 z-20 px-2.5 py-1 text-[11px] font-semibold tracking-wide text-white bg-[#172333]/90 backdrop-blur-xs border border-white/15 rounded-md">
+          <span className="absolute top-3 left-3 z-20 px-2.5 py-1 text-[11px] font-semibold tracking-wide text-white bg-[#040D1A]/90 backdrop-blur-xs border border-white/15 rounded-md">
             {displayCategory}
           </span>
 
@@ -321,9 +322,9 @@ const MarketplaceServiceCard: React.FC<MarketplaceServiceCardProps> = ({
                 })
               }
               title="Quick preview sample"
-              className="absolute bottom-3 right-3 z-20 inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold text-white bg-[#172333]/90 hover:bg-[#172333] rounded-md border border-white/15 shadow-xs transition-all duration-150"
+              className="absolute bottom-3 right-3 z-20 inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold text-white bg-[#040D1A]/90 hover:bg-[#040D1A] rounded-md border border-white/15 shadow-xs transition-all duration-150"
             >
-              <Eye className="w-3.5 h-3.5 text-[#F18A45]" />
+              <Eye className="w-3.5 h-3.5 text-[#10B981]" />
               <span>Preview</span>
             </button>
           )}
@@ -346,55 +347,55 @@ const MarketplaceServiceCard: React.FC<MarketplaceServiceCardProps> = ({
                   .toUpperCase()}
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-semibold text-[#172333] truncate leading-tight">
+                <p className="text-xs font-semibold text-[#F8FAFC] truncate leading-tight">
                   {creatorName}
                 </p>
-                <p className="text-[11px] text-[#6E7785] truncate leading-tight mt-0.5">
+                <p className="text-[11px] text-[#94A3B8] truncate leading-tight mt-0.5">
                   {studioName}
                 </p>
               </div>
             </div>
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-[#26734D] bg-[#26734D]/10 px-2 py-0.5 rounded shrink-0">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-[#16A34A] bg-[#16A34A]/10 px-2 py-0.5 rounded shrink-0">
               Verified Studio
             </span>
           </div>
 
           {/* Service Title */}
-          <h3 className="text-[15px] font-semibold text-[#172333] group-hover:text-[#F18A45] transition-colors leading-snug line-clamp-2 min-h-[2.6rem]">
+          <h3 className="text-[15px] font-semibold text-[#F8FAFC] group-hover:text-[#10B981] transition-colors leading-snug line-clamp-2 min-h-[2.6rem]">
             <Link to={detailPath} className="focus:outline-none">
               {srv.title}
             </Link>
           </h3>
 
           {/* Short Description */}
-          <p className="text-xs text-[#6E7785] line-clamp-2 leading-relaxed min-h-[2.25rem]">
+          <p className="text-xs text-[#94A3B8] line-clamp-2 leading-relaxed min-h-[2.25rem]">
             {srv.description}
           </p>
 
           {/* Delivery Time & Revisions Meta Strip */}
-          <div className="pt-2.5 border-t border-[#E2E4DF]/80 flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#6E7785]">
-            <span className="inline-flex items-center gap-1.5 font-medium text-[#172333]">
-              <Clock className="w-3.5 h-3.5 text-[#F18A45] shrink-0" />
+          <div className="pt-2.5 border-t border-[#1E3A5F]/80 flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#94A3B8]">
+            <span className="inline-flex items-center gap-1.5 font-medium text-[#F8FAFC]">
+              <Clock className="w-3.5 h-3.5 text-[#10B981] shrink-0" />
               <span>{srv.turnaroundTime || '24–48 hours'}</span>
             </span>
             <span className="inline-flex items-center gap-1">
-              <RefreshCw className="w-3 h-3 text-[#6E7785] shrink-0" />
+              <RefreshCw className="w-3 h-3 text-[#94A3B8] shrink-0" />
               <span>{srv.revisions || '2 Revisions'}</span>
             </span>
             {!srv.isCustomQuote && (
-              <span className="text-[#26734D] font-semibold">3 Packages</span>
+              <span className="text-[#16A34A] font-semibold">3 Packages</span>
             )}
           </div>
         </div>
       </div>
 
       {/* 3. Marketplace Price & Dual Action Footer */}
-      <div className="px-5 py-3.5 bg-[#F5F5F1]/75 border-t border-[#E2E4DF] space-y-3">
+      <div className="px-5 py-3.5 bg-[#132A4A]/75 border-t border-[#1E3A5F] space-y-3">
         <div className="flex items-baseline justify-between gap-2">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-[#6E7785]">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]">
             {srv.isCustomQuote ? 'Project Scope' : 'Starting At'}
           </span>
-          <span className="font-mono text-base font-bold text-[#172333] tabular-nums">
+          <span className="font-mono text-base font-bold text-[#F8FAFC] tabular-nums">
             {srv.priceDisplay}
           </span>
         </div>
@@ -402,13 +403,13 @@ const MarketplaceServiceCard: React.FC<MarketplaceServiceCardProps> = ({
         <div className="grid grid-cols-2 gap-2">
           <Link
             to={`/contact?service=${encodeURIComponent(srv.title)}`}
-            className="w-full inline-flex items-center justify-center px-3 py-2 text-xs font-medium text-[#172333] bg-white border border-[#E2E4DF] hover:border-[#172333] hover:bg-[#F5F5F1]/50 rounded-lg transition-colors text-center"
+            className="w-full inline-flex items-center justify-center px-3 py-2 text-xs font-medium text-[#F8FAFC] bg-[#0D1F38] border border-[#1E3A5F] hover:border-[#10B981] hover:bg-[#132A4A]/50 rounded-lg transition-colors text-center"
           >
             Contact for a Project
           </Link>
           <Link
             to={detailPath}
-            className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg transition-colors text-center"
+            className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-colors text-center"
           >
             <span>View Service</span>
             <ArrowRight className="w-3.5 h-3.5 shrink-0 transition-transform duration-200 group-hover:translate-x-0.5" />
@@ -447,10 +448,10 @@ const MarketplacePortfolioCard: React.FC<MarketplacePortfolioCardProps> = ({
   const galleryCount = 1 + (Array.isArray(item.galleryUrls) ? item.galleryUrls.filter(Boolean).length : 0);
 
   return (
-    <article className="group bg-white border border-[#E2E4DF] rounded-xl overflow-hidden flex flex-col justify-between shadow-[0_1px_3px_rgba(23,35,51,0.04)] hover:-translate-y-0.5 hover:border-[#172333]/50 hover:shadow-[0_14px_32px_-8px_rgba(23,35,51,0.12)] transition-all duration-200">
+    <article className="pe-card-interactive group bg-[#0D1F38] border border-[#1E3A5F] rounded-xl overflow-hidden flex flex-col justify-between shadow-[0_1px_3px_rgba(0,0,0,0.35)]">
       <div>
         {/* 1. Consistent 16:10 Media Stage — Preserves full artwork without cropping */}
-        <div className="relative aspect-[16/10] w-full bg-[#0F1722] overflow-hidden border-b border-[#E2E4DF]">
+        <div className="relative aspect-[16/10] w-full bg-[#040D1A] overflow-hidden border-b border-[#1E3A5F]">
           <Link
             to={detailPath}
             className="relative flex items-center justify-center w-full h-full overflow-hidden"
@@ -477,7 +478,7 @@ const MarketplacePortfolioCard: React.FC<MarketplacePortfolioCardProps> = ({
           </Link>
 
           {/* Category Tag Overlay */}
-          <span className="absolute top-3 left-3 z-20 px-2.5 py-1 text-[11px] font-semibold tracking-wide text-white bg-[#172333]/90 backdrop-blur-xs border border-white/15 rounded-md">
+          <span className="absolute top-3 left-3 z-20 px-2.5 py-1 text-[11px] font-semibold tracking-wide text-white bg-[#040D1A]/90 backdrop-blur-xs border border-white/15 rounded-md">
             {displayCat}
           </span>
 
@@ -487,12 +488,12 @@ const MarketplacePortfolioCard: React.FC<MarketplacePortfolioCardProps> = ({
               type="button"
               onClick={() => onQuickPreview(item)}
               title="Quick preview project"
-              className="absolute bottom-3 right-3 z-20 inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold text-white bg-[#172333]/90 hover:bg-[#172333] rounded-md border border-white/15 shadow-xs transition-all duration-150"
+              className="absolute bottom-3 right-3 z-20 inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold text-white bg-[#040D1A]/90 hover:bg-[#040D1A] rounded-md border border-white/15 shadow-xs transition-all duration-150"
             >
               {item.videoUrl ? (
-                <Film className="w-3.5 h-3.5 text-[#F18A45]" />
+                <Film className="w-3.5 h-3.5 text-[#10B981]" />
               ) : (
-                <Eye className="w-3.5 h-3.5 text-[#F18A45]" />
+                <Eye className="w-3.5 h-3.5 text-[#10B981]" />
               )}
               <span>Preview</span>
             </button>
@@ -516,42 +517,42 @@ const MarketplacePortfolioCard: React.FC<MarketplacePortfolioCardProps> = ({
                   .toUpperCase()}
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-semibold text-[#172333] truncate leading-tight">
+                <p className="text-xs font-semibold text-[#F8FAFC] truncate leading-tight">
                   {creatorName}
                 </p>
-                <p className="text-[11px] text-[#6E7785] truncate leading-tight mt-0.5">
+                <p className="text-[11px] text-[#94A3B8] truncate leading-tight mt-0.5">
                   {studioName}
                 </p>
               </div>
             </div>
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-[#26734D] bg-[#26734D]/10 px-2 py-0.5 rounded shrink-0">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-[#16A34A] bg-[#16A34A]/10 px-2 py-0.5 rounded shrink-0">
               Verified Studio
             </span>
           </div>
 
           {/* Project Title */}
-          <h3 className="text-[15px] font-semibold text-[#172333] group-hover:text-[#F18A45] transition-colors leading-snug line-clamp-2 min-h-[2.6rem]">
+          <h3 className="text-[15px] font-semibold text-[#F8FAFC] group-hover:text-[#10B981] transition-colors leading-snug line-clamp-2 min-h-[2.6rem]">
             <Link to={detailPath} className="focus:outline-none">
               {item.title}
             </Link>
           </h3>
 
           {/* Short Description */}
-          <p className="text-xs text-[#6E7785] line-clamp-2 leading-relaxed min-h-[2.25rem]">
+          <p className="text-xs text-[#94A3B8] line-clamp-2 leading-relaxed min-h-[2.25rem]">
             {item.description}
           </p>
 
           {/* Project Meta Strip */}
-          <div className="pt-2.5 border-t border-[#E2E4DF]/80 flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#6E7785]">
-            <span className="inline-flex items-center gap-1.5 font-medium text-[#172333]">
-              <Clock className="w-3.5 h-3.5 text-[#F18A45] shrink-0" />
+          <div className="pt-2.5 border-t border-[#1E3A5F]/80 flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#94A3B8]">
+            <span className="inline-flex items-center gap-1.5 font-medium text-[#F8FAFC]">
+              <Clock className="w-3.5 h-3.5 text-[#10B981] shrink-0" />
               <span>{item.videoUrl ? 'Video Production' : '24–48 hours'}</span>
             </span>
             <span className="inline-flex items-center gap-1">
-              <RefreshCw className="w-3 h-3 text-[#6E7785] shrink-0" />
+              <RefreshCw className="w-3 h-3 text-[#94A3B8] shrink-0" />
               <span>{galleryCount > 1 ? `${galleryCount} Previews` : 'High-Res Export'}</span>
             </span>
-            <span className="text-[#26734D] font-semibold">
+            <span className="text-[#16A34A] font-semibold">
               {item.featured ? 'Featured Work' : 'Case Study'}
             </span>
           </div>
@@ -559,12 +560,12 @@ const MarketplacePortfolioCard: React.FC<MarketplacePortfolioCardProps> = ({
       </div>
 
       {/* 3. Deliverable & Dual Action Footer */}
-      <div className="px-5 py-3.5 bg-[#F5F5F1]/75 border-t border-[#E2E4DF] space-y-3">
+      <div className="px-5 py-3.5 bg-[#132A4A]/75 border-t border-[#1E3A5F] space-y-3">
         <div className="flex items-baseline justify-between gap-2">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-[#6E7785]">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]">
             Deliverable
           </span>
-          <span className="font-mono text-sm font-bold text-[#172333] truncate max-w-[190px]">
+          <span className="font-mono text-sm font-bold text-[#F8FAFC] truncate max-w-[190px]">
             {item.metricsSummary || displayCat}
           </span>
         </div>
@@ -572,13 +573,13 @@ const MarketplacePortfolioCard: React.FC<MarketplacePortfolioCardProps> = ({
         <div className="grid grid-cols-2 gap-2">
           <Link
             to={`/contact?service=${encodeURIComponent(displayCat)}`}
-            className="w-full inline-flex items-center justify-center px-3 py-2 text-xs font-medium text-[#172333] bg-white border border-[#E2E4DF] hover:border-[#172333] hover:bg-[#F5F5F1]/50 rounded-lg transition-colors text-center"
+            className="w-full inline-flex items-center justify-center px-3 py-2 text-xs font-medium text-[#F8FAFC] bg-[#0D1F38] border border-[#1E3A5F] hover:border-[#10B981] hover:bg-[#132A4A]/50 rounded-lg transition-colors text-center"
           >
             Contact for a Project
           </Link>
           <Link
             to={detailPath}
-            className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg transition-colors text-center"
+            className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-colors text-center"
           >
             <span>View Project</span>
             <ArrowRight className="w-3.5 h-3.5 shrink-0 transition-transform duration-200 group-hover:translate-x-0.5" />
@@ -621,9 +622,9 @@ export const HomePage: React.FC = () => {
   }, []);
 
   const whatsappUrl = buildWhatsAppLink(settings.whatsappNumber, settings.whatsappDefaultMessage);
-  const primaryBg = custom.primaryColor || '#172333';
-  const secondaryBg = custom.secondaryColor || '#24364A';
-  const accentColor = custom.accentColor || '#F18A45';
+  const primaryBg = custom.primaryColor || '#040D1A';
+  const secondaryBg = custom.secondaryColor || '#132A4A';
+  const accentColor = custom.accentColor || '#10B981';
 
   const heroPreviewSrc =
     custom.heroImageUrl ||
@@ -641,7 +642,7 @@ export const HomePage: React.FC = () => {
     <div>
       {/* HERO SECTION */}
       <section
-        className="text-[#F5F5F1] border-b"
+        className="text-[#132A4A] border-b"
         style={{ backgroundColor: primaryBg, borderColor: secondaryBg }}
       >
         <div className="max-w-[1200px] mx-auto px-6 py-16 lg:py-24">
@@ -650,18 +651,18 @@ export const HomePage: React.FC = () => {
             <div className="lg:col-span-7 flex flex-col justify-between space-y-8">
               <div className="space-y-6">
                 <p
-                  className="text-xs font-medium tracking-wide"
-                  style={{ color: accentColor }}
+                  className="text-xs font-semibold tracking-wide"
+                  style={{ color: '#2DD4BF' }}
                 >
                   {custom.heroKicker}
                 </p>
                 <h1
-                  className="font-editorial font-semibold text-white tracking-tight leading-[1.08]"
+                  className="font-editorial font-bold text-white tracking-tight leading-[1.08]"
                   style={{ fontSize: 'clamp(2.5rem, 4.2vw, 3.75rem)', textWrap: 'balance' }}
                 >
                   {custom.heroHeadline}
                 </h1>
-                <p className="text-base sm:text-lg text-[#D0D5DD] max-w-xl leading-relaxed">
+                <p className="text-base sm:text-lg text-[#94A3B8] max-w-xl leading-relaxed">
                   {custom.heroSubheadline}
                 </p>
               </div>
@@ -670,7 +671,7 @@ export const HomePage: React.FC = () => {
                 <div className="flex flex-wrap items-center gap-4">
                   <Link
                     to={custom.heroPrimaryCtaLink || '/contact'}
-                    className="inline-flex items-center gap-2 px-6 py-3.5 text-sm font-semibold text-[#172333] rounded-lg transition-colors whitespace-nowrap shrink-0"
+                    className="inline-flex items-center gap-2 px-6 py-3.5 text-sm font-semibold text-white rounded-lg shadow-sm hover:opacity-95 transition-all whitespace-nowrap shrink-0"
                     style={{ backgroundColor: accentColor }}
                   >
                     <span>{custom.heroPrimaryCtaLabel || 'Start a Project'}</span>
@@ -687,7 +688,7 @@ export const HomePage: React.FC = () => {
 
                 {custom.heroDisciplines && custom.heroDisciplines.length > 0 && (
                   <div
-                    className="pt-4 border-t flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-[#9BA3B0]"
+                    className="pt-4 border-t flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-[#94A3B8]"
                     style={{ borderColor: secondaryBg }}
                   >
                     {custom.heroDisciplines.map((disc, idx) => (
@@ -704,15 +705,15 @@ export const HomePage: React.FC = () => {
             {/* Right Visual Studio Composition */}
             <div className="lg:col-span-5 flex">
               <div
-                className="w-full border border-white/10 rounded-lg p-6 flex flex-col justify-between space-y-6"
+                className="pe-card-interactive w-full border border-white/10 rounded-lg p-6 flex flex-col justify-between space-y-6"
                 style={{ backgroundColor: secondaryBg }}
               >
                 <div className="flex items-center justify-between border-b border-white/10 pb-4">
                   <div>
                     <p className="text-xs font-semibold text-white">{custom.showcaseTitle}</p>
-                    <p className="text-[11px] text-[#9BA3B0] mt-0.5">{custom.showcaseSubtitle}</p>
+                    <p className="text-[11px] text-[#94A3B8] mt-0.5">{custom.showcaseSubtitle}</p>
                   </div>
-                  <span className="font-mono text-xs" style={{ color: accentColor }}>
+                  <span className="font-mono text-xs font-semibold" style={{ color: '#2DD4BF' }}>
                     {custom.showcaseBadge}
                   </span>
                 </div>
@@ -732,22 +733,22 @@ export const HomePage: React.FC = () => {
 
                 <div className="grid grid-cols-2 gap-4 pt-2">
                   <div
-                    className="border border-white/10 rounded-lg p-3.5"
+                    className="pe-card-interactive border border-white/10 rounded-lg p-3.5"
                     style={{ backgroundColor: primaryBg }}
                   >
-                    <p className="text-xs text-[#9BA3B0]">{custom.stat1Label}</p>
+                    <p className="text-xs text-[#94A3B8]">{custom.stat1Label}</p>
                     <p className="text-lg font-mono font-semibold text-white mt-1 tabular-nums">
                       {custom.stat1Value}
                     </p>
-                    <p className="text-[11px] text-[#9BA3B0] mt-0.5">{custom.stat1Subtext}</p>
+                    <p className="text-[11px] text-[#94A3B8] mt-0.5">{custom.stat1Subtext}</p>
                   </div>
                   <div
-                    className="border border-white/10 rounded-lg p-3.5"
+                    className="pe-card-interactive border border-white/10 rounded-lg p-3.5"
                     style={{ backgroundColor: primaryBg }}
                   >
-                    <p className="text-xs text-[#9BA3B0]">{custom.stat2Label}</p>
+                    <p className="text-xs text-[#94A3B8]">{custom.stat2Label}</p>
                     <p className="text-lg font-semibold text-white mt-1">{custom.stat2Value}</p>
-                    <p className="text-[11px] text-[#9BA3B0] mt-0.5">{custom.stat2Subtext}</p>
+                    <p className="text-[11px] text-[#94A3B8] mt-0.5">{custom.stat2Subtext}</p>
                   </div>
                 </div>
               </div>
@@ -761,16 +762,16 @@ export const HomePage: React.FC = () => {
         <section className="max-w-[1200px] mx-auto px-6 py-20">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
             <div>
-              <p className="text-xs font-semibold text-[#6E7785] tracking-wide">
+              <p className="text-xs font-semibold text-[#94A3B8] tracking-wide">
                 {custom.homeServicesKicker}
               </p>
-              <h2 className="font-editorial text-3xl font-semibold text-[#172333] mt-2">
+              <h2 className="font-editorial text-3xl font-semibold text-[#F8FAFC] mt-2">
                 {custom.homeServicesHeading}
               </h2>
             </div>
             <Link
               to="/services"
-              className="inline-flex items-center gap-2 text-sm font-semibold text-[#172333] hover:text-[#F18A45] transition-colors whitespace-nowrap shrink-0"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-[#F8FAFC] hover:text-[#10B981] transition-colors whitespace-nowrap shrink-0"
             >
               <span>{custom.homeServicesCtaLabel}</span>
               <ArrowRight className="w-4 h-4" />
@@ -782,22 +783,22 @@ export const HomePage: React.FC = () => {
               {[1, 2, 3].map((n) => (
                 <div
                   key={n}
-                  className="h-96 bg-white rounded-lg animate-pulse border border-[#E2E4DF]"
+                  className="h-96 bg-[#0D1F38] rounded-lg animate-pulse border border-[#1E3A5F]"
                 />
               ))}
             </div>
           ) : services.length === 0 ? (
-            <div className="bg-white border border-[#E2E4DF] rounded-lg p-10 text-center">
-              <p className="font-editorial text-lg font-semibold text-[#172333]">
+            <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-10 text-center">
+              <p className="font-editorial text-lg font-semibold text-[#F8FAFC]">
                 Custom Creative Services Available
               </p>
-              <p className="text-sm text-[#6E7785] mt-1.5 max-w-md mx-auto">
+              <p className="text-sm text-[#94A3B8] mt-1.5 max-w-md mx-auto">
                 Contact {settings.businessName || 'Prithvi Editify'} directly to discuss your graphic design, thumbnail, or video editing project scope.
               </p>
               <div className="mt-5 flex justify-center gap-3">
                 <Link
                   to="/contact"
-                  className="px-4 py-2.5 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg transition-colors"
+                  className="px-4 py-2.5 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-colors"
                 >
                   Contact for a Project
                 </Link>
@@ -823,20 +824,20 @@ export const HomePage: React.FC = () => {
 
       {/* PORTFOLIO PREVIEW SECTION */}
       {settings.portfolioVisible !== false && portfolio.length > 0 && (
-        <section className="bg-white border-y border-[#E2E4DF] py-20">
+        <section className="bg-[#0D1F38] border-y border-[#1E3A5F] py-20">
           <div className="max-w-[1200px] mx-auto px-6">
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-[#E2E4DF]">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-[#1E3A5F]">
               <div>
-                <p className="text-xs font-semibold text-[#6E7785] tracking-wide">
+                <p className="text-xs font-semibold text-[#94A3B8] tracking-wide">
                   {custom.homePortfolioKicker}
                 </p>
-                <h2 className="font-editorial text-3xl font-semibold text-[#172333] mt-2">
+                <h2 className="font-editorial text-3xl font-semibold text-[#F8FAFC] mt-2">
                   {custom.homePortfolioHeading}
                 </h2>
               </div>
               <Link
                 to="/portfolio"
-                className="inline-flex items-center gap-2 text-sm font-semibold text-[#172333] hover:text-[#F18A45] transition-colors whitespace-nowrap shrink-0"
+                className="inline-flex items-center gap-2 text-sm font-semibold text-[#F8FAFC] hover:text-[#10B981] transition-colors whitespace-nowrap shrink-0"
               >
                 <span>{custom.homePortfolioCtaLabel}</span>
                 <ArrowRight className="w-4 h-4" />
@@ -847,7 +848,7 @@ export const HomePage: React.FC = () => {
             <div
               role="tablist"
               aria-label="Filter featured portfolio projects by category"
-              className="flex items-center gap-2 overflow-x-auto py-4 border-b border-[#E2E4DF] [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+              className="flex items-center gap-2 overflow-x-auto py-4 border-b border-[#1E3A5F] [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
             >
               {PORTFOLIO_SHOWCASE_CATEGORIES.map((cat) => {
                 const active = portfolioCategory === cat;
@@ -868,8 +869,8 @@ export const HomePage: React.FC = () => {
                     }
                     className={`inline-flex items-center gap-1.5 px-3.5 py-2 text-xs rounded-lg border transition-all duration-150 whitespace-nowrap shrink-0 ${
                       active
-                        ? 'bg-[#172333] text-white border-[#172333] font-semibold shadow-2xs'
-                        : 'bg-[#F5F5F1]/70 text-[#6E7785] border-[#E2E4DF] hover:bg-white hover:text-[#172333] hover:border-[#172333]/40 font-medium'
+                        ? 'bg-gradient-to-r from-[#0EA5E9] to-[#10B981] text-white border-[#10B981] font-semibold shadow-2xs'
+                        : 'bg-[#132A4A]/70 text-[#94A3B8] border-[#1E3A5F] hover:bg-[#132A4A] hover:text-[#F8FAFC] hover:border-[#10B981]/40 font-medium'
                     }`}
                   >
                     <span>{cat}</span>
@@ -878,7 +879,7 @@ export const HomePage: React.FC = () => {
                         className={`font-mono text-[10px] px-1.5 py-0.2 rounded tabular-nums ${
                           active
                             ? 'bg-white/15 text-white'
-                            : 'bg-[#E2E4DF]/70 text-[#172333]'
+                            : 'bg-[#1E3A5F]/70 text-[#F8FAFC]'
                         }`}
                       >
                         {matchCount}
@@ -894,7 +895,7 @@ export const HomePage: React.FC = () => {
                 {[1, 2, 3].map((n) => (
                   <div
                     key={n}
-                    className="h-96 bg-[#F5F5F1] rounded-lg animate-pulse border border-[#E2E4DF]"
+                    className="h-96 bg-[#132A4A] rounded-lg animate-pulse border border-[#1E3A5F]"
                   />
                 ))}
               </div>
@@ -945,10 +946,10 @@ export const HomePage: React.FC = () => {
       {custom.showProcessSection !== false && (
         <section className="max-w-[1200px] mx-auto px-6 py-20">
           <div className="max-w-2xl mb-12">
-            <p className="text-xs font-semibold text-[#6E7785] tracking-wide">
+            <p className="text-xs font-semibold text-[#94A3B8] tracking-wide">
               {custom.processKicker}
             </p>
-            <h2 className="font-editorial text-3xl font-semibold text-[#172333] mt-2">
+            <h2 className="font-editorial text-3xl font-semibold text-[#F8FAFC] mt-2">
               {custom.processHeading}
             </h2>
           </div>
@@ -957,10 +958,10 @@ export const HomePage: React.FC = () => {
             {custom.processSteps.map((p, idx) => (
               <div
                 key={`${p.step}_${idx}`}
-                className="bg-white border border-[#E2E4DF] rounded-lg p-6 shadow-[0_1px_2px_rgba(23,35,51,0.04)]"
+                className="pe-card-interactive bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 shadow-[0_1px_2px_rgba(0,0,0,0.35)]"
               >
-                <h3 className="text-base font-semibold text-[#172333]">{p.step}</h3>
-                <p className="text-sm text-[#6E7785] mt-2.5 leading-relaxed">{p.desc}</p>
+                <h3 className="text-base font-semibold text-[#F8FAFC]">{p.step}</h3>
+                <p className="text-sm text-[#94A3B8] mt-2.5 leading-relaxed">{p.desc}</p>
               </div>
             ))}
           </div>
@@ -970,18 +971,18 @@ export const HomePage: React.FC = () => {
       {/* TRUST SECTION */}
       {custom.showTrustSection !== false && (
         <section
-          className="text-[#F5F5F1] py-20 border-y"
+          className="text-[#132A4A] py-20 border-y"
           style={{ backgroundColor: primaryBg, borderColor: secondaryBg }}
         >
           <div className="max-w-[1200px] mx-auto px-6">
             <div className="max-w-2xl mb-12">
-              <p className="text-xs font-semibold tracking-wide" style={{ color: accentColor }}>
+              <p className="text-xs font-semibold tracking-wide" style={{ color: '#2DD4BF' }}>
                 {custom.trustKicker}
               </p>
               <h2 className="font-editorial text-3xl font-semibold text-white mt-2">
                 {custom.trustHeading}
               </h2>
-              <p className="text-sm text-[#9BA3B0] mt-3 leading-relaxed">{custom.trustSubtitle}</p>
+              <p className="text-sm text-[#94A3B8] mt-3 leading-relaxed">{custom.trustSubtitle}</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -990,12 +991,12 @@ export const HomePage: React.FC = () => {
                 return (
                   <div
                     key={`${pillar.title}_${idx}`}
-                    className="border border-white/10 rounded-lg p-6"
+                    className="pe-card-interactive border border-white/10 rounded-xl p-6"
                     style={{ backgroundColor: secondaryBg }}
                   >
-                    <IconComp className="w-5 h-5 mb-3" style={{ color: accentColor }} />
+                    <IconComp className="w-5 h-5 mb-3" style={{ color: '#2DD4BF' }} />
                     <h3 className="text-base font-semibold text-white">{pillar.title}</h3>
-                    <p className="text-sm text-[#D0D5DD] mt-2 leading-relaxed">{pillar.desc}</p>
+                    <p className="text-sm text-[#94A3B8] mt-2 leading-relaxed">{pillar.desc}</p>
                   </div>
                 );
               })}
@@ -1004,35 +1005,45 @@ export const HomePage: React.FC = () => {
         </section>
       )}
 
+      {/* FREQUENTLY ASKED QUESTIONS (FAQ) SECTION FOR TRUST & SEO */}
+      <StudioFaqSection
+        primaryBg={primaryBg}
+        secondaryBg={secondaryBg}
+        accentColor={accentColor}
+        ownerName={settings.ownerName || 'Shankar Baluragi'}
+        businessName={settings.businessName || 'Prithvi Editify'}
+        whatsappUrl={whatsappUrl}
+      />
+
       {/* CONTACT / INQUIRY SECTION */}
       {custom.showHomeContactSection !== false && (
         <section className="max-w-[1200px] mx-auto px-6 py-20">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
             <div className="lg:col-span-5 space-y-6">
-              <p className="text-xs font-semibold text-[#6E7785] tracking-wide">
+              <p className="text-xs font-semibold text-[#94A3B8] tracking-wide">
                 {custom.homeContactKicker}
               </p>
-              <h2 className="font-editorial text-3xl font-semibold text-[#172333]">
+              <h2 className="font-editorial text-3xl font-semibold text-[#F8FAFC]">
                 {custom.homeContactHeading}
               </h2>
-              <p className="text-sm text-[#6E7785] leading-relaxed">{custom.homeContactDesc}</p>
+              <p className="text-sm text-[#94A3B8] leading-relaxed">{custom.homeContactDesc}</p>
 
-              <div className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-4">
-                <h3 className="text-sm font-semibold text-[#172333]">Direct Studio Contact</h3>
-                <div className="space-y-2 text-xs text-[#6E7785]">
+              <div className="pe-card-interactive bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 space-y-4">
+                <h3 className="text-sm font-semibold text-[#F8FAFC]">Direct Studio Contact</h3>
+                <div className="space-y-2 text-xs text-[#94A3B8]">
                   <p>
-                    <span className="font-semibold text-[#172333]">Studio Owner:</span>{' '}
+                    <span className="font-semibold text-[#F8FAFC]">Studio Owner:</span>{' '}
                     {settings.ownerName || 'Shankar Baluragi'}
                   </p>
                   {settings.businessEmail && (
                     <p>
-                      <span className="font-semibold text-[#172333]">Email:</span>{' '}
+                      <span className="font-semibold text-[#F8FAFC]">Email:</span>{' '}
                       {settings.businessEmail}
                     </p>
                   )}
                   {custom.workingHours && (
                     <p>
-                      <span className="font-semibold text-[#172333]">Hours:</span>{' '}
+                      <span className="font-semibold text-[#F8FAFC]">Hours:</span>{' '}
                       {custom.workingHours}
                     </p>
                   )}
@@ -1042,13 +1053,13 @@ export const HomePage: React.FC = () => {
                     href={whatsappUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-semibold text-[#172333] rounded-lg transition-colors whitespace-nowrap shrink-0"
+                    className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-semibold text-white rounded-lg hover:opacity-95 transition-opacity whitespace-nowrap shrink-0"
                     style={{ backgroundColor: accentColor }}
                   >
                     <MessageSquare className="w-4 h-4" />
                     <span>Open WhatsApp Chat</span>
                   </a>
-                  <p className="text-[11px] text-[#6E7785] mt-2">
+                  <p className="text-[11px] text-[#94A3B8] mt-2">
                     Opens WhatsApp with a prefilled inquiry message. You confirm and send the message directly in WhatsApp.
                   </p>
                 </div>
@@ -1195,20 +1206,20 @@ export const ServicesPage: React.FC = () => {
     setSearchParams({});
   };
 
-  const primaryBg = custom.primaryColor || '#172333';
-  const secondaryBg = custom.secondaryColor || '#24364A';
-  const accentColor = custom.accentColor || '#F18A45';
+  const primaryBg = custom.primaryColor || '#040D1A';
+  const secondaryBg = custom.secondaryColor || '#132A4A';
+  const accentColor = custom.accentColor || '#10B981';
 
   return (
     <div>
       {/* Top Horizontal Marketplace Category Filter Bar */}
-      <div className="bg-white border-b border-[#E2E4DF] sticky top-16 z-20 shadow-[0_1px_2px_rgba(23,35,51,0.03)]">
+      <div className="bg-[#0D1F38] border-b border-[#1E3A5F] sticky top-16 z-20 shadow-[0_1px_2px_rgba(23,35,51,0.03)]">
         <div className="max-w-[1200px] mx-auto px-6 flex items-center gap-2 py-2.5">
           <button
             type="button"
             onClick={() => scrollCategoryBar('left')}
             aria-label="Scroll categories left"
-            className="hidden sm:inline-flex items-center justify-center w-7 h-7 rounded-md border border-[#E2E4DF] bg-white text-[#6E7785] hover:text-[#172333] hover:border-[#172333]/40 shrink-0 transition-colors"
+            className="hidden sm:inline-flex items-center justify-center w-7 h-7 rounded-md border border-[#1E3A5F] bg-[#0D1F38] text-[#94A3B8] hover:text-[#F8FAFC] hover:border-[#10B981]/40 shrink-0 transition-colors"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
@@ -1235,8 +1246,8 @@ export const ServicesPage: React.FC = () => {
                   onClick={() => handleSelectCategory(cat)}
                   className={`inline-flex items-center gap-1.5 px-3.5 py-2 text-xs rounded-lg border transition-all duration-150 whitespace-nowrap shrink-0 ${
                     active
-                      ? 'bg-[#172333] text-white border-[#172333] font-semibold shadow-2xs'
-                      : 'bg-[#F5F5F1]/70 text-[#6E7785] border-[#E2E4DF] hover:bg-white hover:text-[#172333] hover:border-[#172333]/40 font-medium'
+                      ? 'bg-gradient-to-r from-[#0EA5E9] to-[#10B981] text-white border-[#10B981] font-semibold shadow-2xs'
+                      : 'bg-[#132A4A]/70 text-[#94A3B8] border-[#1E3A5F] hover:bg-[#132A4A] hover:text-[#F8FAFC] hover:border-[#10B981]/40 font-medium'
                   }`}
                 >
                   <span>{cat}</span>
@@ -1245,7 +1256,7 @@ export const ServicesPage: React.FC = () => {
                       className={`font-mono text-[10px] px-1.5 py-0.2 rounded tabular-nums ${
                         active
                           ? 'bg-white/15 text-white'
-                          : 'bg-[#E2E4DF]/70 text-[#172333]'
+                          : 'bg-[#1E3A5F]/70 text-[#F8FAFC]'
                       }`}
                     >
                       {matchCount}
@@ -1260,7 +1271,7 @@ export const ServicesPage: React.FC = () => {
             type="button"
             onClick={() => scrollCategoryBar('right')}
             aria-label="Scroll categories right"
-            className="hidden sm:inline-flex items-center justify-center w-7 h-7 rounded-md border border-[#E2E4DF] bg-white text-[#6E7785] hover:text-[#172333] hover:border-[#172333]/40 shrink-0 transition-colors"
+            className="hidden sm:inline-flex items-center justify-center w-7 h-7 rounded-md border border-[#1E3A5F] bg-[#0D1F38] text-[#94A3B8] hover:text-[#F8FAFC] hover:border-[#10B981]/40 shrink-0 transition-colors"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
@@ -1269,18 +1280,18 @@ export const ServicesPage: React.FC = () => {
 
       <div className="max-w-[1200px] mx-auto px-6 py-12 lg:py-14">
         {/* Marketplace Header, Search & Sort Controls */}
-        <div className="border-b border-[#E2E4DF] pb-7">
+        <div className="border-b border-[#1E3A5F] pb-7">
           <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
             <div className="max-w-2xl">
-              <p className="text-xs font-semibold text-[#6E7785] tracking-wide">
+              <p className="text-xs font-semibold text-[#94A3B8] tracking-wide">
                 {custom.servicesPageKicker || 'Prithvi Editify · Creative Services'}
               </p>
-              <h1 className="font-editorial text-3xl sm:text-4xl font-semibold text-[#172333] mt-2">
+              <h1 className="font-editorial text-3xl sm:text-4xl font-semibold text-[#F8FAFC] mt-2">
                 {selectedCategory === 'All'
                   ? custom.servicesPageTitle || 'Creative Services'
                   : selectedCategory}
               </h1>
-              <p className="text-base text-[#6E7785] mt-2.5 leading-relaxed">
+              <p className="text-base text-[#94A3B8] mt-2.5 leading-relaxed">
                 {custom.servicesPageDescription ||
                   'Professional design, video editing and digital creative solutions for your brand.'}
               </p>
@@ -1289,21 +1300,21 @@ export const ServicesPage: React.FC = () => {
             {/* Search & Sort Bar */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
               <div className="relative flex-1 sm:w-72">
-                <Search className="w-4 h-4 text-[#6E7785] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <Search className="w-4 h-4 text-[#94A3B8] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="search"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search for a service…"
                   aria-label="Search for a service"
-                  className="w-full pl-10 pr-8 py-2.5 text-xs bg-white border border-[#E2E4DF] rounded-lg text-[#172333] placeholder-[#6E7785] focus:outline-none focus:border-[#172333] transition-colors"
+                  className="w-full pl-10 pr-8 py-2.5 text-xs bg-[#0D1F38] border border-[#1E3A5F] rounded-lg text-[#F8FAFC] placeholder-[#94A3B8] focus:outline-none focus:border-[#10B981] transition-colors"
                 />
                 {searchQuery && (
                   <button
                     type="button"
                     onClick={() => setSearchQuery('')}
                     aria-label="Clear search"
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#6E7785] hover:text-[#172333] p-0.5"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#F8FAFC] p-0.5"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -1311,15 +1322,15 @@ export const ServicesPage: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-2">
-                <SlidersHorizontal className="w-3.5 h-3.5 text-[#6E7785] shrink-0 hidden sm:block" />
-                <label htmlFor="service-sort" className="text-xs text-[#6E7785] whitespace-nowrap">
+                <SlidersHorizontal className="w-3.5 h-3.5 text-[#94A3B8] shrink-0 hidden sm:block" />
+                <label htmlFor="service-sort" className="text-xs text-[#94A3B8] whitespace-nowrap">
                   Sort by:
                 </label>
                 <select
                   id="service-sort"
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as ServiceSortOption)}
-                  className="px-3 py-2.5 text-xs font-medium text-[#172333] bg-white border border-[#E2E4DF] rounded-lg focus:outline-none focus:border-[#172333] transition-colors"
+                  className="px-3 py-2.5 text-xs font-medium text-[#F8FAFC] bg-[#0D1F38] border border-[#1E3A5F] rounded-lg focus:outline-none focus:border-[#10B981] transition-colors"
                 >
                   <option value="recommended">Recommended</option>
                   <option value="price_asc">Price: Low to High</option>
@@ -1330,20 +1341,20 @@ export const ServicesPage: React.FC = () => {
           </div>
 
           {/* Active Filter Status Strip */}
-          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-xs text-[#6E7785]">
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-xs text-[#94A3B8]">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="font-mono tabular-nums text-[#172333] font-semibold">
+              <span className="font-mono tabular-nums text-[#F8FAFC] font-semibold">
                 {filteredAndSortedServices.length}{' '}
                 {filteredAndSortedServices.length === 1 ? 'service' : 'services'} available
               </span>
               {selectedCategory !== 'All' && (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#172333]/5 text-[#172333] font-medium">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#040D1A]/5 text-[#F8FAFC] font-medium">
                   <span>Category: {selectedCategory}</span>
                   <button
                     type="button"
                     onClick={() => handleSelectCategory('All')}
                     aria-label={`Remove ${selectedCategory} filter`}
-                    className="hover:text-[#F18A45]"
+                    className="hover:text-[#10B981]"
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -1355,7 +1366,7 @@ export const ServicesPage: React.FC = () => {
               <button
                 type="button"
                 onClick={handleClearFilters}
-                className="inline-flex items-center gap-1 text-xs font-semibold text-[#172333] hover:text-[#F18A45] transition-colors whitespace-nowrap"
+                className="inline-flex items-center gap-1 text-xs font-semibold text-[#F8FAFC] hover:text-[#10B981] transition-colors whitespace-nowrap"
               >
                 <X className="w-3.5 h-3.5" />
                 <span>Clear all filters</span>
@@ -1370,29 +1381,29 @@ export const ServicesPage: React.FC = () => {
           {[1, 2, 3, 4, 5, 6].map((n) => (
             <div
               key={n}
-              className="h-[420px] bg-white border border-[#E2E4DF] rounded-lg animate-pulse"
+              className="h-[420px] bg-[#0D1F38] border border-[#1E3A5F] rounded-lg animate-pulse"
             />
           ))}
         </div>
       ) : filteredAndSortedServices.length === 0 ? (
-        <div className="mt-10 bg-white border border-[#E2E4DF] rounded-lg p-12 text-center max-w-xl mx-auto shadow-[0_1px_2px_rgba(23,35,51,0.04)]">
-          <h2 className="font-editorial text-xl font-semibold text-[#172333]">
+        <div className="mt-10 bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-12 text-center max-w-xl mx-auto shadow-[0_1px_2px_rgba(0,0,0,0.35)]">
+          <h2 className="font-editorial text-xl font-semibold text-[#F8FAFC]">
             No matching services found
           </h2>
-          <p className="text-sm text-[#6E7785] mt-2 leading-relaxed">
+          <p className="text-sm text-[#94A3B8] mt-2 leading-relaxed">
             No services matched your current search or category selection. Try clearing your filters or contact Prithvi Editify directly for a custom project scope.
           </p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
             <button
               type="button"
               onClick={handleClearFilters}
-              className="px-4 py-2.5 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg transition-colors"
+              className="px-4 py-2.5 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-colors"
             >
               Reset All Filters
             </button>
             <Link
               to="/contact"
-              className="px-4 py-2.5 text-xs font-semibold text-[#172333] bg-[#F5F5F1] hover:bg-[#E2E4DF] rounded-lg transition-colors"
+              className="px-4 py-2.5 text-xs font-semibold text-[#F8FAFC] bg-[#132A4A] hover:bg-[#1E3A5F] rounded-lg transition-colors"
             >
               Contact for a Project
             </Link>
@@ -1421,27 +1432,27 @@ export const ServicesPage: React.FC = () => {
       </div>
 
       {/* Custom Scope Banner */}
-      <div className="mt-16 bg-white border border-[#E2E4DF] rounded-lg p-6 sm:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-[0_1px_2px_rgba(23,35,51,0.04)]">
+      <div className="pe-card-interactive mt-16 bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 sm:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-[0_1px_2px_rgba(0,0,0,0.35)]">
         <div className="max-w-xl">
-          <p className="text-xs font-semibold text-[#6E7785]">Custom Creative Production</p>
-          <h2 className="font-editorial text-2xl font-semibold text-[#172333] mt-1">
+          <p className="text-xs font-semibold text-[#94A3B8]">Custom Creative Production</p>
+          <h2 className="font-editorial text-2xl font-semibold text-[#F8FAFC] mt-1">
             Need a multi-deliverable package or monthly creative retainer?
           </h2>
-          <p className="text-sm text-[#6E7785] mt-2 leading-relaxed">
+          <p className="text-sm text-[#94A3B8] mt-2 leading-relaxed">
             Share your brand requirements, volume of creatives, and target schedule with Shankar Baluragi for a tailored studio quote.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3 shrink-0">
           <Link
             to="/contact"
-            className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg transition-colors whitespace-nowrap"
+            className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-colors whitespace-nowrap"
           >
             <span>Contact for a Project</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </Link>
           <Link
             to="/portfolio"
-            className="px-4 py-2.5 text-xs font-semibold text-[#172333] bg-[#F5F5F1] hover:bg-[#E2E4DF] rounded-lg transition-colors whitespace-nowrap"
+            className="px-4 py-2.5 text-xs font-semibold text-[#F8FAFC] bg-[#132A4A] hover:bg-[#1E3A5F] rounded-lg transition-colors whitespace-nowrap"
           >
             Explore Portfolio
           </Link>
@@ -1516,17 +1527,17 @@ export const ServiceDetailPage: React.FC = () => {
     return [...sameCategory, ...others].slice(0, 3);
   }, [services, service]);
 
-  const primaryBg = custom.primaryColor || '#172333';
-  const secondaryBg = custom.secondaryColor || '#24364A';
-  const accentColor = custom.accentColor || '#F18A45';
+  const primaryBg = custom.primaryColor || '#040D1A';
+  const secondaryBg = custom.secondaryColor || '#132A4A';
+  const accentColor = custom.accentColor || '#10B981';
 
   if (loading) {
     return (
       <div className="max-w-[1200px] mx-auto px-6 py-16 space-y-8">
-        <div className="h-6 w-64 bg-white border border-[#E2E4DF] rounded animate-pulse" />
+        <div className="h-6 w-64 bg-[#0D1F38] border border-[#1E3A5F] rounded animate-pulse" />
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          <div className="lg:col-span-8 h-[480px] bg-white border border-[#E2E4DF] rounded-lg animate-pulse" />
-          <div className="lg:col-span-4 h-[420px] bg-white border border-[#E2E4DF] rounded-lg animate-pulse" />
+          <div className="lg:col-span-8 h-[480px] bg-[#0D1F38] border border-[#1E3A5F] rounded-lg animate-pulse" />
+          <div className="lg:col-span-4 h-[420px] bg-[#0D1F38] border border-[#1E3A5F] rounded-lg animate-pulse" />
         </div>
       </div>
     );
@@ -1535,24 +1546,24 @@ export const ServiceDetailPage: React.FC = () => {
   if (!service) {
     return (
       <div className="max-w-[1200px] mx-auto px-6 py-20 text-center space-y-4">
-        <p className="text-xs font-semibold text-[#6E7785]">Service Not Found</p>
-        <h1 className="font-editorial text-3xl font-semibold text-[#172333]">
+        <p className="text-xs font-semibold text-[#94A3B8]">Service Not Found</p>
+        <h1 className="font-editorial text-3xl font-semibold text-[#F8FAFC]">
           This service listing is unavailable
         </h1>
-        <p className="text-sm text-[#6E7785] max-w-md mx-auto">
+        <p className="text-sm text-[#94A3B8] max-w-md mx-auto">
           The service you selected may have been updated or unpublished. Browse all available creative services below.
         </p>
         <div className="pt-2 flex items-center justify-center gap-3">
           <Link
             to="/services"
-            className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg transition-colors"
+            className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Back to Creative Services</span>
           </Link>
           <Link
             to="/contact"
-            className="px-5 py-2.5 text-xs font-semibold text-[#172333] bg-white border border-[#E2E4DF] hover:border-[#172333] rounded-lg transition-colors"
+            className="px-5 py-2.5 text-xs font-semibold text-[#F8FAFC] bg-[#0D1F38] border border-[#1E3A5F] hover:border-[#10B981] rounded-lg transition-colors"
           >
             Contact for a Project
           </Link>
@@ -1615,37 +1626,37 @@ export const ServiceDetailPage: React.FC = () => {
   return (
     <div className="max-w-[1200px] mx-auto px-6 py-10 lg:py-14 space-y-10">
       {/* 1. Breadcrumb & Service Marketplace Header */}
-      <div className="space-y-4 border-b border-[#E2E4DF] pb-6">
+      <div className="space-y-4 border-b border-[#1E3A5F] pb-6">
         <nav
           aria-label="Breadcrumb"
-          className="flex flex-wrap items-center justify-between gap-4 text-xs text-[#6E7785]"
+          className="flex flex-wrap items-center justify-between gap-4 text-xs text-[#94A3B8]"
         >
           <div className="flex flex-wrap items-center gap-2">
-            <Link to="/services" className="hover:text-[#172333] transition-colors font-medium">
+            <Link to="/services" className="hover:text-[#F8FAFC] transition-colors font-medium">
               Creative Services
             </Link>
             <span aria-hidden="true">/</span>
             <Link
               to={`/services?category=${encodeURIComponent(displayCategory)}`}
-              className="hover:text-[#172333] transition-colors"
+              className="hover:text-[#F8FAFC] transition-colors"
             >
               {displayCategory}
             </Link>
             <span aria-hidden="true">/</span>
-            <span className="text-[#172333] font-medium truncate max-w-xs sm:max-w-md">
+            <span className="text-[#F8FAFC] font-medium truncate max-w-xs sm:max-w-md">
               {service.title}
             </span>
           </div>
           <Link
             to="/services"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#172333] hover:text-[#F18A45] transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#F8FAFC] hover:text-[#10B981] transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>All Services</span>
           </Link>
         </nav>
 
-        <h1 className="font-editorial text-2xl sm:text-3xl lg:text-4xl font-semibold text-[#172333] leading-tight">
+        <h1 className="font-editorial text-2xl sm:text-3xl lg:text-4xl font-semibold text-[#F8FAFC] leading-tight">
           {service.title}
         </h1>
 
@@ -1666,27 +1677,27 @@ export const ServiceDetailPage: React.FC = () => {
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-[#172333]">{creatorName}</span>
-                  <span className="text-[11px] font-semibold text-[#26734D] bg-[#26734D]/10 px-2 py-0.5 rounded">
+                  <span className="text-xs font-semibold text-[#F8FAFC]">{creatorName}</span>
+                  <span className="text-[11px] font-semibold text-[#16A34A] bg-[#16A34A]/10 px-2 py-0.5 rounded">
                     Verified Studio Owner
                   </span>
                 </div>
-                <p className="text-[11px] text-[#6E7785]">
+                <p className="text-[11px] text-[#94A3B8]">
                   {studioName} · Creative Production Studio
                 </p>
               </div>
             </div>
 
-            <span className="hidden sm:inline text-[#E2E4DF]">|</span>
+            <span className="hidden sm:inline text-[#1E3A5F]">|</span>
 
-            <div className="flex flex-wrap items-center gap-3 text-xs text-[#6E7785]">
-              <span className="inline-flex items-center gap-1 font-medium text-[#172333]">
-                <Clock className="w-3.5 h-3.5 text-[#F18A45]" />
+            <div className="flex flex-wrap items-center gap-3 text-xs text-[#94A3B8]">
+              <span className="inline-flex items-center gap-1 font-medium text-[#F8FAFC]">
+                <Clock className="w-3.5 h-3.5 text-[#10B981]" />
                 <span>Delivery: {service.turnaroundTime || '24–48 hours'}</span>
               </span>
               <span aria-hidden="true">·</span>
-              <span className="inline-flex items-center gap-1 font-medium text-[#172333]">
-                <RefreshCw className="w-3.5 h-3.5 text-[#26734D]" />
+              <span className="inline-flex items-center gap-1 font-medium text-[#F8FAFC]">
+                <RefreshCw className="w-3.5 h-3.5 text-[#16A34A]" />
                 <span>{service.revisions || '2 Revisions'}</span>
               </span>
             </div>
@@ -1694,7 +1705,7 @@ export const ServiceDetailPage: React.FC = () => {
 
           <a
             href="#compare-packages"
-            className="text-xs font-semibold text-[#172333] hover:text-[#F18A45] transition-colors"
+            className="text-xs font-semibold text-[#F8FAFC] hover:text-[#10B981] transition-colors"
           >
             Compare Packages ↓
           </a>
@@ -1706,8 +1717,8 @@ export const ServiceDetailPage: React.FC = () => {
         {/* LEFT COLUMN: Gallery Stage, Service Details, Package Comparison Table, Requirements & Inquiry */}
         <div className="lg:col-span-7 xl:col-span-8 space-y-8">
           {/* Interactive Gallery Stage — Fixed height + w-full h-full object-contain so posters NEVER crop */}
-          <div className="bg-white border border-[#E2E4DF] rounded-lg p-3 sm:p-4 space-y-3 shadow-[0_1px_3px_rgba(23,35,51,0.04)]">
-            <div className="relative h-[340px] sm:h-[460px] w-full bg-[#0F1722] rounded-lg overflow-hidden border border-[#E2E4DF]">
+          <div className="pe-card-interactive bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-3 sm:p-4 space-y-3 shadow-[0_1px_3px_rgba(0,0,0,0.35)]">
+            <div className="relative h-[340px] sm:h-[460px] w-full bg-[#040D1A] rounded-lg overflow-hidden border border-[#1E3A5F]">
               {hasCustomImage && (
                 <img
                   src={currentPreviewUrl}
@@ -1737,7 +1748,7 @@ export const ServiceDetailPage: React.FC = () => {
                       )
                     }
                     aria-label="Previous image"
-                    className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-[#172333] flex items-center justify-center shadow-md transition-colors"
+                    className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-[#0D1F38]/90 hover:bg-[#132A4A] text-[#F8FAFC] flex items-center justify-center shadow-md transition-colors"
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
@@ -1749,7 +1760,7 @@ export const ServiceDetailPage: React.FC = () => {
                       )
                     }
                     aria-label="Next image"
-                    className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-[#172333] flex items-center justify-center shadow-md transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-[#0D1F38]/90 hover:bg-[#132A4A] text-[#F8FAFC] flex items-center justify-center shadow-md transition-colors"
                   >
                     <ChevronRight className="w-4 h-4" />
                   </button>
@@ -1769,9 +1780,9 @@ export const ServiceDetailPage: React.FC = () => {
                     storageBucket: 'service-media',
                   })
                 }
-                className="absolute bottom-3 right-3 z-20 inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-[#172333]/90 hover:bg-[#172333] border border-white/15 rounded-lg shadow-sm transition-colors"
+                className="absolute bottom-3 right-3 z-20 inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-[#040D1A]/90 hover:bg-[#040D1A] border border-white/15 rounded-lg shadow-sm transition-colors"
               >
-                <Eye className="w-4 h-4 text-[#F18A45]" />
+                <Eye className="w-4 h-4 text-[#10B981]" />
                 <span>Open Full Preview</span>
               </button>
             </div>
@@ -1784,10 +1795,10 @@ export const ServiceDetailPage: React.FC = () => {
                     key={`${imgUrl}_${idx}`}
                     type="button"
                     onClick={() => setActiveMediaIndex(idx)}
-                    className={`w-20 h-14 rounded-md overflow-hidden border bg-[#0F1722] transition-all ${
+                    className={`w-20 h-14 rounded-md overflow-hidden border bg-[#040D1A] transition-all ${
                       activeMediaIndex === idx
-                        ? 'border-[#172333] ring-2 ring-[#172333]/20'
-                        : 'border-[#E2E4DF] opacity-70 hover:opacity-100'
+                        ? 'border-[#040D1A] ring-2 ring-[#10B981]/20'
+                        : 'border-[#1E3A5F] opacity-70 hover:opacity-100'
                     }`}
                   >
                     <img
@@ -1813,9 +1824,9 @@ export const ServiceDetailPage: React.FC = () => {
                         storageBucket: 'service-media',
                       })
                     }
-                    className="inline-flex items-center gap-2 px-3.5 py-2.5 text-xs font-semibold text-[#172333] bg-[#F5F5F1] border border-[#E2E4DF] hover:border-[#172333] rounded-lg transition-colors"
+                    className="inline-flex items-center gap-2 px-3.5 py-2.5 text-xs font-semibold text-[#F8FAFC] bg-[#132A4A] border border-[#1E3A5F] hover:border-[#10B981] rounded-lg transition-colors"
                   >
-                    <Film className="w-4 h-4 text-[#F18A45]" />
+                    <Film className="w-4 h-4 text-[#10B981]" />
                     <span>Watch Video Sample</span>
                   </button>
                 )}
@@ -1824,22 +1835,22 @@ export const ServiceDetailPage: React.FC = () => {
           </div>
 
           {/* About This Service & Deliverables Card */}
-          <section className="bg-white border border-[#E2E4DF] rounded-lg p-6 sm:p-8 space-y-6 shadow-[0_1px_2px_rgba(23,35,51,0.04)]">
+          <section className="pe-card-interactive bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 sm:p-8 space-y-6 shadow-[0_1px_2px_rgba(0,0,0,0.35)]">
             <div className="space-y-3">
-              <h2 className="font-editorial text-xl font-semibold text-[#172333]">
+              <h2 className="font-editorial text-xl font-semibold text-[#F8FAFC]">
                 About This Service
               </h2>
-              <p className="text-sm sm:text-base text-[#6E7785] leading-relaxed whitespace-pre-line">
+              <p className="text-sm sm:text-base text-[#94A3B8] leading-relaxed whitespace-pre-line">
                 {service.description}
               </p>
             </div>
 
-            <div className="pt-6 border-t border-[#E2E4DF] space-y-4">
+            <div className="pt-6 border-t border-[#1E3A5F] space-y-4">
               <div>
-                <h3 className="font-editorial text-lg font-semibold text-[#172333]">
+                <h3 className="font-editorial text-lg font-semibold text-[#F8FAFC]">
                   What’s Included & Deliverables
                 </h3>
-                <p className="text-xs text-[#6E7785] mt-0.5">
+                <p className="text-xs text-[#94A3B8] mt-0.5">
                   Every project for {service.title} includes these studio deliverables:
                 </p>
               </div>
@@ -1849,35 +1860,35 @@ export const ServiceDetailPage: React.FC = () => {
                   {deliverablesItems.map((item, idx) => (
                     <li
                       key={`${item}_${idx}`}
-                      className="flex items-start gap-2.5 text-sm text-[#172333] bg-[#F5F5F1]/60 border border-[#E2E4DF] rounded-lg p-3"
+                      className="pe-card-interactive flex items-start gap-2.5 text-sm text-[#F8FAFC] bg-[#132A4A]/60 border border-[#1E3A5F] rounded-lg p-3"
                     >
-                      <CheckCircle2 className="w-4 h-4 text-[#26734D] shrink-0 mt-0.5" />
+                      <CheckCircle2 className="w-4 h-4 text-[#16A34A] shrink-0 mt-0.5" />
                       <span>{item}</span>
                     </li>
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-[#6E7785]">
+                <p className="text-sm text-[#94A3B8]">
                   {service.deliverablesSummary ||
                     'High-resolution production files scoped specifically to your project brief.'}
                 </p>
               )}
             </div>
 
-            <div className="pt-5 border-t border-[#E2E4DF] grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-              <div className="p-3.5 bg-[#F5F5F1]/50 rounded-lg border border-[#E2E4DF]">
-                <span className="block text-[#6E7785]">Service Category</span>
-                <span className="font-semibold text-[#172333] mt-1 block">{displayCategory}</span>
+            <div className="pt-5 border-t border-[#1E3A5F] grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+              <div className="pe-card-interactive p-3.5 bg-[#132A4A]/50 rounded-lg border border-[#1E3A5F]">
+                <span className="block text-[#94A3B8]">Service Category</span>
+                <span className="font-semibold text-[#F8FAFC] mt-1 block">{displayCategory}</span>
               </div>
-              <div className="p-3.5 bg-[#F5F5F1]/50 rounded-lg border border-[#E2E4DF]">
-                <span className="block text-[#6E7785]">Standard Turnaround</span>
-                <span className="font-semibold text-[#172333] mt-1 block">
+              <div className="pe-card-interactive p-3.5 bg-[#132A4A]/50 rounded-lg border border-[#1E3A5F]">
+                <span className="block text-[#94A3B8]">Standard Turnaround</span>
+                <span className="font-semibold text-[#F8FAFC] mt-1 block">
                   {service.turnaroundTime || '24–48 hours'}
                 </span>
               </div>
-              <div className="p-3.5 bg-[#F5F5F1]/50 rounded-lg border border-[#E2E4DF]">
-                <span className="block text-[#6E7785]">Starting Rate (INR)</span>
-                <span className="font-mono font-semibold text-[#172333] mt-1 block tabular-nums">
+              <div className="pe-card-interactive p-3.5 bg-[#132A4A]/50 rounded-lg border border-[#1E3A5F]">
+                <span className="block text-[#94A3B8]">Starting Rate (INR)</span>
+                <span className="font-mono font-semibold text-[#F8FAFC] mt-1 block tabular-nums">
                   {service.priceDisplay}
                 </span>
               </div>
@@ -1888,13 +1899,13 @@ export const ServiceDetailPage: React.FC = () => {
           {!service.isCustomQuote && packages.length > 0 && (
             <section
               id="compare-packages"
-              className="scroll-mt-24 bg-white border border-[#E2E4DF] rounded-lg overflow-hidden shadow-[0_1px_2px_rgba(23,35,51,0.04)]"
+              className="pe-card-interactive scroll-mt-24 bg-[#0D1F38] border border-[#1E3A5F] rounded-lg overflow-hidden shadow-[0_1px_2px_rgba(0,0,0,0.35)]"
             >
-              <div className="p-6 border-b border-[#E2E4DF]">
-                <h2 className="font-editorial text-xl font-semibold text-[#172333]">
+              <div className="p-6 border-b border-[#1E3A5F]">
+                <h2 className="font-editorial text-xl font-semibold text-[#F8FAFC]">
                   Compare Packages
                 </h2>
-                <p className="text-xs text-[#6E7785] mt-1">
+                <p className="text-xs text-[#94A3B8] mt-1">
                   Select a package tier based on your required deliverables, turnaround time, and revision rounds.
                 </p>
               </div>
@@ -1902,78 +1913,78 @@ export const ServiceDetailPage: React.FC = () => {
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse min-w-[600px]">
                   <thead>
-                    <tr className="border-b border-[#E2E4DF] bg-[#F5F5F1]/50">
-                      <th className="p-4 text-xs font-semibold text-[#6E7785] w-1/4">
+                    <tr className="border-b border-[#1E3A5F] bg-[#132A4A]/50">
+                      <th className="p-4 text-xs font-semibold text-[#94A3B8] w-1/4">
                         Package Tier
                       </th>
                       {packages.map((pkg) => (
                         <th
                           key={pkg.tier}
-                          className={`p-4 w-1/4 border-l border-[#E2E4DF] ${
-                            selectedTier === pkg.tier ? 'bg-[#172333]/[0.03]' : ''
+                          className={`p-4 w-1/4 border-l border-[#1E3A5F] ${
+                            selectedTier === pkg.tier ? 'bg-[#040D1A]/[0.03]' : ''
                           }`}
                         >
-                          <span className="text-xs font-bold uppercase tracking-wider text-[#F18A45] block">
+                          <span className="text-xs font-bold uppercase tracking-wider text-[#10B981] block">
                             {pkg.tier}
                           </span>
-                          <span className="font-mono text-xl font-bold text-[#172333] mt-1 block tabular-nums">
+                          <span className="font-mono text-xl font-bold text-[#F8FAFC] mt-1 block tabular-nums">
                             {pkg.priceDisplay}
                           </span>
-                          <span className="text-xs font-semibold text-[#172333] mt-1 block">
+                          <span className="text-xs font-semibold text-[#F8FAFC] mt-1 block">
                             {pkg.name}
                           </span>
                         </th>
                       ))}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#E2E4DF] text-xs">
+                  <tbody className="divide-y divide-[#1E3A5F] text-xs">
                     <tr>
-                      <td className="p-4 font-semibold text-[#172333]">Scope Summary</td>
+                      <td className="p-4 font-semibold text-[#F8FAFC]">Scope Summary</td>
                       {packages.map((pkg) => (
                         <td
                           key={`${pkg.tier}_desc`}
-                          className="p-4 text-[#6E7785] border-l border-[#E2E4DF] leading-relaxed"
+                          className="p-4 text-[#94A3B8] border-l border-[#1E3A5F] leading-relaxed"
                         >
                           {pkg.description}
                         </td>
                       ))}
                     </tr>
                     <tr>
-                      <td className="p-4 font-semibold text-[#172333]">Delivery Time</td>
+                      <td className="p-4 font-semibold text-[#F8FAFC]">Delivery Time</td>
                       {packages.map((pkg) => (
                         <td
                           key={`${pkg.tier}_deliv`}
-                          className="p-4 font-medium text-[#172333] border-l border-[#E2E4DF]"
+                          className="p-4 font-medium text-[#F8FAFC] border-l border-[#1E3A5F]"
                         >
                           {pkg.deliveryTime}
                         </td>
                       ))}
                     </tr>
                     <tr>
-                      <td className="p-4 font-semibold text-[#172333]">Revisions</td>
+                      <td className="p-4 font-semibold text-[#F8FAFC]">Revisions</td>
                       {packages.map((pkg) => (
                         <td
                           key={`${pkg.tier}_rev`}
-                          className="p-4 font-medium text-[#172333] border-l border-[#E2E4DF]"
+                          className="p-4 font-medium text-[#F8FAFC] border-l border-[#1E3A5F]"
                         >
                           {pkg.revisions}
                         </td>
                       ))}
                     </tr>
                     <tr>
-                      <td className="p-4 font-semibold text-[#172333]">What’s Included</td>
+                      <td className="p-4 font-semibold text-[#F8FAFC]">What’s Included</td>
                       {packages.map((pkg) => (
                         <td
                           key={`${pkg.tier}_feat`}
-                          className="p-4 border-l border-[#E2E4DF] align-top"
+                          className="p-4 border-l border-[#1E3A5F] align-top"
                         >
                           <ul className="space-y-1.5">
                             {pkg.features.map((feat, i) => (
                               <li
                                 key={`${pkg.tier}_f_${i}`}
-                                className="flex items-start gap-1.5 text-[#172333]"
+                                className="flex items-start gap-1.5 text-[#F8FAFC]"
                               >
-                                <CheckCircle2 className="w-3.5 h-3.5 text-[#26734D] shrink-0 mt-0.5" />
+                                <CheckCircle2 className="w-3.5 h-3.5 text-[#16A34A] shrink-0 mt-0.5" />
                                 <span>{feat}</span>
                               </li>
                             ))}
@@ -1981,20 +1992,20 @@ export const ServiceDetailPage: React.FC = () => {
                         </td>
                       ))}
                     </tr>
-                    <tr className="bg-[#F5F5F1]/40">
-                      <td className="p-4 font-semibold text-[#172333]">Action</td>
+                    <tr className="bg-[#132A4A]/40">
+                      <td className="p-4 font-semibold text-[#F8FAFC]">Action</td>
                       {packages.map((pkg) => (
                         <td
                           key={`${pkg.tier}_btn`}
-                          className="p-4 border-l border-[#E2E4DF]"
+                          className="p-4 border-l border-[#1E3A5F]"
                         >
                           <a
                             href="#service-inquiry"
                             onClick={() => setSelectedTier(pkg.tier)}
                             className={`w-full inline-flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-semibold rounded-lg transition-colors ${
                               selectedTier === pkg.tier
-                                ? 'bg-[#172333] text-white hover:bg-[#24364A]'
-                                : 'bg-white text-[#172333] border border-[#E2E4DF] hover:border-[#172333]'
+                                ? 'bg-[#132A4A] text-[#F8FAFC] hover:bg-[#132A4A]'
+                                : 'bg-[#0D1F38] text-[#F8FAFC] border border-[#1E3A5F] hover:border-[#10B981]'
                             }`}
                           >
                             <span>Select {pkg.tier}</span>
@@ -2010,38 +2021,38 @@ export const ServiceDetailPage: React.FC = () => {
           )}
 
           {/* Client Requirements Section */}
-          <section className="bg-white border border-[#E2E4DF] rounded-lg p-6 sm:p-8 space-y-5 shadow-[0_1px_2px_rgba(23,35,51,0.04)]">
+          <section className="pe-card-interactive bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 sm:p-8 space-y-5 shadow-[0_1px_2px_rgba(0,0,0,0.35)]">
             <div>
-              <h2 className="font-editorial text-xl font-semibold text-[#172333]">
+              <h2 className="font-editorial text-xl font-semibold text-[#F8FAFC]">
                 Client Requirements
               </h2>
-              <p className="text-xs text-[#6E7785] mt-1">
+              <p className="text-xs text-[#94A3B8] mt-1">
                 To begin work on your project smoothly, please share the following details when submitting your brief:
               </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-              <div className="p-4 bg-[#F5F5F1]/70 border border-[#E2E4DF] rounded-lg space-y-1">
-                <p className="font-semibold text-[#172333]">01. Project Objective & Platform</p>
-                <p className="text-[#6E7785] leading-relaxed">
+              <div className="pe-card-interactive p-4 bg-[#132A4A]/70 border border-[#1E3A5F] rounded-lg space-y-1">
+                <p className="font-semibold text-[#F8FAFC]">01. Project Objective & Platform</p>
+                <p className="text-[#94A3B8] leading-relaxed">
                   Specify where the creative or edit will be published (YouTube, Instagram, LinkedIn, Meta Ads, Print, or Web) and required dimensions.
                 </p>
               </div>
-              <div className="p-4 bg-[#F5F5F1]/70 border border-[#E2E4DF] rounded-lg space-y-1">
-                <p className="font-semibold text-[#172333]">02. Copy, Script, or Key Text</p>
-                <p className="text-[#6E7785] leading-relaxed">
+              <div className="pe-card-interactive p-4 bg-[#132A4A]/70 border border-[#1E3A5F] rounded-lg space-y-1">
+                <p className="font-semibold text-[#F8FAFC]">02. Copy, Script, or Key Text</p>
+                <p className="text-[#94A3B8] leading-relaxed">
                   Provide any exact headlines, thumbnail titles, ad copy, or video timestamps that need to appear in the deliverable.
                 </p>
               </div>
-              <div className="p-4 bg-[#F5F5F1]/70 border border-[#E2E4DF] rounded-lg space-y-1">
-                <p className="font-semibold text-[#172333]">03. Brand Assets & Raw Footage</p>
-                <p className="text-[#6E7785] leading-relaxed">
+              <div className="pe-card-interactive p-4 bg-[#132A4A]/70 border border-[#1E3A5F] rounded-lg space-y-1">
+                <p className="font-semibold text-[#F8FAFC]">03. Brand Assets & Raw Footage</p>
+                <p className="text-[#94A3B8] leading-relaxed">
                   Attach logos, brand colors, subject photos, or footage links via the inquiry form or inside your Client Portal.
                 </p>
               </div>
-              <div className="p-4 bg-[#F5F5F1]/70 border border-[#E2E4DF] rounded-lg space-y-1">
-                <p className="font-semibold text-[#172333]">04. Preferred Schedule</p>
-                <p className="text-[#6E7785] leading-relaxed">
+              <div className="pe-card-interactive p-4 bg-[#132A4A]/70 border border-[#1E3A5F] rounded-lg space-y-1">
+                <p className="font-semibold text-[#F8FAFC]">04. Preferred Schedule</p>
+                <p className="text-[#94A3B8] leading-relaxed">
                   Let us know your target release date so we can confirm turnaround and milestone review dates before starting.
                 </p>
               </div>
@@ -2051,14 +2062,14 @@ export const ServiceDetailPage: React.FC = () => {
           {/* Direct Service Inquiry Form Section */}
           <section id="service-inquiry" className="scroll-mt-24 space-y-4">
             <div>
-              <p className="text-xs font-semibold text-[#6E7785]">Start a Project Brief</p>
-              <h2 className="font-editorial text-2xl font-semibold text-[#172333] mt-1">
+              <p className="text-xs font-semibold text-[#94A3B8]">Start a Project Brief</p>
+              <h2 className="font-editorial text-2xl font-semibold text-[#F8FAFC] mt-1">
                 Inquire About {service.title}{' '}
                 {!service.isCustomQuote && `(${activePackage.tier} — ${activePackage.priceDisplay})`}
               </h2>
-              <p className="text-sm text-[#6E7785] mt-1">
+              <p className="text-sm text-[#94A3B8] mt-1">
                 Your inquiry is prefilled with{' '}
-                <span className="font-semibold text-[#172333]">{service.title}</span>. Submit your project details below to receive a confirmed scope and timeline.
+                <span className="font-semibold text-[#F8FAFC]">{service.title}</span>. Submit your project details below to receive a confirmed scope and timeline.
               </p>
             </div>
             <InquiryForm
@@ -2071,13 +2082,13 @@ export const ServiceDetailPage: React.FC = () => {
 
         {/* RIGHT STICKY COLUMN: Fiverr-Style Interactive Package Tabs (Basic | Standard | Premium) */}
         <aside className="lg:col-span-5 xl:col-span-4 lg:sticky lg:top-24 space-y-5">
-          <div className="bg-white border border-[#E2E4DF] rounded-lg overflow-hidden shadow-[0_6px_24px_rgba(23,35,51,0.06)]">
+          <div className="pe-card-interactive bg-[#0D1F38] border border-[#1E3A5F] rounded-lg overflow-hidden shadow-[0_6px_24px_rgba(23,35,51,0.06)]">
             {/* Top Interactive Package Tier Tabs (Basic | Standard | Premium) */}
             {!service.isCustomQuote && packages.length > 0 ? (
               <div
                 role="tablist"
                 aria-label="Service packages"
-                className="grid grid-cols-3 border-b border-[#E2E4DF] bg-[#F5F5F1]"
+                className="grid grid-cols-3 border-b border-[#1E3A5F] bg-[#132A4A]"
               >
                 {packages.map((pkg) => {
                   const isAct = selectedTier === pkg.tier;
@@ -2090,8 +2101,8 @@ export const ServiceDetailPage: React.FC = () => {
                       onClick={() => setSelectedTier(pkg.tier)}
                       className={`py-3.5 px-2 text-xs font-bold transition-all border-b-2 ${
                         isAct
-                          ? 'bg-white text-[#172333] border-[#F18A45]'
-                          : 'text-[#6E7785] border-transparent hover:text-[#172333]'
+                          ? 'bg-[#0D1F38] text-[#F8FAFC] border-[#10B981]'
+                          : 'text-[#94A3B8] border-transparent hover:text-[#F8FAFC]'
                       }`}
                     >
                       {pkg.tier}
@@ -2100,37 +2111,37 @@ export const ServiceDetailPage: React.FC = () => {
                 })}
               </div>
             ) : (
-              <div className="px-6 py-4 bg-[#172333] text-white flex items-center justify-between">
+              <div className="px-6 py-4 bg-[#132A4A] text-[#F8FAFC] flex items-center justify-between">
                 <span className="text-xs font-semibold tracking-wide">Custom Project Scope</span>
-                <span className="font-mono text-xs text-[#F18A45]">INR PRICING</span>
+                <span className="font-mono text-xs text-[#10B981]">INR PRICING</span>
               </div>
             )}
 
             <div className="p-6 space-y-5">
               {/* Selected Package Header & Price */}
-              <div className="flex items-baseline justify-between gap-4 pb-4 border-b border-[#E2E4DF]">
+              <div className="flex items-baseline justify-between gap-4 pb-4 border-b border-[#1E3A5F]">
                 <div>
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#F18A45] block">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#10B981] block">
                     {service.isCustomQuote ? 'Scoped Brief' : `${activePackage.tier} Package`}
                   </span>
-                  <h2 className="text-base font-semibold text-[#172333] mt-0.5">
+                  <h2 className="text-base font-semibold text-[#F8FAFC] mt-0.5">
                     {service.isCustomQuote ? service.title : activePackage.name}
                   </h2>
                 </div>
-                <span className="font-mono text-2xl font-bold text-[#172333] tabular-nums shrink-0">
+                <span className="font-mono text-2xl font-bold text-[#F8FAFC] tabular-nums shrink-0">
                   {service.isCustomQuote ? service.priceDisplay : activePackage.priceDisplay}
                 </span>
               </div>
 
               {/* Package Description */}
-              <p className="text-xs text-[#6E7785] leading-relaxed">
+              <p className="text-xs text-[#94A3B8] leading-relaxed">
                 {service.isCustomQuote ? service.description : activePackage.description}
               </p>
 
               {/* Delivery & Revisions Bar (Fiverr Style) */}
-              <div className="flex items-center justify-between gap-4 py-3 px-3.5 bg-[#F5F5F1]/80 border border-[#E2E4DF] rounded-lg text-xs font-semibold text-[#172333]">
+              <div className="flex items-center justify-between gap-4 py-3 px-3.5 bg-[#132A4A]/80 border border-[#1E3A5F] rounded-lg text-xs font-semibold text-[#F8FAFC]">
                 <span className="inline-flex items-center gap-1.5">
-                  <Clock className="w-4 h-4 text-[#F18A45]" />
+                  <Clock className="w-4 h-4 text-[#10B981]" />
                   <span>
                     {service.isCustomQuote
                       ? service.turnaroundTime || 'Scoped per brief'
@@ -2138,7 +2149,7 @@ export const ServiceDetailPage: React.FC = () => {
                   </span>
                 </span>
                 <span className="inline-flex items-center gap-1.5">
-                  <RefreshCw className="w-3.5 h-3.5 text-[#26734D]" />
+                  <RefreshCw className="w-3.5 h-3.5 text-[#16A34A]" />
                   <span>
                     {service.isCustomQuote
                       ? service.revisions || '2 Revisions'
@@ -2149,15 +2160,15 @@ export const ServiceDetailPage: React.FC = () => {
 
               {/* Included Features Checklist */}
               <div className="space-y-2.5">
-                <p className="text-xs font-semibold text-[#172333]">What’s Included:</p>
+                <p className="text-xs font-semibold text-[#F8FAFC]">What’s Included:</p>
                 <ul className="space-y-2">
                   {(service.isCustomQuote ? deliverablesItems : activePackage.features).map(
                     (item, idx) => (
                       <li
                         key={`pkg_feat_${idx}`}
-                        className="flex items-start gap-2 text-xs text-[#172333]"
+                        className="flex items-start gap-2 text-xs text-[#F8FAFC]"
                       >
-                        <CheckCircle2 className="w-4 h-4 text-[#26734D] shrink-0 mt-0.5" />
+                        <CheckCircle2 className="w-4 h-4 text-[#16A34A] shrink-0 mt-0.5" />
                         <span>{item}</span>
                       </li>
                     )
@@ -2169,7 +2180,7 @@ export const ServiceDetailPage: React.FC = () => {
               <div className="pt-2 space-y-2.5">
                 <a
                   href="#service-inquiry"
-                  className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg transition-colors"
+                  className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-colors"
                 >
                   <span>
                     {service.isCustomQuote
@@ -2183,7 +2194,7 @@ export const ServiceDetailPage: React.FC = () => {
                   href={whatsappUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-xs font-semibold text-[#172333] rounded-lg transition-colors"
+                  className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-xs font-semibold text-white rounded-lg hover:opacity-95 transition-opacity"
                   style={{ backgroundColor: accentColor }}
                 >
                   <MessageSquare className="w-3.5 h-3.5" />
@@ -2193,7 +2204,7 @@ export const ServiceDetailPage: React.FC = () => {
                 {!service.isCustomQuote && (
                   <a
                     href="#compare-packages"
-                    className="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-semibold text-[#6E7785] hover:text-[#172333] transition-colors"
+                    className="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-semibold text-[#94A3B8] hover:text-[#F8FAFC] transition-colors"
                   >
                     <span>Compare All 3 Packages</span>
                   </a>
@@ -2203,7 +2214,7 @@ export const ServiceDetailPage: React.FC = () => {
           </div>
 
           {/* Studio Seller Card */}
-          <div className="bg-white border border-[#E2E4DF] rounded-lg p-5 space-y-3 text-xs">
+          <div className="pe-card-interactive bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-5 space-y-3 text-xs">
             <div className="flex items-center gap-3">
               <div
                 className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
@@ -2217,18 +2228,18 @@ export const ServiceDetailPage: React.FC = () => {
                   .toUpperCase()}
               </div>
               <div>
-                <p className="font-semibold text-[#172333]">{creatorName}</p>
-                <p className="text-[#6E7785]">Founder · {studioName}</p>
+                <p className="font-semibold text-[#F8FAFC]">{creatorName}</p>
+                <p className="text-[#94A3B8]">Founder · {studioName}</p>
               </div>
             </div>
-            <p className="text-[#6E7785] leading-relaxed">
+            <p className="text-[#94A3B8] leading-relaxed">
               Every project includes written scope confirmation, private draft previews in the Client Portal, and itemized INR billing.
             </p>
-            <div className="pt-2 border-t border-[#E2E4DF] flex items-center justify-between text-[11px] text-[#6E7785]">
+            <div className="pt-2 border-t border-[#1E3A5F] flex items-center justify-between text-[11px] text-[#94A3B8]">
               <span>Currency: INR (₹)</span>
               <Link
                 to={`/contact?service=${encodeURIComponent(service.title)}`}
-                className="font-semibold text-[#172333] hover:text-[#F18A45]"
+                className="font-semibold text-[#F8FAFC] hover:text-[#10B981]"
               >
                 Send Custom Brief →
               </Link>
@@ -2239,17 +2250,17 @@ export const ServiceDetailPage: React.FC = () => {
 
       {/* Related Services Section */}
       {relatedServices.length > 0 && (
-        <section className="pt-12 border-t border-[#E2E4DF] space-y-6">
+        <section className="pt-12 border-t border-[#1E3A5F] space-y-6">
           <div className="flex items-end justify-between gap-4">
             <div>
-              <p className="text-xs font-semibold text-[#6E7785]">Explore More Capabilities</p>
-              <h2 className="font-editorial text-2xl font-semibold text-[#172333] mt-1">
+              <p className="text-xs font-semibold text-[#94A3B8]">Explore More Capabilities</p>
+              <h2 className="font-editorial text-2xl font-semibold text-[#F8FAFC] mt-1">
                 Related Creative Services
               </h2>
             </div>
             <Link
               to="/services"
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#172333] hover:text-[#F18A45] transition-colors"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#F8FAFC] hover:text-[#10B981] transition-colors"
             >
               <span>View All Services</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -2390,20 +2401,20 @@ export const PortfolioPage: React.FC = () => {
     setSearchParams({});
   };
 
-  const primaryBg = custom.primaryColor || '#172333';
-  const secondaryBg = custom.secondaryColor || '#24364A';
-  const accentColor = custom.accentColor || '#F18A45';
+  const primaryBg = custom.primaryColor || '#040D1A';
+  const secondaryBg = custom.secondaryColor || '#132A4A';
+  const accentColor = custom.accentColor || '#10B981';
 
   return (
     <div>
       {/* Top Horizontal Marketplace Category Filter Bar */}
-      <div className="bg-white border-b border-[#E2E4DF] sticky top-16 z-20 shadow-[0_1px_2px_rgba(23,35,51,0.03)]">
+      <div className="bg-[#0D1F38] border-b border-[#1E3A5F] sticky top-16 z-20 shadow-[0_1px_2px_rgba(23,35,51,0.03)]">
         <div className="max-w-[1200px] mx-auto px-6 flex items-center gap-2 py-2.5">
           <button
             type="button"
             onClick={() => scrollCategoryBar('left')}
             aria-label="Scroll categories left"
-            className="hidden sm:inline-flex items-center justify-center w-7 h-7 rounded-md border border-[#E2E4DF] bg-white text-[#6E7785] hover:text-[#172333] hover:border-[#172333]/40 shrink-0 transition-colors"
+            className="hidden sm:inline-flex items-center justify-center w-7 h-7 rounded-md border border-[#1E3A5F] bg-[#0D1F38] text-[#94A3B8] hover:text-[#F8FAFC] hover:border-[#10B981]/40 shrink-0 transition-colors"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
@@ -2430,8 +2441,8 @@ export const PortfolioPage: React.FC = () => {
                   onClick={() => handleSelectCategory(cat)}
                   className={`inline-flex items-center gap-1.5 px-3.5 py-2 text-xs rounded-lg border transition-all duration-150 whitespace-nowrap shrink-0 ${
                     active
-                      ? 'bg-[#172333] text-white border-[#172333] font-semibold shadow-2xs'
-                      : 'bg-[#F5F5F1]/70 text-[#6E7785] border-[#E2E4DF] hover:bg-white hover:text-[#172333] hover:border-[#172333]/40 font-medium'
+                      ? 'bg-gradient-to-r from-[#0EA5E9] to-[#10B981] text-white border-[#10B981] font-semibold shadow-2xs'
+                      : 'bg-[#132A4A]/70 text-[#94A3B8] border-[#1E3A5F] hover:bg-[#132A4A] hover:text-[#F8FAFC] hover:border-[#10B981]/40 font-medium'
                   }`}
                 >
                   <span>{cat}</span>
@@ -2440,7 +2451,7 @@ export const PortfolioPage: React.FC = () => {
                       className={`font-mono text-[10px] px-1.5 py-0.2 rounded tabular-nums ${
                         active
                           ? 'bg-white/15 text-white'
-                          : 'bg-[#E2E4DF]/70 text-[#172333]'
+                          : 'bg-[#1E3A5F]/70 text-[#F8FAFC]'
                       }`}
                     >
                       {matchCount}
@@ -2455,7 +2466,7 @@ export const PortfolioPage: React.FC = () => {
             type="button"
             onClick={() => scrollCategoryBar('right')}
             aria-label="Scroll categories right"
-            className="hidden sm:inline-flex items-center justify-center w-7 h-7 rounded-md border border-[#E2E4DF] bg-white text-[#6E7785] hover:text-[#172333] hover:border-[#172333]/40 shrink-0 transition-colors"
+            className="hidden sm:inline-flex items-center justify-center w-7 h-7 rounded-md border border-[#1E3A5F] bg-[#0D1F38] text-[#94A3B8] hover:text-[#F8FAFC] hover:border-[#10B981]/40 shrink-0 transition-colors"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
@@ -2464,18 +2475,18 @@ export const PortfolioPage: React.FC = () => {
 
       <div className="max-w-[1200px] mx-auto px-6 py-12 lg:py-14">
         {/* Portfolio Header, Search & Sort Controls */}
-        <div className="border-b border-[#E2E4DF] pb-7">
+        <div className="border-b border-[#1E3A5F] pb-7">
           <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
             <div className="max-w-2xl">
-              <p className="text-xs font-semibold text-[#6E7785] tracking-wide">
+              <p className="text-xs font-semibold text-[#94A3B8] tracking-wide">
                 {custom.portfolioPageKicker || 'Prithvi Editify · Curated Project Showcase'}
               </p>
-              <h1 className="font-editorial text-3xl sm:text-4xl font-semibold text-[#172333] mt-2">
+              <h1 className="font-editorial text-3xl sm:text-4xl font-semibold text-[#F8FAFC] mt-2">
                 {category === 'All'
                   ? custom.portfolioPageTitle || 'Creative Portfolio'
                   : category}
               </h1>
-              <p className="text-base text-[#6E7785] mt-2.5 leading-relaxed">
+              <p className="text-base text-[#94A3B8] mt-2.5 leading-relaxed">
                 {custom.portfolioPageDescription ||
                   'Explore selected design, branding, thumbnail and video editing projects by Prithvi Editify.'}
               </p>
@@ -2484,21 +2495,21 @@ export const PortfolioPage: React.FC = () => {
             {/* Search & Sort Bar */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
               <div className="relative flex-1 sm:w-72">
-                <Search className="w-4 h-4 text-[#6E7785] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <Search className="w-4 h-4 text-[#94A3B8] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="search"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search for a project…"
                   aria-label="Search for a project"
-                  className="w-full pl-10 pr-8 py-2.5 text-xs bg-white border border-[#E2E4DF] rounded-lg text-[#172333] placeholder-[#6E7785] focus:outline-none focus:border-[#172333] transition-colors"
+                  className="w-full pl-10 pr-8 py-2.5 text-xs bg-[#0D1F38] border border-[#1E3A5F] rounded-lg text-[#F8FAFC] placeholder-[#94A3B8] focus:outline-none focus:border-[#10B981] transition-colors"
                 />
                 {searchQuery && (
                   <button
                     type="button"
                     onClick={() => setSearchQuery('')}
                     aria-label="Clear search"
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#6E7785] hover:text-[#172333] p-0.5"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#F8FAFC] p-0.5"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -2506,15 +2517,15 @@ export const PortfolioPage: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-2">
-                <SlidersHorizontal className="w-3.5 h-3.5 text-[#6E7785] shrink-0 hidden sm:block" />
-                <label htmlFor="portfolio-sort" className="text-xs text-[#6E7785] whitespace-nowrap">
+                <SlidersHorizontal className="w-3.5 h-3.5 text-[#94A3B8] shrink-0 hidden sm:block" />
+                <label htmlFor="portfolio-sort" className="text-xs text-[#94A3B8] whitespace-nowrap">
                   Sort by:
                 </label>
                 <select
                   id="portfolio-sort"
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as PortfolioSortOption)}
-                  className="px-3 py-2.5 text-xs font-medium text-[#172333] bg-white border border-[#E2E4DF] rounded-lg focus:outline-none focus:border-[#172333] transition-colors"
+                  className="px-3 py-2.5 text-xs font-medium text-[#F8FAFC] bg-[#0D1F38] border border-[#1E3A5F] rounded-lg focus:outline-none focus:border-[#10B981] transition-colors"
                 >
                   <option value="recommended">Recommended</option>
                   <option value="featured">Featured First</option>
@@ -2525,19 +2536,19 @@ export const PortfolioPage: React.FC = () => {
           </div>
 
           {/* Active Filter Status Strip */}
-          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-xs text-[#6E7785]">
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-xs text-[#94A3B8]">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="font-mono tabular-nums text-[#172333] font-semibold">
+              <span className="font-mono tabular-nums text-[#F8FAFC] font-semibold">
                 {filtered.length} {filtered.length === 1 ? 'project' : 'projects'} available
               </span>
               {category !== 'All' && (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#172333]/5 text-[#172333] font-medium">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#040D1A]/5 text-[#F8FAFC] font-medium">
                   <span>Category: {category}</span>
                   <button
                     type="button"
                     onClick={() => handleSelectCategory('All')}
                     aria-label={`Remove ${category} filter`}
-                    className="hover:text-[#F18A45]"
+                    className="hover:text-[#10B981]"
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -2549,7 +2560,7 @@ export const PortfolioPage: React.FC = () => {
               <button
                 type="button"
                 onClick={handleClearFilters}
-                className="inline-flex items-center gap-1 text-xs font-semibold text-[#172333] hover:text-[#F18A45] transition-colors whitespace-nowrap"
+                className="inline-flex items-center gap-1 text-xs font-semibold text-[#F8FAFC] hover:text-[#10B981] transition-colors whitespace-nowrap"
               >
                 <X className="w-3.5 h-3.5" />
                 <span>Clear all filters</span>
@@ -2564,29 +2575,29 @@ export const PortfolioPage: React.FC = () => {
             {[1, 2, 3, 4, 5, 6].map((n) => (
               <div
                 key={n}
-                className="h-[420px] bg-white border border-[#E2E4DF] rounded-lg animate-pulse"
+                className="h-[420px] bg-[#0D1F38] border border-[#1E3A5F] rounded-lg animate-pulse"
               />
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="mt-10 bg-white border border-[#E2E4DF] rounded-lg p-12 text-center max-w-xl mx-auto shadow-[0_1px_2px_rgba(23,35,51,0.04)]">
-            <h2 className="font-editorial text-xl font-semibold text-[#172333]">
+          <div className="mt-10 bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-12 text-center max-w-xl mx-auto shadow-[0_1px_2px_rgba(0,0,0,0.35)]">
+            <h2 className="font-editorial text-xl font-semibold text-[#F8FAFC]">
               No matching portfolio projects found
             </h2>
-            <p className="text-sm text-[#6E7785] mt-2 leading-relaxed">
+            <p className="text-sm text-[#94A3B8] mt-2 leading-relaxed">
               Try clearing your search query or selecting another creative category, or contact Prithvi Editify to request a custom sample brief.
             </p>
             <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
               <button
                 type="button"
                 onClick={handleClearFilters}
-                className="px-4 py-2.5 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg transition-colors"
+                className="px-4 py-2.5 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-colors"
               >
                 Reset All Filters
               </button>
               <Link
                 to="/contact"
-                className="px-4 py-2.5 text-xs font-semibold text-[#172333] bg-[#F5F5F1] hover:bg-[#E2E4DF] rounded-lg transition-colors"
+                className="px-4 py-2.5 text-xs font-semibold text-[#F8FAFC] bg-[#132A4A] hover:bg-[#1E3A5F] rounded-lg transition-colors"
               >
                 Contact for a Project
               </Link>
@@ -2614,27 +2625,27 @@ export const PortfolioPage: React.FC = () => {
       </div>
 
       {/* Portfolio CTA Banner */}
-      <div className="mt-16 bg-white border border-[#E2E4DF] rounded-lg p-6 sm:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-[0_1px_2px_rgba(23,35,51,0.04)]">
+      <div className="pe-card-interactive mt-16 bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 sm:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-[0_1px_2px_rgba(0,0,0,0.35)]">
         <div className="max-w-xl">
-          <p className="text-xs font-semibold text-[#6E7785]">Start a Creative Project</p>
-          <h2 className="font-editorial text-2xl font-semibold text-[#172333] mt-1">
+          <p className="text-xs font-semibold text-[#94A3B8]">Start a Creative Project</p>
+          <h2 className="font-editorial text-2xl font-semibold text-[#F8FAFC] mt-1">
             Looking for similar design quality or video editing for your brand?
           </h2>
-          <p className="text-sm text-[#6E7785] mt-2 leading-relaxed">
+          <p className="text-sm text-[#94A3B8] mt-2 leading-relaxed">
             Explore our service rates or send your project brief directly to Shankar Baluragi.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3 shrink-0">
           <Link
             to="/contact"
-            className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg transition-colors whitespace-nowrap"
+            className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-colors whitespace-nowrap"
           >
             <span>Contact for a Project</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </Link>
           <Link
             to="/services"
-            className="px-4 py-2.5 text-xs font-semibold text-[#172333] bg-[#F5F5F1] hover:bg-[#E2E4DF] rounded-lg transition-colors whitespace-nowrap"
+            className="px-4 py-2.5 text-xs font-semibold text-[#F8FAFC] bg-[#132A4A] hover:bg-[#1E3A5F] rounded-lg transition-colors whitespace-nowrap"
           >
             Browse Creative Services
           </Link>
@@ -2749,17 +2760,17 @@ export const PortfolioDetailPage: React.FC = () => {
     return [...sameCat, ...others].slice(0, 3);
   }, [items, project]);
 
-  const primaryBg = custom.primaryColor || '#172333';
-  const secondaryBg = custom.secondaryColor || '#24364A';
-  const accentColor = custom.accentColor || '#F18A45';
+  const primaryBg = custom.primaryColor || '#040D1A';
+  const secondaryBg = custom.secondaryColor || '#132A4A';
+  const accentColor = custom.accentColor || '#10B981';
 
   if (loading) {
     return (
       <div className="max-w-[1200px] mx-auto px-6 py-16 space-y-8">
-        <div className="h-6 w-64 bg-white border border-[#E2E4DF] rounded animate-pulse" />
+        <div className="h-6 w-64 bg-[#0D1F38] border border-[#1E3A5F] rounded animate-pulse" />
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          <div className="lg:col-span-8 h-[480px] bg-white border border-[#E2E4DF] rounded-lg animate-pulse" />
-          <div className="lg:col-span-4 h-[360px] bg-white border border-[#E2E4DF] rounded-lg animate-pulse" />
+          <div className="lg:col-span-8 h-[480px] bg-[#0D1F38] border border-[#1E3A5F] rounded-lg animate-pulse" />
+          <div className="lg:col-span-4 h-[360px] bg-[#0D1F38] border border-[#1E3A5F] rounded-lg animate-pulse" />
         </div>
       </div>
     );
@@ -2768,24 +2779,24 @@ export const PortfolioDetailPage: React.FC = () => {
   if (!project) {
     return (
       <div className="max-w-[1200px] mx-auto px-6 py-20 text-center space-y-4">
-        <p className="text-xs font-semibold text-[#6E7785]">Project Not Found</p>
-        <h1 className="font-editorial text-3xl font-semibold text-[#172333]">
+        <p className="text-xs font-semibold text-[#94A3B8]">Project Not Found</p>
+        <h1 className="font-editorial text-3xl font-semibold text-[#F8FAFC]">
           This portfolio project is unavailable
         </h1>
-        <p className="text-sm text-[#6E7785] max-w-md mx-auto">
+        <p className="text-sm text-[#94A3B8] max-w-md mx-auto">
           The project you selected may have been moved or unpublished. Return to the portfolio gallery to explore more work.
         </p>
         <div className="pt-2 flex items-center justify-center gap-3">
           <Link
             to="/portfolio"
-            className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg transition-colors"
+            className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Back to Creative Portfolio</span>
           </Link>
           <Link
             to="/contact"
-            className="px-5 py-2.5 text-xs font-semibold text-[#172333] bg-white border border-[#E2E4DF] hover:border-[#172333] rounded-lg transition-colors"
+            className="px-5 py-2.5 text-xs font-semibold text-[#F8FAFC] bg-[#0D1F38] border border-[#1E3A5F] hover:border-[#10B981] rounded-lg transition-colors"
           >
             Contact for a Project
           </Link>
@@ -2820,30 +2831,30 @@ export const PortfolioDetailPage: React.FC = () => {
   return (
     <div className="max-w-[1200px] mx-auto px-6 py-10 lg:py-14 space-y-10">
       {/* Top Breadcrumb & Project Header */}
-      <div className="space-y-5 border-b border-[#E2E4DF] pb-6">
+      <div className="space-y-5 border-b border-[#1E3A5F] pb-6">
         <nav
           aria-label="Breadcrumb"
-          className="flex flex-wrap items-center justify-between gap-4 text-xs text-[#6E7785]"
+          className="flex flex-wrap items-center justify-between gap-4 text-xs text-[#94A3B8]"
         >
           <div className="flex flex-wrap items-center gap-2">
-            <Link to="/portfolio" className="hover:text-[#172333] transition-colors font-medium">
+            <Link to="/portfolio" className="hover:text-[#F8FAFC] transition-colors font-medium">
               Creative Portfolio
             </Link>
             <span aria-hidden="true">/</span>
             <Link
               to={`/portfolio?category=${encodeURIComponent(displayCategory)}`}
-              className="hover:text-[#172333] transition-colors"
+              className="hover:text-[#F8FAFC] transition-colors"
             >
               {displayCategory}
             </Link>
             <span aria-hidden="true">/</span>
-            <span className="text-[#172333] font-medium truncate max-w-xs sm:max-w-md">
+            <span className="text-[#F8FAFC] font-medium truncate max-w-xs sm:max-w-md">
               {project.title}
             </span>
           </div>
           <Link
             to="/portfolio"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#172333] hover:text-[#F18A45] transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#F8FAFC] hover:text-[#10B981] transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Back to Portfolio</span>
@@ -2851,18 +2862,18 @@ export const PortfolioDetailPage: React.FC = () => {
         </nav>
 
         <div className="space-y-2">
-          <div className="flex flex-wrap items-center gap-2 text-xs text-[#6E7785]">
-            <span className="font-semibold text-[#172333]">{displayCategory}</span>
+          <div className="flex flex-wrap items-center gap-2 text-xs text-[#94A3B8]">
+            <span className="font-semibold text-[#F8FAFC]">{displayCategory}</span>
             <span aria-hidden="true">·</span>
             <span>{project.metricsSummary || 'Studio Deliverable'}</span>
             {project.isSampleContent && (
               <>
                 <span aria-hidden="true">·</span>
-                <span className="text-[#A96518] font-medium">Demonstration Sample</span>
+                <span className="text-[#D97706] font-medium">Demonstration Sample</span>
               </>
             )}
           </div>
-          <h1 className="font-editorial text-3xl sm:text-4xl font-semibold text-[#172333] leading-tight">
+          <h1 className="font-editorial text-3xl sm:text-4xl font-semibold text-[#F8FAFC] leading-tight">
             {project.title}
           </h1>
         </div>
@@ -2875,7 +2886,7 @@ export const PortfolioDetailPage: React.FC = () => {
           {/* Primary Showcase Media Viewer */}
           <div className="space-y-3">
             {project.videoUrl ? (
-              <div className="bg-[#0F1722] border border-[#E2E4DF] rounded-lg overflow-hidden">
+              <div className="bg-[#040D1A] border border-[#1E3A5F] rounded-lg overflow-hidden">
                 <video
                   src={project.videoUrl}
                   poster={primaryCover}
@@ -2885,7 +2896,7 @@ export const PortfolioDetailPage: React.FC = () => {
                 />
               </div>
             ) : (
-              <div className="relative h-[340px] sm:h-[460px] w-full bg-[#0F1722] border border-[#E2E4DF] rounded-lg overflow-hidden">
+              <div className="relative h-[340px] sm:h-[460px] w-full bg-[#040D1A] border border-[#1E3A5F] rounded-lg overflow-hidden">
                 {hasCustomCover && (
                   <img
                     src={activeImageUrl}
@@ -2919,9 +2930,9 @@ export const PortfolioDetailPage: React.FC = () => {
                       storageBucket: 'portfolio-media',
                     })
                   }
-                  className="absolute bottom-4 right-4 z-20 inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-[#172333]/90 hover:bg-[#172333] border border-white/15 rounded-lg shadow-sm transition-colors"
+                  className="absolute bottom-4 right-4 z-20 inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-[#040D1A]/90 hover:bg-[#040D1A] border border-white/15 rounded-lg shadow-sm transition-colors"
                 >
-                  <Eye className="w-4 h-4 text-[#F18A45]" />
+                  <Eye className="w-4 h-4 text-[#10B981]" />
                   <span>Inspect Full Resolution</span>
                 </button>
               </div>
@@ -2935,10 +2946,10 @@ export const PortfolioDetailPage: React.FC = () => {
                     key={`${imgUrl}_${idx}`}
                     type="button"
                     onClick={() => setActiveImageIndex(idx)}
-                    className={`w-20 h-16 rounded-md overflow-hidden border bg-[#0F1722] transition-all ${
+                    className={`w-20 h-16 rounded-md overflow-hidden border bg-[#040D1A] transition-all ${
                       activeImageIndex === idx
-                        ? 'border-[#172333] ring-2 ring-[#172333]/20'
-                        : 'border-[#E2E4DF] opacity-75 hover:opacity-100'
+                        ? 'border-[#040D1A] ring-2 ring-[#10B981]/20'
+                        : 'border-[#1E3A5F] opacity-75 hover:opacity-100'
                     }`}
                   >
                     <img
@@ -2954,17 +2965,17 @@ export const PortfolioDetailPage: React.FC = () => {
           </div>
 
           {/* Project Description & Creative Notes */}
-          <section className="bg-white border border-[#E2E4DF] rounded-lg p-6 sm:p-8 space-y-4 shadow-[0_1px_2px_rgba(23,35,51,0.04)]">
-            <h2 className="font-editorial text-xl font-semibold text-[#172333]">
+          <section className="pe-card-interactive bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 sm:p-8 space-y-4 shadow-[0_1px_2px_rgba(0,0,0,0.35)]">
+            <h2 className="font-editorial text-xl font-semibold text-[#F8FAFC]">
               Project Overview
             </h2>
-            <p className="text-sm sm:text-base text-[#6E7785] leading-relaxed">
+            <p className="text-sm sm:text-base text-[#94A3B8] leading-relaxed">
               {project.description}
             </p>
 
             {project.tags && project.tags.length > 0 && (
-              <div className="pt-4 border-t border-[#E2E4DF] flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-[#6E7785]">
-                <span className="font-semibold text-[#172333]">Keywords:</span>
+              <div className="pt-4 border-t border-[#1E3A5F] flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-[#94A3B8]">
+                <span className="font-semibold text-[#F8FAFC]">Keywords:</span>
                 {project.tags.map((tag, idx) => (
                   <React.Fragment key={`${tag}_${idx}`}>
                     {idx > 0 && <span aria-hidden="true">·</span>}
@@ -2978,55 +2989,55 @@ export const PortfolioDetailPage: React.FC = () => {
 
         {/* Right Sticky Project Info & Inquiry Panel */}
         <aside className="lg:col-span-4 lg:sticky lg:top-24 space-y-6">
-          <div className="bg-white border border-[#E2E4DF] rounded-lg overflow-hidden shadow-[0_4px_16px_rgba(23,35,51,0.05)]">
-            <div className="px-6 py-4 bg-[#172333] text-white flex items-center justify-between">
+          <div className="pe-card-interactive bg-[#0D1F38] border border-[#1E3A5F] rounded-lg overflow-hidden shadow-[0_4px_16px_rgba(23,35,51,0.05)]">
+            <div className="px-6 py-4 bg-[#132A4A] text-[#F8FAFC] flex items-center justify-between">
               <span className="text-xs font-semibold tracking-wide">Project Summary</span>
-              <span className="font-mono text-xs text-[#F18A45]">PORTFOLIO</span>
+              <span className="font-mono text-xs text-[#10B981]">PORTFOLIO</span>
             </div>
 
             <div className="p-6 space-y-6">
-              <div className="border-b border-[#E2E4DF] pb-4">
-                <p className="text-xs text-[#6E7785]">{displayCategory}</p>
-                <h2 className="text-lg font-semibold text-[#172333] mt-0.5">{project.title}</h2>
+              <div className="border-b border-[#1E3A5F] pb-4">
+                <p className="text-xs text-[#94A3B8]">{displayCategory}</p>
+                <h2 className="text-lg font-semibold text-[#F8FAFC] mt-0.5">{project.title}</h2>
               </div>
 
               <dl className="space-y-3.5 text-xs">
                 <div className="flex items-start justify-between gap-4">
-                  <dt className="text-[#6E7785]">Category</dt>
-                  <dd className="font-semibold text-[#172333] text-right">{displayCategory}</dd>
+                  <dt className="text-[#94A3B8]">Category</dt>
+                  <dd className="font-semibold text-[#F8FAFC] text-right">{displayCategory}</dd>
                 </div>
                 <div className="flex items-start justify-between gap-4">
-                  <dt className="text-[#6E7785]">Specifications</dt>
-                  <dd className="font-semibold text-[#172333] text-right">
+                  <dt className="text-[#94A3B8]">Specifications</dt>
+                  <dd className="font-semibold text-[#F8FAFC] text-right">
                     {project.metricsSummary || 'Studio Deliverable'}
                   </dd>
                 </div>
                 <div className="flex items-start justify-between gap-4">
-                  <dt className="text-[#6E7785]">Studio</dt>
-                  <dd className="font-semibold text-[#172333] text-right">
+                  <dt className="text-[#94A3B8]">Studio</dt>
+                  <dd className="font-semibold text-[#F8FAFC] text-right">
                     {settings.businessName || 'Prithvi Editify'}
                   </dd>
                 </div>
                 <div className="flex items-start justify-between gap-4">
-                  <dt className="text-[#6E7785]">Creative Lead</dt>
-                  <dd className="font-semibold text-[#172333] text-right">
+                  <dt className="text-[#94A3B8]">Creative Lead</dt>
+                  <dd className="font-semibold text-[#F8FAFC] text-right">
                     {settings.ownerName || 'Shankar Baluragi'}
                   </dd>
                 </div>
                 {project.isSampleContent && (
-                  <div className="pt-2 border-t border-[#E2E4DF] text-[11px] text-[#A96518]">
+                  <div className="pt-2 border-t border-[#1E3A5F] text-[11px] text-[#D97706]">
                     Note: This record is labeled as a studio demonstration sample.
                   </div>
                 )}
               </dl>
 
               {project.projectUrl && (
-                <div className="pt-2 border-t border-[#E2E4DF]">
+                <div className="pt-2 border-t border-[#1E3A5F]">
                   <a
                     href={project.projectUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-semibold text-[#172333] bg-[#F5F5F1] hover:bg-[#E2E4DF] rounded-lg transition-colors"
+                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-semibold text-[#F8FAFC] bg-[#132A4A] hover:bg-[#1E3A5F] rounded-lg transition-colors"
                   >
                     <span>View Live External Link</span>
                     <ExternalLink className="w-3.5 h-3.5" />
@@ -3034,10 +3045,10 @@ export const PortfolioDetailPage: React.FC = () => {
                 </div>
               )}
 
-              <div className="pt-2 border-t border-[#E2E4DF] space-y-2.5">
+              <div className="pt-2 border-t border-[#1E3A5F] space-y-2.5">
                 <Link
                   to={`/contact?service=${encodeURIComponent(displayCategory)}`}
-                  className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg transition-colors"
+                  className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-colors"
                 >
                   <span>Contact for a Project</span>
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -3047,7 +3058,7 @@ export const PortfolioDetailPage: React.FC = () => {
                   href={whatsappUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-xs font-semibold text-[#172333] rounded-lg transition-colors"
+                  className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-xs font-semibold text-white rounded-lg hover:opacity-95 transition-opacity"
                   style={{ backgroundColor: accentColor }}
                 >
                   <MessageSquare className="w-3.5 h-3.5" />
@@ -3061,17 +3072,17 @@ export const PortfolioDetailPage: React.FC = () => {
 
       {/* More Portfolio Projects */}
       {relatedProjects.length > 0 && (
-        <section className="pt-12 border-t border-[#E2E4DF] space-y-6">
+        <section className="pt-12 border-t border-[#1E3A5F] space-y-6">
           <div className="flex items-end justify-between gap-4">
             <div>
-              <p className="text-xs font-semibold text-[#6E7785]">More Studio Work</p>
-              <h2 className="font-editorial text-2xl font-semibold text-[#172333] mt-1">
+              <p className="text-xs font-semibold text-[#94A3B8]">More Studio Work</p>
+              <h2 className="font-editorial text-2xl font-semibold text-[#F8FAFC] mt-1">
                 Related Portfolio Projects
               </h2>
             </div>
             <Link
               to="/portfolio"
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#172333] hover:text-[#F18A45] transition-colors"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#F8FAFC] hover:text-[#10B981] transition-colors"
             >
               <span>View Full Portfolio</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -3126,9 +3137,9 @@ export const PortfolioDetailPage: React.FC = () => {
 export const AboutPage: React.FC = () => {
   const { settings } = useOutletContext<OutletCtx>();
   const custom = mergeSiteCustomization(settings.siteCustomization || DEFAULT_SITE_CUSTOMIZATION);
-  const primaryBg = custom.primaryColor || '#172333';
-  const secondaryBg = custom.secondaryColor || '#24364A';
-  const accentColor = custom.accentColor || '#F18A45';
+  const primaryBg = custom.primaryColor || '#040D1A';
+  const secondaryBg = custom.secondaryColor || '#132A4A';
+  const accentColor = custom.accentColor || '#10B981';
 
   const founderSrc =
     custom.founderImageUrl ||
@@ -3144,12 +3155,12 @@ export const AboutPage: React.FC = () => {
     <div className="max-w-[1200px] mx-auto px-6 py-16 space-y-16">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
         <div className="lg:col-span-7 space-y-5">
-          <p className="text-xs font-semibold text-[#6E7785] tracking-wide">{custom.aboutKicker}</p>
-          <h1 className="font-editorial text-4xl font-semibold text-[#172333] leading-tight">
+          <p className="text-xs font-semibold text-[#94A3B8] tracking-wide">{custom.aboutKicker}</p>
+          <h1 className="font-editorial text-4xl font-semibold text-[#F8FAFC] leading-tight">
             {custom.aboutHeading}
           </h1>
-          <p className="text-base text-[#6E7785] leading-relaxed">{custom.aboutParagraph1}</p>
-          <p className="text-sm text-[#6E7785] leading-relaxed">{custom.aboutParagraph2}</p>
+          <p className="text-base text-[#94A3B8] leading-relaxed">{custom.aboutParagraph1}</p>
+          <p className="text-sm text-[#94A3B8] leading-relaxed">{custom.aboutParagraph2}</p>
           <div className="pt-2 flex flex-wrap gap-4">
             <Link
               to="/contact"
@@ -3160,7 +3171,7 @@ export const AboutPage: React.FC = () => {
             </Link>
             <Link
               to="/services"
-              className="px-5 py-2.5 text-sm font-semibold text-[#172333] bg-white border border-[#E2E4DF] hover:border-[#172333] rounded-lg transition-colors whitespace-nowrap"
+              className="px-5 py-2.5 text-sm font-semibold text-[#F8FAFC] bg-[#0D1F38] border border-[#1E3A5F] hover:border-[#10B981] rounded-lg transition-colors whitespace-nowrap"
             >
               {custom.aboutSecondaryCtaLabel || 'View Services & Pricing'}
             </Link>
@@ -3168,7 +3179,7 @@ export const AboutPage: React.FC = () => {
         </div>
 
         <div className="lg:col-span-5">
-          <div className="bg-white border border-[#E2E4DF] rounded-lg overflow-hidden shadow-[0_1px_2px_rgba(23,35,51,0.04)]">
+          <div className="pe-card-interactive bg-[#0D1F38] border border-[#1E3A5F] rounded-lg overflow-hidden shadow-[0_1px_2px_rgba(0,0,0,0.35)]">
             <img
               src={founderSrc}
               alt={custom.founderName || settings.ownerName || 'Shankar Baluragi'}
@@ -3176,10 +3187,10 @@ export const AboutPage: React.FC = () => {
               className="w-full aspect-[4/3] object-cover"
             />
             <div className="p-6 space-y-2">
-              <p className="text-sm font-semibold text-[#172333]">
+              <p className="text-sm font-semibold text-[#F8FAFC]">
                 {custom.founderName || settings.ownerName || 'Shankar Baluragi'}
               </p>
-              <p className="text-xs text-[#6E7785]">{custom.founderRole}</p>
+              <p className="text-xs text-[#94A3B8]">{custom.founderRole}</p>
             </div>
           </div>
         </div>
@@ -3189,10 +3200,10 @@ export const AboutPage: React.FC = () => {
         {custom.aboutPillars.map((pillar, idx) => (
           <div
             key={`${pillar.title}_${idx}`}
-            className="bg-white border border-[#E2E4DF] rounded-lg p-6 shadow-[0_1px_2px_rgba(23,35,51,0.04)]"
+            className="pe-card-interactive bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 shadow-[0_1px_2px_rgba(0,0,0,0.35)]"
           >
-            <h2 className="text-base font-semibold text-[#172333]">{pillar.title}</h2>
-            <p className="text-sm text-[#6E7785] mt-2 leading-relaxed">{pillar.desc}</p>
+            <h2 className="text-base font-semibold text-[#F8FAFC]">{pillar.title}</h2>
+            <p className="text-sm text-[#94A3B8] mt-2 leading-relaxed">{pillar.desc}</p>
           </div>
         ))}
       </div>
@@ -3209,44 +3220,44 @@ export const ContactPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const preselectedService = searchParams.get('service') || undefined;
   const whatsappUrl = buildWhatsAppLink(settings.whatsappNumber, settings.whatsappDefaultMessage);
-  const accentColor = custom.accentColor || '#F18A45';
+  const accentColor = custom.accentColor || '#10B981';
 
   return (
     <div className="max-w-[1200px] mx-auto px-6 py-16">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
         <div className="lg:col-span-5 space-y-6">
           <div>
-            <p className="text-xs font-semibold text-[#6E7785] tracking-wide">
+            <p className="text-xs font-semibold text-[#94A3B8] tracking-wide">
               {custom.contactKicker}
             </p>
-            <h1 className="font-editorial text-4xl font-semibold text-[#172333] mt-2">
+            <h1 className="font-editorial text-4xl font-semibold text-[#F8FAFC] mt-2">
               {custom.contactHeading}
             </h1>
-            <p className="text-sm text-[#6E7785] mt-3 leading-relaxed">
+            <p className="text-sm text-[#94A3B8] mt-3 leading-relaxed">
               {custom.contactDescription}
             </p>
           </div>
 
-          <div className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-4 shadow-[0_1px_2px_rgba(23,35,51,0.04)]">
-            <h2 className="text-base font-semibold text-[#172333]">{custom.whatsappCardTitle}</h2>
-            <p className="text-xs text-[#6E7785] leading-relaxed">{custom.whatsappCardDesc}</p>
+          <div className="pe-card-interactive bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 space-y-4 shadow-[0_1px_2px_rgba(0,0,0,0.35)]">
+            <h2 className="text-base font-semibold text-[#F8FAFC]">{custom.whatsappCardTitle}</h2>
+            <p className="text-xs text-[#94A3B8] leading-relaxed">{custom.whatsappCardDesc}</p>
             <a
               href={whatsappUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-semibold text-[#172333] rounded-lg transition-colors whitespace-nowrap shrink-0"
+              className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-semibold text-white rounded-lg hover:opacity-95 transition-opacity whitespace-nowrap shrink-0"
               style={{ backgroundColor: accentColor }}
             >
               <MessageSquare className="w-4 h-4" />
               <span>{custom.whatsappButtonLabel || 'Discuss on WhatsApp'}</span>
             </a>
-            <p className="text-[11px] text-[#6E7785]">
+            <p className="text-[11px] text-[#94A3B8]">
               Note: Clicking opens WhatsApp; you confirm and send the message in your WhatsApp app.
             </p>
           </div>
 
-          <div className="bg-white border border-[#E2E4DF] rounded-lg p-6 space-y-2 text-xs text-[#6E7785] shadow-[0_1px_2px_rgba(23,35,51,0.04)]">
-            <p className="font-semibold text-[#172333]">Studio Information</p>
+          <div className="pe-card-interactive bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 space-y-2 text-xs text-[#94A3B8] shadow-[0_1px_2px_rgba(0,0,0,0.35)]">
+            <p className="font-semibold text-[#F8FAFC]">Studio Information</p>
             <p>Business: {settings.businessName || 'Prithvi Editify'}</p>
             <p>Owner: {settings.ownerName || 'Shankar Baluragi'}</p>
             {settings.businessEmail && <p>Email: {settings.businessEmail}</p>}
@@ -3275,16 +3286,16 @@ export const PrivacyPolicyPage: React.FC = () => {
 
   return (
     <div className="max-w-3xl mx-auto px-6 py-16 space-y-6">
-      <h1 className="font-editorial text-3xl font-semibold text-[#172333]">Privacy Policy</h1>
-      <p className="text-xs text-[#6E7785]">
+      <h1 className="font-editorial text-3xl font-semibold text-[#F8FAFC]">Privacy Policy</h1>
+      <p className="text-xs text-[#94A3B8]">
         Effective Date: {custom.legalEffectiveDate || 'October 2026'} ·{' '}
         {settings.businessName || 'Prithvi Editify'} ({settings.ownerName || 'Shankar Baluragi'})
       </p>
-      <div className="bg-white border border-[#E2E4DF] rounded-lg p-8 space-y-4 text-sm text-[#172333] leading-relaxed">
+      <div className="pe-card-interactive bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-8 space-y-4 text-sm text-[#F8FAFC] leading-relaxed">
         {custom.privacySections.map((sec, idx) => (
           <React.Fragment key={`${sec.heading}_${idx}`}>
             <h2 className="text-base font-semibold">{sec.heading}</h2>
-            <p className="text-[#6E7785]">{sec.body}</p>
+            <p className="text-[#94A3B8]">{sec.body}</p>
           </React.Fragment>
         ))}
       </div>
@@ -3298,18 +3309,18 @@ export const TermsPage: React.FC = () => {
 
   return (
     <div className="max-w-3xl mx-auto px-6 py-16 space-y-6">
-      <h1 className="font-editorial text-3xl font-semibold text-[#172333]">
+      <h1 className="font-editorial text-3xl font-semibold text-[#F8FAFC]">
         Terms and Conditions
       </h1>
-      <p className="text-xs text-[#6E7785]">
+      <p className="text-xs text-[#94A3B8]">
         Effective Date: {custom.legalEffectiveDate || 'October 2026'} ·{' '}
         {settings.businessName || 'Prithvi Editify'} ({settings.ownerName || 'Shankar Baluragi'})
       </p>
-      <div className="bg-white border border-[#E2E4DF] rounded-lg p-8 space-y-4 text-sm text-[#172333] leading-relaxed">
+      <div className="pe-card-interactive bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-8 space-y-4 text-sm text-[#F8FAFC] leading-relaxed">
         {custom.termsSections.map((sec, idx) => (
           <React.Fragment key={`${sec.heading}_${idx}`}>
             <h2 className="text-base font-semibold">{sec.heading}</h2>
-            <p className="text-[#6E7785]">{sec.body}</p>
+            <p className="text-[#94A3B8]">{sec.body}</p>
           </React.Fragment>
         ))}
       </div>
@@ -3319,21 +3330,21 @@ export const TermsPage: React.FC = () => {
 
 export const NotFoundPage: React.FC = () => (
   <div className="max-w-xl mx-auto px-6 py-24 text-center space-y-5">
-    <p className="font-mono text-xs text-[#F18A45] font-semibold">ERROR 404</p>
-    <h1 className="font-editorial text-3xl font-semibold text-[#172333]">Page not found</h1>
-    <p className="text-sm text-[#6E7785]">
+    <p className="font-mono text-xs text-[#10B981] font-semibold">ERROR 404</p>
+    <h1 className="font-editorial text-3xl font-semibold text-[#F8FAFC]">Page not found</h1>
+    <p className="text-sm text-[#94A3B8]">
       The page you are looking for does not exist or has been moved.
     </p>
     <div className="pt-2 flex items-center justify-center gap-3">
       <Link
         to="/"
-        className="px-5 py-2.5 text-xs font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg transition-colors"
+        className="px-5 py-2.5 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-colors"
       >
         Return Home
       </Link>
       <Link
         to="/contact"
-        className="px-5 py-2.5 text-xs font-semibold text-[#172333] bg-white border border-[#E2E4DF] hover:border-[#172333] rounded-lg transition-colors"
+        className="px-5 py-2.5 text-xs font-semibold text-[#F8FAFC] bg-[#0D1F38] border border-[#1E3A5F] hover:border-[#10B981] rounded-lg transition-colors"
       >
         Contact Studio
       </Link>

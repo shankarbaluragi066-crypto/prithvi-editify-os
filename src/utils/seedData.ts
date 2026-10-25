@@ -13,9 +13,9 @@ import {
 export function createStudioArtworkDataUri(
   title: string,
   subtitle: string,
-  accentColor: string = '#F18A45',
-  bgPrimary: string = '#172333',
-  bgSecondary: string = '#24364A'
+  accentColor: string = '#10B981',
+  bgPrimary: string = '#040D1A',
+  bgSecondary: string = '#0D1F38'
 ): string {
   const safeTitle = title.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const safeSub = subtitle.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -25,46 +25,51 @@ export function createStudioArtworkDataUri(
         <stop offset="0%" stop-color="${bgPrimary}"/>
         <stop offset="100%" stop-color="${bgSecondary}"/>
       </linearGradient>
-      <radialGradient id="glow" cx="78%" cy="32%" r="48%">
-        <stop offset="0%" stop-color="${accentColor}" stop-opacity="0.22"/>
-        <stop offset="100%" stop-color="${accentColor}" stop-opacity="0"/>
+      <radialGradient id="glow" cx="78%" cy="28%" r="52%">
+        <stop offset="0%" stop-color="${accentColor}" stop-opacity="0.34"/>
+        <stop offset="55%" stop-color="#0EA5E9" stop-opacity="0.16"/>
+        <stop offset="100%" stop-color="#2DD4BF" stop-opacity="0"/>
       </radialGradient>
+      <linearGradient id="accentGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#0EA5E9"/>
+        <stop offset="100%" stop-color="#10B981"/>
+      </linearGradient>
     </defs>
     <rect width="800" height="600" fill="url(#bg)"/>
     <rect width="800" height="600" fill="url(#glow)"/>
-    <g stroke="#ffffff" stroke-opacity="0.06" stroke-width="1">
+    <g stroke="#1E3A5F" stroke-opacity="0.6" stroke-width="1">
       <line x1="72" y1="0" x2="72" y2="600"/>
       <line x1="400" y1="0" x2="400" y2="600" stroke-dasharray="4 6"/>
       <line x1="728" y1="0" x2="728" y2="600"/>
       <line x1="0" y1="88" x2="800" y2="88"/>
       <line x1="0" y1="512" x2="800" y2="512"/>
     </g>
-    <rect x="72" y="88" width="656" height="424" rx="10" fill="#172333" fill-opacity="0.68" stroke="#ffffff" stroke-opacity="0.14"/>
-    <line x1="72" y1="136" x2="728" y2="136" stroke="#ffffff" stroke-opacity="0.09"/>
-    <circle cx="100" cy="112" r="4" fill="${accentColor}" fill-opacity="0.85"/>
-    <circle cx="116" cy="112" r="4" fill="#ffffff" fill-opacity="0.22"/>
-    <circle cx="132" cy="112" r="4" fill="#ffffff" fill-opacity="0.12"/>
-    <text x="696" y="116" text-anchor="end" fill="#9BA3B0" font-family="monospace" font-size="11" letter-spacing="1.2">PRITHVI EDITIFY · STUDIO</text>
-    <circle cx="624" cy="248" r="88" fill="${accentColor}" fill-opacity="0.12"/>
-    <circle cx="624" cy="248" r="52" fill="none" stroke="${accentColor}" stroke-width="1.75" stroke-opacity="0.65"/>
-    <circle cx="624" cy="248" r="4" fill="${accentColor}"/>
-    <rect x="120" y="176" width="64" height="4" rx="2" fill="${accentColor}"/>
-    <text x="120" y="232" fill="#F5F5F1" font-family="Georgia, 'Times New Roman', serif" font-size="33" font-weight="600" letter-spacing="-0.4">${safeTitle}</text>
-    <text x="120" y="270" fill="#D0D5DD" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="15" letter-spacing="0.3">${safeSub}</text>
+    <rect x="72" y="88" width="656" height="424" rx="14" fill="#081629" fill-opacity="0.9" stroke="#1E3A5F" stroke-width="1.2"/>
+    <line x1="72" y1="136" x2="728" y2="136" stroke="#1E3A5F" stroke-width="1"/>
+    <circle cx="100" cy="112" r="4.5" fill="#0EA5E9"/>
+    <circle cx="116" cy="112" r="4.5" fill="#14B8A6" fill-opacity="0.9"/>
+    <circle cx="132" cy="112" r="4.5" fill="#10B981" fill-opacity="0.85"/>
+    <text x="696" y="116" text-anchor="end" fill="#94A3B8" font-family="monospace" font-size="11" letter-spacing="1.2">PRITHVI EDITIFY · CREATIVE STUDIO</text>
+    <circle cx="624" cy="248" r="88" fill="#10B981" fill-opacity="0.14"/>
+    <circle cx="624" cy="248" r="52" fill="none" stroke="url(#accentGrad)" stroke-width="1.75" stroke-opacity="0.88"/>
+    <circle cx="624" cy="248" r="4.5" fill="#2DD4BF"/>
+    <rect x="120" y="176" width="72" height="4" rx="2" fill="url(#accentGrad)"/>
+    <text x="120" y="232" fill="#F8FAFC" font-family="-apple-system, BlinkMacSystemFont, 'Plus Jakarta Sans', sans-serif" font-size="32" font-weight="700" letter-spacing="-0.6">${safeTitle}</text>
+    <text x="120" y="270" fill="#94A3B8" font-family="-apple-system, BlinkMacSystemFont, 'Plus Jakarta Sans', sans-serif" font-size="15" letter-spacing="0.2">${safeSub}</text>
     <g transform="translate(120, 344)">
-      <rect x="0" y="0" width="176" height="108" rx="6" fill="#24364A" fill-opacity="0.85" stroke="#ffffff" stroke-opacity="0.12"/>
-      <rect x="20" y="22" width="64" height="7" rx="3.5" fill="${accentColor}"/>
-      <rect x="20" y="42" width="124" height="6" rx="3" fill="#ffffff" fill-opacity="0.38"/>
-      <rect x="20" y="56" width="96" height="6" rx="3" fill="#ffffff" fill-opacity="0.2"/>
-      <text x="20" y="86" fill="#9BA3B0" font-family="monospace" font-size="10" letter-spacing="0.8">LAYOUT &amp; GRID</text>
-      <rect x="196" y="0" width="360" height="108" rx="6" fill="#24364A" fill-opacity="0.85" stroke="#ffffff" stroke-opacity="0.12"/>
-      <line x1="220" y1="38" x2="532" y2="38" stroke="#ffffff" stroke-opacity="0.14" stroke-width="2"/>
-      <line x1="220" y1="38" x2="395" y2="38" stroke="${accentColor}" stroke-width="2.5"/>
-      <circle cx="395" cy="38" r="6" fill="#F5F5F1" stroke="${accentColor}" stroke-width="2"/>
-      <rect x="220" y="56" width="88" height="10" rx="3" fill="#ffffff" fill-opacity="0.18"/>
-      <rect x="316" y="56" width="128" height="10" rx="3" fill="${accentColor}" fill-opacity="0.32"/>
-      <rect x="452" y="56" width="80" height="10" rx="3" fill="#ffffff" fill-opacity="0.12"/>
-      <text x="220" y="88" fill="#9BA3B0" font-family="monospace" font-size="10" letter-spacing="0.8">MASTER TIMELINE · COLOR CALIBRATED</text>
+      <rect x="0" y="0" width="176" height="108" rx="10" fill="#132A4A" fill-opacity="0.92" stroke="#1E3A5F" stroke-width="1"/>
+      <rect x="20" y="22" width="64" height="7" rx="3.5" fill="url(#accentGrad)"/>
+      <rect x="20" y="42" width="124" height="6" rx="3" fill="#F8FAFC" fill-opacity="0.38"/>
+      <rect x="20" y="56" width="96" height="6" rx="3" fill="#94A3B8" fill-opacity="0.28"/>
+      <text x="20" y="86" fill="#94A3B8" font-family="monospace" font-size="10" letter-spacing="0.8">VISUAL SYSTEM</text>
+      <rect x="196" y="0" width="360" height="108" rx="10" fill="#132A4A" fill-opacity="0.92" stroke="#1E3A5F" stroke-width="1"/>
+      <line x1="220" y1="38" x2="532" y2="38" stroke="#1E3A5F" stroke-width="2"/>
+      <line x1="220" y1="38" x2="395" y2="38" stroke="url(#accentGrad)" stroke-width="2.5"/>
+      <circle cx="395" cy="38" r="6" fill="#F8FAFC" stroke="#10B981" stroke-width="2"/>
+      <rect x="220" y="56" width="88" height="10" rx="3" fill="#0EA5E9" fill-opacity="0.32"/>
+      <rect x="316" y="56" width="128" height="10" rx="3" fill="#14B8A6" fill-opacity="0.52"/>
+      <rect x="452" y="56" width="80" height="10" rx="3" fill="#10B981" fill-opacity="0.38"/>
+      <text x="220" y="88" fill="#94A3B8" font-family="monospace" font-size="10" letter-spacing="0.8">MASTER TIMELINE · STUDIO GRADE</text>
     </g>
   </svg>`;
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
@@ -74,10 +79,10 @@ export const DEFAULT_STUDIO_LOGO_URL = '/assets/aistudio/image_82a12d7d.png';
 
 export const DEFAULT_SITE_CUSTOMIZATION: SiteCustomization = {
   logoUrl: DEFAULT_STUDIO_LOGO_URL,
-  primaryColor: '#172333',
-  secondaryColor: '#24364A',
-  accentColor: '#F18A45',
-  backgroundColor: '#F5F5F1',
+  primaryColor: '#040D1A',
+  secondaryColor: '#081629',
+  accentColor: '#10B981',
+  backgroundColor: '#040D1A',
   announcementEnabled: false,
   announcementText:
     'Now accepting new graphic design, YouTube thumbnail & video editing briefs — fast studio turnaround.',
@@ -278,6 +283,16 @@ export function mergeSiteCustomization(
   if (!raw || typeof raw !== 'object') {
     return { ...DEFAULT_SITE_CUSTOMIZATION };
   }
+  const rawPrimary = String(raw.primaryColor || '').trim();
+  const rawSecondary = String(raw.secondaryColor || '').trim();
+  const rawAccent = String(raw.accentColor || '').trim();
+  const rawBg = String(raw.backgroundColor || '').trim();
+
+  const LEGACY_PRIMARIES = ['#172333', '#0B1220', '#070B14'];
+  const LEGACY_SECONDARIES = ['#24364A', '#14213D', '#0B1120', '#151F32'];
+  const LEGACY_ACCENTS = ['#F18A45', '#2563EB', '#7657FF', '#A855F7'];
+  const LEGACY_BGS = ['#F5F5F1', '#F7F9FC', '#070B14', '#0B1120'];
+
   const merged: SiteCustomization = {
     ...DEFAULT_SITE_CUSTOMIZATION,
     ...raw,
@@ -285,6 +300,22 @@ export function mergeSiteCustomization(
       raw.logoUrl && String(raw.logoUrl).trim()
         ? String(raw.logoUrl).trim()
         : DEFAULT_SITE_CUSTOMIZATION.logoUrl,
+    primaryColor:
+      !rawPrimary || LEGACY_PRIMARIES.includes(rawPrimary.toUpperCase())
+        ? DEFAULT_SITE_CUSTOMIZATION.primaryColor
+        : rawPrimary,
+    secondaryColor:
+      !rawSecondary || LEGACY_SECONDARIES.includes(rawSecondary.toUpperCase())
+        ? DEFAULT_SITE_CUSTOMIZATION.secondaryColor
+        : rawSecondary,
+    accentColor:
+      !rawAccent || LEGACY_ACCENTS.includes(rawAccent.toUpperCase())
+        ? DEFAULT_SITE_CUSTOMIZATION.accentColor
+        : rawAccent,
+    backgroundColor:
+      !rawBg || LEGACY_BGS.includes(rawBg.toUpperCase())
+        ? DEFAULT_SITE_CUSTOMIZATION.backgroundColor
+        : rawBg,
     servicesPageTitle:
       !raw.servicesPageTitle ||
       raw.servicesPageTitle === 'Transparent starting prices for creative production'
@@ -405,7 +436,7 @@ export const SEED_SERVICES: Omit<ServiceItem, 'id' | 'createdAt' | 'updatedAt'>[
     isCustomQuote: false,
     deliverablesSummary: 'Print-ready & web-optimized PNG/JPG, platform aspect ratios, 2 revision rounds.',
     turnaroundTime: '24–48 hours',
-    imageUrl: createStudioArtworkDataUri('Social Media Post', 'Brand Grid & Carousel Systems', '#F18A45'),
+    imageUrl: createStudioArtworkDataUri('Social Media Post', 'Brand Grid & Carousel Systems', '#2563EB'),
     published: true,
     sortOrder: 1,
   },
@@ -421,7 +452,7 @@ export const SEED_SERVICES: Omit<ServiceItem, 'id' | 'createdAt' | 'updatedAt'>[
     isCustomQuote: false,
     deliverablesSummary: '1:1, 4:5, and 9:16 ad placements with high-contrast focal typography.',
     turnaroundTime: '48 hours',
-    imageUrl: createStudioArtworkDataUri('Promotional Ad Creative', 'Performance Campaign Layout', '#E07A35'),
+    imageUrl: createStudioArtworkDataUri('Promotional Ad Creative', 'Performance Campaign Layout', '#06B6D4'),
     published: true,
     sortOrder: 2,
   },
@@ -437,7 +468,7 @@ export const SEED_SERVICES: Omit<ServiceItem, 'id' | 'createdAt' | 'updatedAt'>[
     isCustomQuote: false,
     deliverablesSummary: 'High-resolution web & print-ready exports in custom dimensions.',
     turnaroundTime: '24–48 hours',
-    imageUrl: createStudioArtworkDataUri('Banner & Digital Flyer', 'Display & Event Key Visuals', '#F18A45'),
+    imageUrl: createStudioArtworkDataUri('Banner & Digital Flyer', 'Display & Event Key Visuals', '#2563EB'),
     published: true,
     sortOrder: 3,
   },
@@ -469,7 +500,7 @@ export const SEED_SERVICES: Omit<ServiceItem, 'id' | 'createdAt' | 'updatedAt'>[
     isCustomQuote: false,
     deliverablesSummary: 'Unified visual motif adapted for feed, story, and banner placements.',
     turnaroundTime: '2–3 business days',
-    imageUrl: createStudioArtworkDataUri('Campaign Creative', 'Launch & Seasonal Systems', '#F18A45'),
+    imageUrl: createStudioArtworkDataUri('Campaign Creative', 'Launch & Seasonal Systems', '#2563EB'),
     published: true,
     sortOrder: 5,
   },
@@ -501,7 +532,7 @@ export const SEED_SERVICES: Omit<ServiceItem, 'id' | 'createdAt' | 'updatedAt'>[
     isCustomQuote: false,
     deliverablesSummary: '1920x1080px master PNG, subject cutouts, color grading, and A/B title variant.',
     turnaroundTime: '24 hours',
-    imageUrl: createStudioArtworkDataUri('YouTube Thumbnail', 'High-Contrast Creator Packaging', '#F18A45'),
+    imageUrl: createStudioArtworkDataUri('YouTube Thumbnail', 'High-Contrast Creator Packaging', '#2563EB'),
     published: true,
     sortOrder: 7,
   },
@@ -517,7 +548,7 @@ export const SEED_SERVICES: Omit<ServiceItem, 'id' | 'createdAt' | 'updatedAt'>[
     isCustomQuote: true,
     deliverablesSummary: '4K/1080p H.264 master render, clean audio mix, lower thirds, and revision review link.',
     turnaroundTime: '3–7 business days',
-    imageUrl: createStudioArtworkDataUri('YouTube Video Editing', 'Long-Form Narrative & Pacing', '#F18A45', '#101926', '#1E2F42'),
+    imageUrl: createStudioArtworkDataUri('YouTube Video Editing', 'Long-Form Narrative & Pacing', '#2563EB', '#101926', '#1E2F42'),
     published: true,
     sortOrder: 8,
   },
@@ -533,7 +564,7 @@ export const SEED_SERVICES: Omit<ServiceItem, 'id' | 'createdAt' | 'updatedAt'>[
     isCustomQuote: true,
     deliverablesSummary: '1080x1920px 60fps vertical master + cover frame selection.',
     turnaroundTime: '24–72 hours',
-    imageUrl: createStudioArtworkDataUri('Instagram Reels Editing', '9:16 Vertical Motion & Captions', '#F18A45', '#172333', '#2B3E55'),
+    imageUrl: createStudioArtworkDataUri('Instagram Reels Editing', '9:16 Vertical Motion & Captions', '#2563EB', '#0B1220', '#14213D'),
     published: true,
     sortOrder: 9,
   },
@@ -549,7 +580,7 @@ export const SEED_SERVICES: Omit<ServiceItem, 'id' | 'createdAt' | 'updatedAt'>[
     isCustomQuote: true,
     deliverablesSummary: 'Scoped specifically to your project brief and timeline.',
     turnaroundTime: 'Custom schedule',
-    imageUrl: createStudioArtworkDataUri('Bespoke Creative Scope', 'Custom Studio Retainers & Packages', '#F18A45'),
+    imageUrl: createStudioArtworkDataUri('Bespoke Creative Scope', 'Custom Studio Retainers & Packages', '#2563EB'),
     published: true,
     sortOrder: 10,
   },
@@ -566,7 +597,7 @@ export const SEED_PORTFOLIO: Omit<PortfolioItem, 'id' | 'createdAt' | 'updatedAt
     category: 'Social Media',
     description:
       'Demonstration portfolio entry showcasing a 6-slide modular Instagram & LinkedIn carousel architecture with typographic hierarchy and warm studio contrast. Replace with live work in Admin > Portfolio.',
-    coverImage: createStudioArtworkDataUri('Modular Carousel System', 'Demonstration Sample · Social Media', '#F18A45'),
+    coverImage: createStudioArtworkDataUri('Modular Carousel System', 'Demonstration Sample · Social Media', '#2563EB'),
     projectUrl: '',
     featured: true,
     published: true,
@@ -580,7 +611,7 @@ export const SEED_PORTFOLIO: Omit<PortfolioItem, 'id' | 'createdAt' | 'updatedAt
     category: 'YouTube Thumbnails',
     description:
       'Demonstration portfolio entry illustrating focal subject separation, three-element visual restraint, and color-contrasted title framing for long-form video essays.',
-    coverImage: createStudioArtworkDataUri('Documentary Thumbnail Study', 'Demonstration Sample · YouTube Packaging', '#E07A35', '#111B27', '#24364A'),
+    coverImage: createStudioArtworkDataUri('Documentary Thumbnail Study', 'Demonstration Sample · YouTube Packaging', '#06B6D4', '#111B27', '#14213D'),
     projectUrl: '',
     featured: true,
     published: true,
@@ -608,7 +639,7 @@ export const SEED_PORTFOLIO: Omit<PortfolioItem, 'id' | 'createdAt' | 'updatedAt
     category: 'Instagram Reels',
     description:
       'Demonstration portfolio entry for 9:16 vertical short-form edits featuring safe-zone caption placement, rhythmic beat markers, and clean visual hooks.',
-    coverImage: createStudioArtworkDataUri('9:16 Kinetic Reels', 'Demonstration Sample · Instagram Reels', '#F18A45', '#172333', '#2B3E55'),
+    coverImage: createStudioArtworkDataUri('9:16 Kinetic Reels', 'Demonstration Sample · Instagram Reels', '#2563EB', '#0B1220', '#14213D'),
     projectUrl: '',
     featured: false,
     published: true,
@@ -636,7 +667,7 @@ export const SEED_PORTFOLIO: Omit<PortfolioItem, 'id' | 'createdAt' | 'updatedAt
     category: 'Branding',
     description:
       'Demonstration portfolio entry presenting typographic pairing rules, color swatch systems, and digital stationery templates.',
-    coverImage: createStudioArtworkDataUri('Brand Identity System', 'Demonstration Sample · Branding', '#F18A45', '#172333', '#1F2E40'),
+    coverImage: createStudioArtworkDataUri('Brand Identity System', 'Demonstration Sample · Branding', '#2563EB', '#0B1220', '#14213D'),
     projectUrl: '',
     featured: false,
     published: true,

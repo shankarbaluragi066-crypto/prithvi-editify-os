@@ -87,8 +87,8 @@ const SupabaseSchemaBanner: React.FC = () => {
 
   if (!isSupabaseConfigured) {
     return (
-      <div className="bg-[#172333] text-[#F5F5F1] px-4 py-2 text-xs text-center border-b border-[#24364A]">
-        <span className="font-semibold text-[#F18A45]">Supabase Setup Pending:</span> Configure{' '}
+      <div className="bg-[#081629] text-[#F8FAFC] px-4 py-2 text-xs text-center border-b border-[#1E3A5F]">
+        <span className="font-semibold text-[#10B981]">Supabase Setup Pending:</span> Configure{' '}
         <code className="font-mono">VITE_SUPABASE_URL</code> and{' '}
         <code className="font-mono">VITE_SUPABASE_PUBLISHABLE_KEY</code> in your environment and run{' '}
         <code className="font-mono">supabase/migrations/20261018000000_prithvi_editify_schema_and_rls.sql</code>{' '}
@@ -110,17 +110,17 @@ const SupabaseSchemaBanner: React.FC = () => {
   };
 
   return (
-    <div className="bg-[#172333] text-[#F5F5F1] px-4 py-2.5 text-xs border-b border-[#24364A] flex flex-wrap items-center justify-center gap-3">
+    <div className="bg-[#081629] text-[#F8FAFC] px-4 py-2.5 text-xs border-b border-[#1E3A5F] flex flex-wrap items-center justify-center gap-3">
       <div className="flex items-center gap-2">
-        <Database className="w-3.5 h-3.5 text-[#F18A45] shrink-0" />
+        <Database className="w-3.5 h-3.5 text-[#10B981] shrink-0" />
         <span>
-          <strong className="text-[#F18A45]">Database Tables Need Migration:</strong> Your Supabase project is connected, but the CRM tables/columns need to be created in your Supabase SQL Editor.
+          <strong className="text-[#10B981]">Database Tables Need Migration:</strong> Your Supabase project is connected, but the CRM tables/columns need to be created in your Supabase SQL Editor.
         </span>
       </div>
       <button
         type="button"
         onClick={handleCopySql}
-        className="inline-flex items-center gap-1.5 px-3 py-1 text-[11px] font-semibold text-[#172333] bg-[#F18A45] hover:bg-[#e07934] rounded-md transition-colors whitespace-nowrap shrink-0"
+        className="inline-flex items-center gap-1.5 px-3 py-1 text-[11px] font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-md transition-all whitespace-nowrap shrink-0"
       >
         {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
         <span>{copied ? 'Copied SQL Script! Paste in Supabase SQL Editor' : 'Copy SQL Migration Script'}</span>
@@ -133,7 +133,7 @@ const RequireAdmin: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   const { user, isAdmin, loading } = useAuth();
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F5F5F1] text-xs text-[#6E7785]">
+      <div className="min-h-screen flex items-center justify-center bg-[#040D1A] text-xs text-[#94A3B8]">
         Verifying administrator session...
       </div>
     );
@@ -143,24 +143,24 @@ const RequireAdmin: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   }
   if (!isAdmin) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F5F5F1] p-6">
-        <div className="bg-white border border-[#E2E4DF] rounded-lg max-w-md w-full p-8 space-y-4">
-          <h1 className="font-editorial text-xl font-semibold text-[#172333]">
+      <div className="min-h-screen flex items-center justify-center bg-[#040D1A] p-6">
+        <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-xl max-w-md w-full p-8 space-y-4 shadow-2xl">
+          <h1 className="font-editorial text-xl font-semibold text-[#F8FAFC]">
             Administrator Access Restricted
           </h1>
-          <p className="text-xs text-[#6E7785] leading-relaxed">
+          <p className="text-xs text-[#94A3B8] leading-relaxed">
             Your current session has standard client permissions. Studio Administrator access is strictly restricted to the verified studio owner.
           </p>
           <div className="flex gap-3 pt-2">
             <Link
               to="/portal"
-              className="px-4 py-2 text-xs font-semibold text-white bg-[#172333] rounded-lg"
+              className="px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] rounded-lg"
             >
               Open My Client Portal
             </Link>
             <Link
               to="/"
-              className="px-4 py-2 text-xs font-semibold text-[#172333] bg-[#F5F5F1] rounded-lg"
+              className="px-4 py-2 text-xs font-semibold text-[#F8FAFC] bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
             >
               Public Website
             </Link>
@@ -176,7 +176,7 @@ const RequireAuth: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F5F5F1] text-xs text-[#6E7785]">
+      <div className="min-h-screen flex items-center justify-center bg-[#040D1A] text-xs text-[#94A3B8]">
         Loading client portal workspace...
       </div>
     );

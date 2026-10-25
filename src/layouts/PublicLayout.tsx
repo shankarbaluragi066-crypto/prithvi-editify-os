@@ -60,10 +60,10 @@ export const PublicLayout: React.FC = () => {
     : custom.navPortalButtonLabel || 'Client Portal';
   const whatsappUrl = buildWhatsAppLink(settings.whatsappNumber, settings.whatsappDefaultMessage);
 
-  const primaryBg = custom.primaryColor || '#172333';
-  const secondaryBg = custom.secondaryColor || '#24364A';
-  const accentColor = custom.accentColor || '#F18A45';
-  const pageBg = custom.backgroundColor || '#F5F5F1';
+  const primaryBg = custom.primaryColor || '#040D1A';
+  const secondaryBg = custom.secondaryColor || '#081629';
+  const accentColor = custom.accentColor || '#10B981';
+  const pageBg = custom.backgroundColor || '#040D1A';
 
   const socialLinks = [
     { label: 'Instagram', url: custom.instagramUrl },
@@ -75,22 +75,21 @@ export const PublicLayout: React.FC = () => {
 
   return (
     <div
-      className="min-h-screen flex flex-col text-[#172333]"
+      className="min-h-screen flex flex-col text-[#F8FAFC]"
       style={{ backgroundColor: pageBg }}
     >
       {/* Optional Top Announcement Bar */}
       {custom.announcementEnabled && custom.announcementText && (
         <div
-          className="text-xs px-6 py-2.5 border-b border-white/10 no-print"
-          style={{ backgroundColor: primaryBg, color: '#F5F5F1' }}
+          className="text-xs px-6 py-2.5 border-b border-[#1E3A5F] no-print"
+          style={{ backgroundColor: secondaryBg, color: '#F8FAFC' }}
         >
           <div className="max-w-[1200px] mx-auto flex flex-wrap items-center justify-between gap-3">
-            <p className="text-xs text-[#F5F5F1]/90">{custom.announcementText}</p>
+            <p className="text-xs text-[#F8FAFC]/90">{custom.announcementText}</p>
             {custom.announcementCtaLabel && (
               <Link
                 to={custom.announcementCtaLink || '/contact'}
-                className="font-semibold hover:underline whitespace-nowrap shrink-0"
-                style={{ color: accentColor }}
+                className="font-semibold hover:underline whitespace-nowrap shrink-0 text-[#2DD4BF]"
               >
                 {custom.announcementCtaLabel}
               </Link>
@@ -101,33 +100,33 @@ export const PublicLayout: React.FC = () => {
 
       {/* Strict 3-Zone Top Bar Contract */}
       <header
-        className="sticky top-0 z-40 backdrop-blur-sm border-b border-[#E2E4DF] no-print"
-        style={{ backgroundColor: `${pageBg}F2` }}
+        className="sticky top-0 z-40 backdrop-blur-md border-b border-[#1E3A5F] no-print"
+        style={{ backgroundColor: `${pageBg}E8` }}
       >
-        <div className="max-w-[1200px] mx-auto flex items-center justify-between gap-8 px-6 py-4">
-          {/* Zone 1: Brand Wordmark & Studio Logo */}
+        <div className="max-w-[1200px] mx-auto flex items-center justify-between gap-8 px-6 py-3.5">
+          {/* Zone 1: Brand Wordmark & Official Uncropped Logo */}
           <Link
             to="/"
-            className="inline-flex items-center gap-3 font-editorial text-xl font-semibold tracking-tight text-[#172333] whitespace-nowrap shrink-0"
+            className="inline-flex items-center gap-3 text-lg sm:text-xl font-bold tracking-tight text-[#F8FAFC] whitespace-nowrap shrink-0"
           >
             <img
               src={custom.logoUrl || DEFAULT_STUDIO_LOGO_URL}
-              alt={settings.businessName || 'Prithvi Editify'}
+              alt={settings.businessName || 'Prithvi Editify OS'}
               referrerPolicy="no-referrer"
-              className="h-9 sm:h-10 w-auto rounded-md bg-white px-1.5 py-0.5 object-contain border border-[#E2E4DF] shadow-2xs"
+              className="h-9 sm:h-10 w-auto rounded-md bg-white px-1.5 py-0.5 object-contain border border-[#1E3A5F] shadow-2xs"
             />
             <span>{settings.businessName || 'Prithvi Editify'}</span>
           </Link>
 
           {/* Zone 2: Clean single-line text navigation links */}
-          <nav className="hidden md:flex items-center gap-7 text-sm font-medium text-[#6E7785]">
+          <nav className="hidden md:flex items-center gap-7 text-sm font-medium text-[#94A3B8]">
             <NavLink
               to="/"
               end
               className={({ isActive }) =>
-                `hover:text-[#172333] transition-colors whitespace-nowrap shrink-0 ${
+                `hover:text-[#F8FAFC] transition-colors whitespace-nowrap shrink-0 ${
                   isActive
-                    ? 'text-[#172333] underline underline-offset-8 decoration-[#F18A45] decoration-2'
+                    ? 'text-[#F8FAFC] font-semibold underline underline-offset-8 decoration-[#10B981] decoration-2'
                     : ''
                 }`
               }
@@ -138,9 +137,9 @@ export const PublicLayout: React.FC = () => {
               <NavLink
                 to="/services"
                 className={({ isActive }) =>
-                  `hover:text-[#172333] transition-colors whitespace-nowrap shrink-0 ${
+                  `hover:text-[#F8FAFC] transition-colors whitespace-nowrap shrink-0 ${
                     isActive
-                      ? 'text-[#172333] underline underline-offset-8 decoration-[#F18A45] decoration-2'
+                      ? 'text-[#F8FAFC] font-semibold underline underline-offset-8 decoration-[#10B981] decoration-2'
                       : ''
                   }`
                 }
@@ -152,9 +151,9 @@ export const PublicLayout: React.FC = () => {
               <NavLink
                 to="/portfolio"
                 className={({ isActive }) =>
-                  `hover:text-[#172333] transition-colors whitespace-nowrap shrink-0 ${
+                  `hover:text-[#F8FAFC] transition-colors whitespace-nowrap shrink-0 ${
                     isActive
-                      ? 'text-[#172333] underline underline-offset-8 decoration-[#F18A45] decoration-2'
+                      ? 'text-[#F8FAFC] font-semibold underline underline-offset-8 decoration-[#10B981] decoration-2'
                       : ''
                   }`
                 }
@@ -166,9 +165,9 @@ export const PublicLayout: React.FC = () => {
               <NavLink
                 to="/about"
                 className={({ isActive }) =>
-                  `hover:text-[#172333] transition-colors whitespace-nowrap shrink-0 ${
+                  `hover:text-[#F8FAFC] transition-colors whitespace-nowrap shrink-0 ${
                     isActive
-                      ? 'text-[#172333] underline underline-offset-8 decoration-[#F18A45] decoration-2'
+                      ? 'text-[#F8FAFC] font-semibold underline underline-offset-8 decoration-[#10B981] decoration-2'
                       : ''
                   }`
                 }
@@ -180,9 +179,9 @@ export const PublicLayout: React.FC = () => {
               <NavLink
                 to="/contact"
                 className={({ isActive }) =>
-                  `hover:text-[#172333] transition-colors whitespace-nowrap shrink-0 ${
+                  `hover:text-[#F8FAFC] transition-colors whitespace-nowrap shrink-0 ${
                     isActive
-                      ? 'text-[#172333] underline underline-offset-8 decoration-[#F18A45] decoration-2'
+                      ? 'text-[#F8FAFC] font-semibold underline underline-offset-8 decoration-[#10B981] decoration-2'
                       : ''
                   }`
                 }
@@ -196,15 +195,15 @@ export const PublicLayout: React.FC = () => {
           <div className="flex items-center gap-3 shrink-0">
             <Link
               to={portalDestination}
-              className="px-4 py-2 text-xs font-semibold text-white rounded-lg transition-colors whitespace-nowrap shrink-0"
-              style={{ backgroundColor: primaryBg }}
+              className="px-4 py-2 text-xs font-semibold text-white rounded-lg bg-gradient-to-r from-[#0EA5E9] to-[#10B981] shadow-[0_8px_20px_-4px_rgba(16,185,129,0.45)] hover:opacity-95 transition-all whitespace-nowrap shrink-0"
+              style={accentColor !== '#10B981' ? { backgroundColor: accentColor, backgroundImage: 'none' } : undefined}
             >
               {portalLabel}
             </Link>
             <button
               type="button"
               onClick={() => setMobileOpen(!mobileOpen)}
-              className="md:hidden p-2 text-[#172333] hover:bg-[#E2E4DF]/60 rounded-lg"
+              className="md:hidden p-2 text-[#F8FAFC] hover:bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               aria-label="Toggle navigation menu"
             >
               {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -214,28 +213,28 @@ export const PublicLayout: React.FC = () => {
 
         {/* Mobile Navigation Drawer */}
         {mobileOpen && (
-          <div className="md:hidden bg-white border-b border-[#E2E4DF] px-6 py-4 space-y-3">
-            <div className="flex flex-col space-y-2.5 text-sm font-medium text-[#172333]">
-              <Link to="/" onClick={() => setMobileOpen(false)} className="py-1">
+          <div className="md:hidden bg-[#0D1F38] border-b border-[#1E3A5F] px-6 py-4 space-y-3 shadow-2xl">
+            <div className="flex flex-col space-y-2.5 text-sm font-medium text-[#F8FAFC]">
+              <Link to="/" onClick={() => setMobileOpen(false)} className="py-1.5 hover:text-[#10B981]">
                 {custom.navHomeLabel || 'Home'}
               </Link>
               {custom.showServicesNav !== false && (
-                <Link to="/services" onClick={() => setMobileOpen(false)} className="py-1">
+                <Link to="/services" onClick={() => setMobileOpen(false)} className="py-1.5 hover:text-[#10B981]">
                   {custom.navServicesLabel || 'Services'}
                 </Link>
               )}
               {custom.showPortfolioNav !== false && (
-                <Link to="/portfolio" onClick={() => setMobileOpen(false)} className="py-1">
+                <Link to="/portfolio" onClick={() => setMobileOpen(false)} className="py-1.5 hover:text-[#10B981]">
                   {custom.navPortfolioLabel || 'Portfolio'}
                 </Link>
               )}
               {custom.showAboutNav !== false && (
-                <Link to="/about" onClick={() => setMobileOpen(false)} className="py-1">
+                <Link to="/about" onClick={() => setMobileOpen(false)} className="py-1.5 hover:text-[#10B981]">
                   {custom.navAboutLabel || 'About'}
                 </Link>
               )}
               {custom.showContactNav !== false && (
-                <Link to="/contact" onClick={() => setMobileOpen(false)} className="py-1">
+                <Link to="/contact" onClick={() => setMobileOpen(false)} className="py-1.5 hover:text-[#10B981]">
                   {custom.navContactLabel || 'Contact'}
                 </Link>
               )}
@@ -245,50 +244,50 @@ export const PublicLayout: React.FC = () => {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1">
+      <main className="flex-1 pe-page-enter">
         <Outlet context={{ settings }} />
       </main>
 
       {/* Studio Footer */}
       <footer
-        className="text-[#F5F5F1] border-t border-[#24364A] no-print"
-        style={{ backgroundColor: primaryBg }}
+        className="text-[#F8FAFC] border-t border-[#1E3A5F] no-print"
+        style={{ backgroundColor: secondaryBg }}
       >
         <div className="max-w-[1200px] mx-auto px-6 py-16">
           <div
-            className="grid grid-cols-1 md:grid-cols-12 gap-10 pb-12 border-b"
-            style={{ borderColor: secondaryBg }}
+            className="grid grid-cols-1 md:grid-cols-12 gap-10 pb-12 border-b border-[#1E3A5F]"
           >
-            <div className="md:col-span-5 space-y-3">
+            <div className="md:col-span-5 space-y-3.5">
               <div className="flex items-center gap-3">
                 <img
                   src={custom.logoUrl || DEFAULT_STUDIO_LOGO_URL}
-                  alt={settings.businessName || 'Prithvi Editify'}
+                  alt={settings.businessName || 'Prithvi Editify OS'}
                   referrerPolicy="no-referrer"
-                  className="h-11 w-auto rounded-md bg-white px-2 py-1 object-contain border border-white/15 shadow-xs"
+                  className="h-11 w-auto rounded-md bg-white px-2 py-1 object-contain border border-[#1E3A5F] shadow-xs"
                 />
-                <p className="font-editorial text-2xl font-semibold text-white">
-                  {settings.businessName || 'Prithvi Editify'}
-                </p>
+                <div>
+                  <p className="text-xl font-bold tracking-tight text-[#F8FAFC]">
+                    {settings.businessName || 'Prithvi Editify'}
+                  </p>
+                </div>
               </div>
-              <p className="text-sm text-[#9BA3B0] max-w-sm leading-relaxed">
+              <p className="text-sm text-[#94A3B8] max-w-sm leading-relaxed">
                 {settings.tagline ||
                   'Professional graphic design, thumbnails, social media creatives, and video editing for brands and creators.'}
               </p>
-              <p className="text-xs text-[#9BA3B0] pt-1">
+              <p className="text-xs text-[#94A3B8] pt-1">
                 {custom.footerStudioLabel ||
                   `Independent Creative Studio · Led by ${settings.ownerName || 'Shankar Baluragi'}`}
               </p>
               {socialLinks.length > 0 && (
-                <div className="pt-2 flex flex-wrap items-center gap-3">
+                <div className="pt-2 flex flex-wrap items-center gap-2.5">
                   {socialLinks.map((soc) => (
                     <a
                       key={soc.label}
                       href={soc.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium text-[#D0D5DD] hover:text-white border border-white/10 transition-colors"
-                      style={{ backgroundColor: secondaryBg }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-[#94A3B8] hover:text-[#F8FAFC] bg-[#0D1F38] hover:bg-[#132A4A] border border-[#1E3A5F] transition-colors"
                     >
                       <span>{soc.label}</span>
                       <ExternalLink className="w-3 h-3" />
@@ -299,37 +298,37 @@ export const PublicLayout: React.FC = () => {
             </div>
 
             <div className="md:col-span-2 space-y-2.5">
-              <p className="text-xs font-semibold text-white tracking-wide">Navigation</p>
-              <ul className="space-y-2 text-sm text-[#9BA3B0]">
+              <p className="text-xs font-semibold text-[#F8FAFC] tracking-wide">Navigation</p>
+              <ul className="space-y-2 text-sm text-[#94A3B8]">
                 <li>
-                  <Link to="/" className="hover:text-white transition-colors">
+                  <Link to="/" className="hover:text-[#F8FAFC] transition-colors">
                     {custom.navHomeLabel || 'Home'}
                   </Link>
                 </li>
                 {custom.showServicesNav !== false && (
                   <li>
-                    <Link to="/services" className="hover:text-white transition-colors">
+                    <Link to="/services" className="hover:text-[#F8FAFC] transition-colors">
                       {custom.navServicesLabel || 'Services & Pricing'}
                     </Link>
                   </li>
                 )}
                 {custom.showPortfolioNav !== false && (
                   <li>
-                    <Link to="/portfolio" className="hover:text-white transition-colors">
+                    <Link to="/portfolio" className="hover:text-[#F8FAFC] transition-colors">
                       {custom.navPortfolioLabel || 'Portfolio'}
                     </Link>
                   </li>
                 )}
                 {custom.showAboutNav !== false && (
                   <li>
-                    <Link to="/about" className="hover:text-white transition-colors">
+                    <Link to="/about" className="hover:text-[#F8FAFC] transition-colors">
                       {custom.navAboutLabel || 'About Studio'}
                     </Link>
                   </li>
                 )}
                 {custom.showContactNav !== false && (
                   <li>
-                    <Link to="/contact" className="hover:text-white transition-colors">
+                    <Link to="/contact" className="hover:text-[#F8FAFC] transition-colors">
                       {custom.navContactLabel || 'Start a Project'}
                     </Link>
                   </li>
@@ -338,8 +337,8 @@ export const PublicLayout: React.FC = () => {
             </div>
 
             <div className="md:col-span-3 space-y-2.5">
-              <p className="text-xs font-semibold text-white tracking-wide">Core Disciplines</p>
-              <ul className="space-y-2 text-sm text-[#9BA3B0]">
+              <p className="text-xs font-semibold text-[#F8FAFC] tracking-wide">Core Disciplines</p>
+              <ul className="space-y-2 text-sm text-[#94A3B8]">
                 {(custom.heroDisciplines && custom.heroDisciplines.length > 0
                   ? custom.heroDisciplines
                   : [
@@ -350,7 +349,7 @@ export const PublicLayout: React.FC = () => {
                     ]
                 ).map((disc) => (
                   <li key={disc}>
-                    <Link to="/services" className="hover:text-white transition-colors">
+                    <Link to="/services" className="hover:text-[#F8FAFC] transition-colors">
                       {disc}
                     </Link>
                   </li>
@@ -359,23 +358,23 @@ export const PublicLayout: React.FC = () => {
             </div>
 
             <div className="md:col-span-2 space-y-3">
-              <p className="text-xs font-semibold text-white tracking-wide">Direct Contact</p>
+              <p className="text-xs font-semibold text-[#F8FAFC] tracking-wide">Direct Contact</p>
               {settings.businessEmail && (
-                <p className="text-xs text-[#9BA3B0] break-all">{settings.businessEmail}</p>
+                <p className="text-xs text-[#94A3B8] break-all">{settings.businessEmail}</p>
               )}
               {settings.whatsappNumber && (
-                <p className="text-xs text-[#9BA3B0] font-mono">{settings.whatsappNumber}</p>
+                <p className="text-xs text-[#94A3B8] font-mono">{settings.whatsappNumber}</p>
               )}
               {settings.businessAddress && (
-                <p className="text-xs text-[#9BA3B0]">{settings.businessAddress}</p>
+                <p className="text-xs text-[#94A3B8]">{settings.businessAddress}</p>
               )}
               <div className="pt-1">
                 <a
                   href={whatsappUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-[#172333] rounded-lg transition-colors whitespace-nowrap shrink-0"
-                  style={{ backgroundColor: accentColor }}
+                  className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-white rounded-lg bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 transition-opacity whitespace-nowrap shrink-0"
+                  style={accentColor !== '#10B981' ? { backgroundColor: accentColor, backgroundImage: 'none' } : undefined}
                 >
                   <MessageSquare className="w-3.5 h-3.5" />
                   Chat on WhatsApp
@@ -384,20 +383,20 @@ export const PublicLayout: React.FC = () => {
             </div>
           </div>
 
-          <div className="pt-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs text-[#9BA3B0]">
+          <div className="pt-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs text-[#94A3B8]">
             <p>
               © {new Date().getFullYear()} {settings.businessName || 'Prithvi Editify'} (
               {settings.ownerName || 'Shankar Baluragi'}).{' '}
               {custom.copyrightText || 'All rights reserved.'}
             </p>
             <div className="flex items-center gap-6">
-              <Link to="/privacy" className="hover:text-white transition-colors">
+              <Link to="/privacy" className="hover:text-[#F8FAFC] transition-colors">
                 Privacy Policy
               </Link>
-              <Link to="/terms" className="hover:text-white transition-colors">
+              <Link to="/terms" className="hover:text-[#F8FAFC] transition-colors">
                 Terms & Conditions
               </Link>
-              <Link to={portalDestination} className="hover:text-white transition-colors">
+              <Link to={portalDestination} className="hover:text-[#F8FAFC] transition-colors">
                 {portalLabel}
               </Link>
             </div>

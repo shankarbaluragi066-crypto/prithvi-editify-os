@@ -37,13 +37,13 @@ export class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <div className="min-h-screen bg-[#F5F5F1] flex items-center justify-center p-6">
-          <div className="bg-white border border-[#E2E4DF] rounded-lg max-w-lg w-full p-8">
-            <div className="flex items-center gap-3 text-[#B93832]">
+        <div className="min-h-screen bg-[#132A4A] flex items-center justify-center p-6">
+          <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg max-w-lg w-full p-8">
+            <div className="flex items-center gap-3 text-[#DC2626]">
               <AlertTriangle className="w-6 h-6 shrink-0" />
-              <h1 className="text-xl font-semibold text-[#172333]">Operation Interrupted</h1>
+              <h1 className="text-xl font-semibold text-[#F8FAFC]">Operation Interrupted</h1>
             </div>
-            <p className="text-sm text-[#6E7785] mt-3 leading-relaxed">
+            <p className="text-sm text-[#94A3B8] mt-3 leading-relaxed">
               {parsedDetails?.error
                 ? `Database security or connection check triggered on ${parsedDetails.operationType?.toUpperCase()} (${parsedDetails.path}): ${parsedDetails.error}`
                 : this.state.errorMessage}
@@ -55,7 +55,7 @@ export class ErrorBoundary extends Component<Props, State> {
                   this.setState({ hasError: false, errorMessage: '' });
                   window.location.reload();
                 }}
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#172333] hover:bg-[#24364A] rounded-lg transition-colors whitespace-nowrap shrink-0"
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-colors whitespace-nowrap shrink-0"
               >
                 <RefreshCw className="w-4 h-4" />
                 Reload Application

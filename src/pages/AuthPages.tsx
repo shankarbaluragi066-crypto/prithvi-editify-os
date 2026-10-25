@@ -88,29 +88,29 @@ export const LoginPage: React.FC = () => {
 
   return (
     <div className="max-w-md mx-auto px-6 py-16">
-      <div className="bg-white border border-[#E2E4DF] rounded-lg p-8 space-y-6">
+      <div className="pe-card-interactive bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-8 space-y-6">
         <div>
           <img
             src={DEFAULT_STUDIO_LOGO_URL}
             alt="Prithvi Editify"
-            className="h-12 w-auto rounded-md bg-white p-1 object-contain border border-[#E2E4DF] mb-3"
+            className="h-12 w-auto rounded-md bg-white p-1 object-contain border border-[#1E3A5F] mb-3"
           />
-          <p className="text-xs font-semibold text-[#6E7785]">Prithvi Editify Client Workspace</p>
-          <h1 className="font-editorial text-2xl font-semibold text-[#172333] mt-1">
+          <p className="text-xs font-semibold text-[#94A3B8]">Prithvi Editify Client Workspace</p>
+          <h1 className="font-editorial text-2xl font-semibold text-[#F8FAFC] mt-1">
             {mode === 'login' ? 'Sign in to Client Portal' : 'Create Client Portal Account'}
           </h1>
-          <p className="text-xs text-[#6E7785] mt-1.5 leading-relaxed">
+          <p className="text-xs text-[#94A3B8] mt-1.5 leading-relaxed">
             Access your active projects, deliverables, timelines, and INR invoices.
           </p>
         </div>
 
         {/* Mode Switcher */}
-        <div className="grid grid-cols-2 gap-1 p-1 bg-[#F5F5F1] rounded-lg">
+        <div className="grid grid-cols-2 gap-1 p-1 bg-[#132A4A] rounded-lg">
           <button
             type="button"
             onClick={() => setMode('login')}
             className={`py-2 text-xs font-semibold rounded-md transition-colors ${
-              mode === 'login' ? 'bg-white text-[#172333] shadow-sm' : 'text-[#6E7785] hover:text-[#172333]'
+              mode === 'login' ? 'bg-[#0D1F38] text-[#F8FAFC] shadow-sm' : 'text-[#94A3B8] hover:text-[#F8FAFC]'
             }`}
           >
             Sign In
@@ -119,7 +119,7 @@ export const LoginPage: React.FC = () => {
             type="button"
             onClick={() => setMode('register')}
             className={`py-2 text-xs font-semibold rounded-md transition-colors ${
-              mode === 'register' ? 'bg-white text-[#172333] shadow-sm' : 'text-[#6E7785] hover:text-[#172333]'
+              mode === 'register' ? 'bg-[#0D1F38] text-[#F8FAFC] shadow-sm' : 'text-[#94A3B8] hover:text-[#F8FAFC]'
             }`}
           >
             Client Registration
@@ -131,22 +131,22 @@ export const LoginPage: React.FC = () => {
           type="button"
           disabled={googleBusy}
           onClick={handleGoogleSignIn}
-          className="w-full flex items-center justify-center gap-2.5 px-4 py-3 text-sm font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg transition-colors disabled:opacity-60"
+          className="w-full flex items-center justify-center gap-2.5 px-4 py-3 text-sm font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-colors disabled:opacity-60"
         >
-          <ShieldCheck className="w-4 h-4 text-[#F18A45]" />
+          <ShieldCheck className="w-4 h-4 text-[#10B981]" />
           <span>{googleBusy ? 'Connecting to Google...' : 'Continue with Google'}</span>
         </button>
 
         <div className="relative flex py-1 items-center">
-          <div className="flex-grow border-t border-[#E2E4DF]" />
-          <span className="flex-shrink mx-3 text-[11px] text-[#6E7785]">OR EMAIL & PASSWORD</span>
-          <div className="flex-grow border-t border-[#E2E4DF]" />
+          <div className="flex-grow border-t border-[#1E3A5F]" />
+          <span className="flex-shrink mx-3 text-[11px] text-[#94A3B8]">OR EMAIL & PASSWORD</span>
+          <div className="flex-grow border-t border-[#1E3A5F]" />
         </div>
 
         {mode === 'login' ? (
           <form onSubmit={loginForm.handleSubmit(onEmailLogin)} noValidate className="space-y-4">
             <div>
-              <label htmlFor="login-email" className="block text-xs font-medium text-[#172333] mb-1">
+              <label htmlFor="login-email" className="block text-xs font-medium text-[#F8FAFC] mb-1">
                 Email Address
               </label>
               <input
@@ -154,19 +154,19 @@ export const LoginPage: React.FC = () => {
                 type="email"
                 {...loginForm.register('email')}
                 placeholder="you@example.com"
-                className="w-full px-3.5 py-2.5 text-sm bg-[#F5F5F1]/60 border border-[#E2E4DF] rounded-lg focus:outline-none focus:border-[#172333]"
+                className="w-full px-3.5 py-2.5 text-sm bg-[#132A4A]/60 border border-[#1E3A5F] rounded-lg focus:outline-none focus:border-[#10B981]"
               />
               {loginForm.formState.errors.email && (
-                <p className="text-xs text-[#B93832] mt-1">{loginForm.formState.errors.email.message}</p>
+                <p className="text-xs text-[#DC2626] mt-1">{loginForm.formState.errors.email.message}</p>
               )}
             </div>
 
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label htmlFor="login-password" className="block text-xs font-medium text-[#172333]">
+                <label htmlFor="login-password" className="block text-xs font-medium text-[#F8FAFC]">
                   Password
                 </label>
-                <Link to="/forgot-password" className="text-xs text-[#6E7785] hover:text-[#172333] underline">
+                <Link to="/forgot-password" className="text-xs text-[#94A3B8] hover:text-[#F8FAFC] underline">
                   Forgot password?
                 </Link>
               </div>
@@ -175,17 +175,17 @@ export const LoginPage: React.FC = () => {
                 type="password"
                 {...loginForm.register('password')}
                 placeholder="••••••••"
-                className="w-full px-3.5 py-2.5 text-sm bg-[#F5F5F1]/60 border border-[#E2E4DF] rounded-lg focus:outline-none focus:border-[#172333]"
+                className="w-full px-3.5 py-2.5 text-sm bg-[#132A4A]/60 border border-[#1E3A5F] rounded-lg focus:outline-none focus:border-[#10B981]"
               />
               {loginForm.formState.errors.password && (
-                <p className="text-xs text-[#B93832] mt-1">{loginForm.formState.errors.password.message}</p>
+                <p className="text-xs text-[#DC2626] mt-1">{loginForm.formState.errors.password.message}</p>
               )}
             </div>
 
             <button
               type="submit"
               disabled={loginForm.formState.isSubmitting}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-[#172333] bg-[#F18A45] hover:bg-[#e07934] rounded-lg transition-colors"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-colors"
             >
               <LogIn className="w-4 h-4" />
               <span>{loginForm.formState.isSubmitting ? 'Signing in...' : 'Sign In with Email'}</span>
@@ -194,7 +194,7 @@ export const LoginPage: React.FC = () => {
         ) : (
           <form onSubmit={registerForm.handleSubmit(onClientRegister)} noValidate className="space-y-4">
             <div>
-              <label htmlFor="reg-name" className="block text-xs font-medium text-[#172333] mb-1">
+              <label htmlFor="reg-name" className="block text-xs font-medium text-[#F8FAFC] mb-1">
                 Full Name *
               </label>
               <input
@@ -202,15 +202,15 @@ export const LoginPage: React.FC = () => {
                 type="text"
                 {...registerForm.register('displayName')}
                 placeholder="Your full name"
-                className="w-full px-3.5 py-2 text-sm bg-[#F5F5F1]/60 border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3.5 py-2 text-sm bg-[#132A4A]/60 border border-[#1E3A5F] rounded-lg"
               />
               {registerForm.formState.errors.displayName && (
-                <p className="text-xs text-[#B93832] mt-1">{registerForm.formState.errors.displayName.message}</p>
+                <p className="text-xs text-[#DC2626] mt-1">{registerForm.formState.errors.displayName.message}</p>
               )}
             </div>
 
             <div>
-              <label htmlFor="reg-email" className="block text-xs font-medium text-[#172333] mb-1">
+              <label htmlFor="reg-email" className="block text-xs font-medium text-[#F8FAFC] mb-1">
                 Email Address *
               </label>
               <input
@@ -218,16 +218,16 @@ export const LoginPage: React.FC = () => {
                 type="email"
                 {...registerForm.register('email')}
                 placeholder="you@company.com"
-                className="w-full px-3.5 py-2 text-sm bg-[#F5F5F1]/60 border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3.5 py-2 text-sm bg-[#132A4A]/60 border border-[#1E3A5F] rounded-lg"
               />
               {registerForm.formState.errors.email && (
-                <p className="text-xs text-[#B93832] mt-1">{registerForm.formState.errors.email.message}</p>
+                <p className="text-xs text-[#DC2626] mt-1">{registerForm.formState.errors.email.message}</p>
               )}
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label htmlFor="reg-phone" className="block text-xs font-medium text-[#172333] mb-1">
+                <label htmlFor="reg-phone" className="block text-xs font-medium text-[#F8FAFC] mb-1">
                   WhatsApp / Phone
                 </label>
                 <input
@@ -235,11 +235,11 @@ export const LoginPage: React.FC = () => {
                   type="tel"
                   {...registerForm.register('phone')}
                   placeholder="+91..."
-                  className="w-full px-3 py-2 text-sm bg-[#F5F5F1]/60 border border-[#E2E4DF] rounded-lg"
+                  className="w-full px-3 py-2 text-sm bg-[#132A4A]/60 border border-[#1E3A5F] rounded-lg"
                 />
               </div>
               <div>
-                <label htmlFor="reg-company" className="block text-xs font-medium text-[#172333] mb-1">
+                <label htmlFor="reg-company" className="block text-xs font-medium text-[#F8FAFC] mb-1">
                   Company / Brand
                 </label>
                 <input
@@ -247,13 +247,13 @@ export const LoginPage: React.FC = () => {
                   type="text"
                   {...registerForm.register('companyName')}
                   placeholder="Brand name"
-                  className="w-full px-3 py-2 text-sm bg-[#F5F5F1]/60 border border-[#E2E4DF] rounded-lg"
+                  className="w-full px-3 py-2 text-sm bg-[#132A4A]/60 border border-[#1E3A5F] rounded-lg"
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="reg-pass" className="block text-xs font-medium text-[#172333] mb-1">
+              <label htmlFor="reg-pass" className="block text-xs font-medium text-[#F8FAFC] mb-1">
                 Password (min 8 characters) *
               </label>
               <input
@@ -261,17 +261,17 @@ export const LoginPage: React.FC = () => {
                 type="password"
                 {...registerForm.register('password')}
                 placeholder="••••••••"
-                className="w-full px-3.5 py-2 text-sm bg-[#F5F5F1]/60 border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3.5 py-2 text-sm bg-[#132A4A]/60 border border-[#1E3A5F] rounded-lg"
               />
               {registerForm.formState.errors.password && (
-                <p className="text-xs text-[#B93832] mt-1">{registerForm.formState.errors.password.message}</p>
+                <p className="text-xs text-[#DC2626] mt-1">{registerForm.formState.errors.password.message}</p>
               )}
             </div>
 
             <button
               type="submit"
               disabled={registerForm.formState.isSubmitting}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-[#172333] bg-[#F18A45] hover:bg-[#e07934] rounded-lg transition-colors"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-colors"
             >
               <UserPlus className="w-4 h-4" />
               <span>{registerForm.formState.isSubmitting ? 'Creating Account...' : 'Create Client Account'}</span>
@@ -358,42 +358,42 @@ export const AdminLoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#172333] flex flex-col justify-center px-6 py-16">
+    <div className="min-h-screen bg-[#040D1A] flex flex-col justify-center px-6 py-16">
       <div className="max-w-md w-full mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <Link
             to="/"
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-[#9BA3B0] hover:text-white transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-[#94A3B8] hover:text-white transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Return to Public Studio</span>
           </Link>
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#24364A] text-[11px] font-mono text-[#F18A45]">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#132A4A] text-[11px] font-mono text-[#2DD4BF]">
             <Lock className="w-3 h-3" />
             PRIVATE OWNER ACCESS
           </span>
         </div>
 
-        <div className="bg-white border border-[#E2E4DF] rounded-lg p-8 space-y-6 shadow-xl">
+        <div className="pe-card-interactive bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-8 space-y-6 shadow-xl">
           <div>
             <img
               src={DEFAULT_STUDIO_LOGO_URL}
               alt="Prithvi Editify"
-              className="h-12 w-auto rounded-md bg-white p-1 object-contain border border-[#E2E4DF] mb-3"
+              className="h-12 w-auto rounded-md bg-white p-1 object-contain border border-[#1E3A5F] mb-3"
             />
-            <p className="text-xs font-semibold text-[#F18A45] uppercase tracking-wider">
+            <p className="text-xs font-semibold text-[#10B981] uppercase tracking-wider">
               Prithvi Editify · Restricted Gateway
             </p>
-            <h1 className="font-editorial text-2xl font-semibold text-[#172333] mt-1">
+            <h1 className="font-editorial text-2xl font-semibold text-[#F8FAFC] mt-1">
               Studio Administrator Sign In
             </h1>
-            <p className="text-xs text-[#6E7785] mt-1.5 leading-relaxed">
+            <p className="text-xs text-[#94A3B8] mt-1.5 leading-relaxed">
               This unlisted portal is reserved exclusively for the verified studio owner. Client accounts must sign in via the public Client Portal.
             </p>
           </div>
 
           {authError && (
-            <div className="p-3.5 rounded-lg bg-[#B93832]/10 border border-[#B93832]/30 flex items-start gap-2.5 text-xs text-[#B93832]">
+            <div className="p-3.5 rounded-lg bg-[#DC2626]/10 border border-[#DC2626]/30 flex items-start gap-2.5 text-xs text-[#DC2626]">
               <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
               <span>{authError}</span>
             </div>
@@ -403,21 +403,21 @@ export const AdminLoginPage: React.FC = () => {
             type="button"
             disabled={googleBusy}
             onClick={handleAdminGoogleSignIn}
-            className="w-full flex items-center justify-center gap-2.5 px-4 py-3 text-sm font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg transition-colors disabled:opacity-60"
+            className="w-full flex items-center justify-center gap-2.5 px-4 py-3 text-sm font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-colors disabled:opacity-60"
           >
-            <ShieldCheck className="w-4 h-4 text-[#F18A45]" />
+            <ShieldCheck className="w-4 h-4 text-[#10B981]" />
             <span>{googleBusy ? 'Verifying Owner Google Account...' : 'Sign In with Owner Google Account'}</span>
           </button>
 
           <div className="relative flex py-1 items-center">
-            <div className="flex-grow border-t border-[#E2E4DF]" />
-            <span className="flex-shrink mx-3 text-[11px] text-[#6E7785]">OR OWNER CREDENTIALS</span>
-            <div className="flex-grow border-t border-[#E2E4DF]" />
+            <div className="flex-grow border-t border-[#1E3A5F]" />
+            <span className="flex-shrink mx-3 text-[11px] text-[#94A3B8]">OR OWNER CREDENTIALS</span>
+            <div className="flex-grow border-t border-[#1E3A5F]" />
           </div>
 
           <form onSubmit={loginForm.handleSubmit(onAdminEmailLogin)} noValidate className="space-y-4">
             <div>
-              <label htmlFor="admin-email" className="block text-xs font-medium text-[#172333] mb-1">
+              <label htmlFor="admin-email" className="block text-xs font-medium text-[#F8FAFC] mb-1">
                 Administrator Email
               </label>
               <input
@@ -426,19 +426,19 @@ export const AdminLoginPage: React.FC = () => {
                 autoComplete="username"
                 {...loginForm.register('email')}
                 placeholder="Authorized studio owner email"
-                className="w-full px-3.5 py-2.5 text-sm bg-[#F5F5F1]/60 border border-[#E2E4DF] rounded-lg focus:outline-none focus:border-[#172333]"
+                className="w-full px-3.5 py-2.5 text-sm bg-[#132A4A]/60 border border-[#1E3A5F] rounded-lg focus:outline-none focus:border-[#10B981]"
               />
               {loginForm.formState.errors.email && (
-                <p className="text-xs text-[#B93832] mt-1">{loginForm.formState.errors.email.message}</p>
+                <p className="text-xs text-[#DC2626] mt-1">{loginForm.formState.errors.email.message}</p>
               )}
             </div>
 
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label htmlFor="admin-password" className="block text-xs font-medium text-[#172333]">
+                <label htmlFor="admin-password" className="block text-xs font-medium text-[#F8FAFC]">
                   Password
                 </label>
-                <Link to="/forgot-password" className="text-xs text-[#6E7785] hover:text-[#172333] underline">
+                <Link to="/forgot-password" className="text-xs text-[#94A3B8] hover:text-[#F8FAFC] underline">
                   Reset owner password
                 </Link>
               </div>
@@ -448,17 +448,17 @@ export const AdminLoginPage: React.FC = () => {
                 autoComplete="current-password"
                 {...loginForm.register('password')}
                 placeholder="••••••••"
-                className="w-full px-3.5 py-2.5 text-sm bg-[#F5F5F1]/60 border border-[#E2E4DF] rounded-lg focus:outline-none focus:border-[#172333]"
+                className="w-full px-3.5 py-2.5 text-sm bg-[#132A4A]/60 border border-[#1E3A5F] rounded-lg focus:outline-none focus:border-[#10B981]"
               />
               {loginForm.formState.errors.password && (
-                <p className="text-xs text-[#B93832] mt-1">{loginForm.formState.errors.password.message}</p>
+                <p className="text-xs text-[#DC2626] mt-1">{loginForm.formState.errors.password.message}</p>
               )}
             </div>
 
             <button
               type="submit"
               disabled={loginForm.formState.isSubmitting}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-[#172333] bg-[#F18A45] hover:bg-[#e07934] rounded-lg transition-colors"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-colors"
             >
               <Lock className="w-4 h-4" />
               <span>{loginForm.formState.isSubmitting ? 'Verifying Owner...' : 'Unlock Studio Admin Console'}</span>
@@ -498,28 +498,28 @@ export const ForgotPasswordPage: React.FC = () => {
 
   return (
     <div className="max-w-md mx-auto px-6 py-16">
-      <div className="bg-white border border-[#E2E4DF] rounded-lg p-8 space-y-5">
-        <div className="flex items-center gap-2.5 text-[#172333]">
-          <KeyRound className="w-5 h-5 text-[#F18A45]" />
+      <div className="pe-card-interactive bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-8 space-y-5">
+        <div className="flex items-center gap-2.5 text-[#F8FAFC]">
+          <KeyRound className="w-5 h-5 text-[#10B981]" />
           <h1 className="font-editorial text-2xl font-semibold">Reset Password</h1>
         </div>
-        <p className="text-xs text-[#6E7785] leading-relaxed">
+        <p className="text-xs text-[#94A3B8] leading-relaxed">
           Enter the email address associated with your Prithvi Editify portal account and we will send a Supabase password reset link.
         </p>
 
         {sent ? (
-          <div className="bg-[#F5F5F1] border border-[#E2E4DF] rounded-lg p-4 text-xs text-[#172333] space-y-3">
+          <div className="bg-[#132A4A] border border-[#1E3A5F] rounded-lg p-4 text-xs text-[#F8FAFC] space-y-3">
             <p>
               If an account exists for <span className="font-semibold">{email}</span>, a password reset link has been sent.
             </p>
-            <Link to="/login" className="inline-block font-semibold text-[#F18A45] hover:underline">
+            <Link to="/login" className="inline-block font-semibold text-[#10B981] hover:underline">
               ← Return to Sign In
             </Link>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="reset-email" className="block text-xs font-medium text-[#172333] mb-1">
+              <label htmlFor="reset-email" className="block text-xs font-medium text-[#F8FAFC] mb-1">
                 Email Address
               </label>
               <input
@@ -529,18 +529,18 @@ export const ForgotPasswordPage: React.FC = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@company.com"
-                className="w-full px-3.5 py-2.5 text-sm bg-[#F5F5F1]/60 border border-[#E2E4DF] rounded-lg"
+                className="w-full px-3.5 py-2.5 text-sm bg-[#132A4A]/60 border border-[#1E3A5F] rounded-lg"
               />
             </div>
             <button
               type="submit"
               disabled={busy}
-              className="w-full py-2.5 text-sm font-semibold text-white bg-[#172333] hover:bg-[#24364A] rounded-lg transition-colors"
+              className="w-full py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-colors"
             >
               {busy ? 'Sending...' : 'Send Reset Link'}
             </button>
             <div className="text-center pt-2">
-              <Link to="/login" className="text-xs text-[#6E7785] hover:text-[#172333]">
+              <Link to="/login" className="text-xs text-[#94A3B8] hover:text-[#F8FAFC]">
                 ← Back to Sign In
               </Link>
             </div>

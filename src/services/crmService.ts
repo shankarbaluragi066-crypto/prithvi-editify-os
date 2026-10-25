@@ -449,7 +449,7 @@ function mapServiceRow(row: Record<string, any>, idx = 0): ServiceItem {
     deliverablesSummary,
     turnaroundTime,
     revisions,
-    imageUrl: String(row.image_url || createStudioArtworkDataUri(title, category, '#F18A45')),
+    imageUrl: String(row.image_url || createStudioArtworkDataUri(title, category, '#2563EB')),
     videoPreviewUrl: String(row.video_preview_url || ''),
     mediaUrls: resolvedMediaUrls,
     packages: resolvedPackages,
@@ -464,7 +464,7 @@ function mapPortfolioRow(row: Record<string, any>, idx = 0): PortfolioItem {
   const title = String(row.title || row.name || 'Studio Project');
   const category = (row.category || 'Graphic Design') as PortfolioItem['category'];
   const coverImage = String(
-    row.cover_image || row.image_url || createStudioArtworkDataUri(title, category, '#172333')
+    row.cover_image || row.image_url || createStudioArtworkDataUri(title, category, '#0B1220')
   );
   const videoUrl = String(row.video_url || '');
   const detectedType = videoUrl
