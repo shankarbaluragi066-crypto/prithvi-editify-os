@@ -288,10 +288,10 @@ export function mergeSiteCustomization(
   const rawAccent = String(raw.accentColor || '').trim();
   const rawBg = String(raw.backgroundColor || '').trim();
 
-  const LEGACY_PRIMARIES = ['#172333', '#0B1220', '#070B14'];
-  const LEGACY_SECONDARIES = ['#24364A', '#14213D', '#0B1120', '#151F32'];
-  const LEGACY_ACCENTS = ['#F18A45', '#2563EB', '#7657FF', '#A855F7'];
-  const LEGACY_BGS = ['#F5F5F1', '#F7F9FC', '#070B14', '#0B1120'];
+  const LEGACY_PRIMARIES = ['#172333', '#0B1220', '#070B14', '#0F172A', '#1E293B'];
+  const LEGACY_SECONDARIES = ['#24364A', '#14213D', '#0B1120', '#151F32', '#1E293B'];
+  const LEGACY_ACCENTS = ['#F18A45', '#2563EB', '#7657FF', '#A855F7', '#3984FF', '#06B6D4'];
+  const LEGACY_BGS = ['#F5F5F1', '#F7F9FC', '#FFFFFF', '#F8FAFC', '#F1F5F9', '#070B14', '#0B1120'];
 
   const merged: SiteCustomization = {
     ...DEFAULT_SITE_CUSTOMIZATION,
