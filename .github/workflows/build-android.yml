@@ -689,8 +689,60 @@ jobs:
               [ -f "$f" ] && CFG="$f" && break
             done
             if [ -z "$CFG" ]; then
-              npx --no-install cap init "$APP_NAME" "$BUNDLE_ID" --web-dir="$WEB_DIR"
-            else
+              node -e 'require("fs").writeFileSync("capacitor.config.json", JSON.stringify({ appId: process.env.BUNDLE_ID, appName: process.env.APP_NAME, webDir: process.env.WEB_DIR }, null, 2) + "\n")'
+              echo "Created capacitor.config.json for $BUNDLE_ID with the web app in $WEB_DIR/"
+            elif [ "$CFG" = "capacitor.config.ts" ]; then
+              node -e '
+                const fs = require("fs"), path = require("path"), Module = require("module");
+                const from = { paths: [process.cwd()] };
+                let ts = null;
+                try { ts = require(require.resolve("typescript", from)); } catch (e) {}
+                let cli = "0.0.0";
+                try { cli = JSON.parse(fs.readFileSync("node_modules/@capacitor/cli/package.json", "utf8")).version; } catch (e) {}
+                const [major, minor] = cli.split(".").map(Number);
+                const cliCopes = major > 8 || (major === 8 && minor >= 5);
+                if (ts && (typeof ts.transpileModule === "function" || cliCopes)) process.exit(0);
+                const file = path.resolve("capacitor.config.ts");
+                const native = async () => {
+                  const copy = path.resolve("capacitor.config.corenna.mts");
+                  const source = fs.readFileSync(file, "utf8").replace(
+                    /import\s+\{([^}]*)\}\s+from\s+([\x27\x22])@capacitor\/cli\2/g,
+                    (all, names, q) => "import type {" + names.replace(/\btype\s+/g, "") + "} from " + q + "@capacitor/cli" + q,
+                  );
+                  fs.writeFileSync(copy, source);
+                  try {
+                    return await import(require("url").pathToFileURL(copy).href);
+                  } finally {
+                    fs.rmSync(copy, { force: true });
+                  }
+                };
+                const load = async () => {
+                  try {
+                    const esbuild = require(require.resolve("esbuild", from));
+                    const m = new Module(file);
+                    m.filename = file;
+                    m.paths = Module._nodeModulePaths(path.dirname(file));
+                    m._compile(esbuild.transformSync(fs.readFileSync(file, "utf8"), { loader: "ts", format: "cjs" }).code, file);
+                    return m.exports;
+                  } catch (e) {
+                    return await native();
+                  }
+                };
+                load().then((m) => {
+                  const config = m && m.default ? m.default : m;
+                  fs.writeFileSync("capacitor.config.json", JSON.stringify(config, null, 2) + "\n");
+                  fs.copyFileSync(file, path.join(require("os").tmpdir(), "capacitor.config.ts"));
+                  fs.unlinkSync(file);
+                  console.log("Capacitor CLI " + cli + " cannot read capacitor.config.ts with TypeScript " + (ts ? ts.version : "missing") + ", so this build uses it as capacitor.config.json.");
+                }).catch((e) => {
+                  console.error("Capacitor CLI " + cli + " cannot read capacitor.config.ts with TypeScript " + (ts ? ts.version : "missing") + ", and converting it to JSON failed: " + (e && e.message ? e.message : e));
+                  console.error("Fix: upgrade @capacitor/cli to 8.5 or later, or replace capacitor.config.ts with capacitor.config.json.");
+                  process.exit(1);
+                });
+              '
+              [ -f capacitor.config.ts ] || CFG=capacitor.config.json
+            fi
+            if [ -n "$CFG" ]; then
               CFG_WEB_DIR="$(grep -oE '"?webDir"?[[:space:]]*:[[:space:]]*["'"'"'][^"'"'"']+' "$CFG" | head -1 | sed -E 's/.*["'"'"']//')"
               if [ -n "$CFG_WEB_DIR" ] && [ ! -f "$CFG_WEB_DIR/index.html" ]; then
                 if [ "$CFG" = "capacitor.config.json" ]; then
