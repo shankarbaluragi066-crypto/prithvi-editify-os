@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
-import { Menu, X, MessageSquare, ExternalLink } from 'lucide-react';
+import { Menu, X, MessageSquare, ExternalLink, Send } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { PWAInstallButton, OfflineStatusBanner } from '../components/PWAInstallPrompt';
 import { fetchPublicSettings } from '../services/crmService';
 import {
   DEFAULT_PUBLIC_SETTINGS,
@@ -75,9 +76,10 @@ export const PublicLayout: React.FC = () => {
 
   return (
     <div
-      className="min-h-screen flex flex-col text-[#F8FAFC]"
+      className="min-h-screen flex flex-col text-[#F8FAFC] pb-20 md:pb-0"
       style={{ backgroundColor: pageBg }}
     >
+      <OfflineStatusBanner />
       {/* Optional Top Announcement Bar */}
       {custom.announcementEnabled && custom.announcementText && (
         <div
@@ -191,8 +193,11 @@ export const PublicLayout: React.FC = () => {
             )}
           </nav>
 
-          {/* Zone 3: 1 primary action */}
-          <div className="flex items-center gap-3 shrink-0">
+          {/* Zone 3: Primary action + PWA Install */}
+          <div className="flex items-center gap-2.5 shrink-0">
+            <div className="hidden sm:block">
+              <PWAInstallButton compact />
+            </div>
             <Link
               to={portalDestination}
               className="px-4 py-2 text-xs font-semibold text-white rounded-lg bg-gradient-to-r from-[#0EA5E9] to-[#10B981] shadow-[0_8px_20px_-4px_rgba(16,185,129,0.45)] hover:opacity-95 transition-all whitespace-nowrap shrink-0"
@@ -238,6 +243,9 @@ export const PublicLayout: React.FC = () => {
                   {custom.navContactLabel || 'Contact'}
                 </Link>
               )}
+              <div className="pt-2 border-t border-[#1E3A5F]">
+                <PWAInstallButton compact />
+              </div>
             </div>
           </div>
         )}
@@ -403,6 +411,26 @@ export const PublicLayout: React.FC = () => {
           </div>
         </div>
       </footer>
+
+      {/* Sticky Mobile "Quick Brief / WhatsApp" Bar */}
+      <div className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-[#081629]/95 backdrop-blur-md border-t border-[#1E3A5F] px-3 py-2.5 flex items-center gap-2.5 shadow-[0_-8px_24px_rgba(0,0,0,0.45)] no-print">
+        <Link
+          to="/contact"
+          className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-bold text-[#040D1A] bg-gradient-to-r from-[#10B981] via-[#2DD4BF] to-[#0EA5E9] shadow-sm"
+        >
+          <Send className="w-3.5 h-3.5" />
+          <span>Start a Project</span>
+        </Link>
+        <a
+          href={whatsappUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-bold text-[#F8FAFC] bg-[#0D1F38] hover:bg-[#132A4A] border border-[#10B981]/40"
+        >
+          <MessageSquare className="w-3.5 h-3.5 text-[#10B981]" />
+          <span>WhatsApp Direct</span>
+        </a>
+      </div>
     </div>
   );
 };

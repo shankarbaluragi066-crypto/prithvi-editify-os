@@ -20,6 +20,8 @@ import {
   LayoutGrid,
   List,
   MapPin,
+  MessageSquare,
+  TrendingUp,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -63,6 +65,7 @@ import {
 import {
   fetchAllQuotationsAdmin,
   inferQuotationDocumentType,
+  saveQuotationAdmin,
 } from '../services/aiAssistantService';
 import {
   PROJECT_MILESTONE_TEMPLATES,
@@ -70,6 +73,7 @@ import {
   generateAIDraftedQuotationFromInquiry,
   getProofingPins,
   checkProjectMasterUnlockStatus,
+  buildWhatsAppProjectStatusTemplateLink,
 } from '../services/workflowEnhancementsService';
 import {
   DependencySafeDeleteModal,
@@ -731,6 +735,161 @@ export const AdminDashboardPage: React.FC = () => {
         </div>
       </div>
 
+      {/* MONTHLY REVENUE & SERVICE CATEGORY ANALYTICS (REVENUE & REPEAT CLIENT BOOKINGS) */}
+      {(() => {
+        const categoriesDef = [
+          {
+            key: 'YouTube Thumbnails',
+            color: '#10B981',
+            match: (txt: string) => /thumbnail|youtube thumb|ctr/i.test(txt),
+          },
+          {
+            key: 'Reels Editing',
+            color: '#0EA5E9',
+            match: (txt: string) => /reel|short|vertical|instagram video/i.test(txt),
+          },
+          {
+            key: 'Social Media Creatives',
+            color: '#2DD4BF',
+            match: (txt: string) => /social|carousel|post|banner|ad|poster|flyer/i.test(txt),
+          },
+          {
+            key: 'Branding & Video Editing',
+            color: '#38BDF8',
+            match: () => true,
+          },
+        ];
+
+        const activeInvs = invoices.filter((i) => i.status !== 'Void' && i.status !== 'Cancelled');
+        const categoryMetrics = categoriesDef.map((cat) => ({
+          category: cat.key,
+          color: cat.color,
+          revenueBilled: 0,
+          revenueCollected: 0,
+          projectsCount: 0,
+          clientEmails: new Set<string>(),
+          repeatClientsCount: 0,
+        }));
+
+        const clientBookingsPerCat = categoriesDef.map(() => new Map<string, number>());
+
+        projects.forEach((proj) => {
+          const text = `${proj.serviceType || ''} ${proj.title || ''}`;
+          const idx = categoriesDef.findIndex((c) => c.match(text));
+          const targetIdx = idx >= 0 ? idx : 3;
+          categoryMetrics[targetIdx].projectsCount += 1;
+          const clientKey = (proj.clientEmail || proj.clientId || proj.clientName || '').toLowerCase();
+          if (clientKey) {
+            categoryMetrics[targetIdx].clientEmails.add(clientKey);
+            const prevCount = clientBookingsPerCat[targetIdx].get(clientKey) || 0;
+            clientBookingsPerCat[targetIdx].set(clientKey, prevCount + 1);
+          }
+          // Attribute project budget if no linked invoice yet
+          const hasLinkedInv = activeInvs.some((inv) => inv.projectId === proj.id);
+          if (!hasLinkedInv && proj.budget > 0) {
+            categoryMetrics[targetIdx].revenueBilled += Number(proj.budget) || 0;
+          }
+        });
+
+        activeInvs.forEach((inv) => {
+          const linkedProj = projects.find((p) => p.id === inv.projectId);
+          const text = `${linkedProj?.serviceType || ''} ${inv.projectTitle || ''} ${inv.itemsSummary || ''}`;
+          const idx = categoriesDef.findIndex((c) => c.match(text));
+          const targetIdx = idx >= 0 ? idx : 3;
+          categoryMetrics[targetIdx].revenueBilled += Number(inv.total) || 0;
+          categoryMetrics[targetIdx].revenueCollected += Number(inv.amountPaid) || 0;
+          const clientKey = (inv.clientEmail || inv.clientId || inv.clientName || '').toLowerCase();
+          if (clientKey) {
+            categoryMetrics[targetIdx].clientEmails.add(clientKey);
+          }
+        });
+
+        categoryMetrics.forEach((m, idx) => {
+          let repeat = 0;
+          clientBookingsPerCat[idx].forEach((count) => {
+            if (count > 1) repeat += 1;
+          });
+          m.repeatClientsCount = repeat;
+        });
+
+        // Overall repeat clients across studio
+        const studioClientProjectCounts = new Map<string, number>();
+        projects.forEach((p) => {
+          const k = (p.clientEmail || p.clientId || p.clientName || '').toLowerCase();
+          if (k) studioClientProjectCounts.set(k, (studioClientProjectCounts.get(k) || 0) + 1);
+        });
+        let totalRepeatClients = 0;
+        studioClientProjectCounts.forEach((cnt) => {
+          if (cnt > 1) totalRepeatClients += 1;
+        });
+
+        const topCategory = [...categoryMetrics].sort(
+          (a, b) => b.revenueBilled - a.revenueBilled || b.projectsCount - a.projectsCount
+        )[0];
+
+        return (
+          <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#1E3A5F] pb-4">
+              <div>
+                <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#10B981]">
+                  <TrendingUp className="w-3.5 h-3.5" />
+                  <span>Monthly Revenue & Service Category Analytics</span>
+                </div>
+                <h2 className="font-editorial text-xl font-semibold text-[#F8FAFC] mt-0.5">
+                  Creative Category Revenue & Repeat Client Bookings
+                </h2>
+                <p className="text-xs text-[#94A3B8] mt-0.5">
+                  Tracks which creative disciplines generate the highest studio revenue and repeat client retainers.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-3 text-xs">
+                <div className="px-3 py-2 rounded-lg bg-[#132A4A] border border-[#1E3A5F]">
+                  <span className="text-[#94A3B8] block text-[10px]">Top Revenue Category</span>
+                  <span className="font-semibold text-[#2DD4BF]">{topCategory?.category || 'YouTube Thumbnails'}</span>
+                </div>
+                <div className="px-3 py-2 rounded-lg bg-[#132A4A] border border-[#1E3A5F]">
+                  <span className="text-[#94A3B8] block text-[10px]">Repeat Client Bookings</span>
+                  <span className="font-mono font-semibold text-[#10B981]">
+                    {totalRepeatClients} Repeat Client(s)
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {categoryMetrics.map((cat) => (
+                <div
+                  key={cat.category}
+                  className="p-4 rounded-lg bg-[#132A4A] border border-[#1E3A5F] space-y-2"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-semibold text-[#F8FAFC]">{cat.category}</span>
+                    <span
+                      className="w-2.5 h-2.5 rounded-full shrink-0"
+                      style={{ backgroundColor: cat.color }}
+                    />
+                  </div>
+                  <div>
+                    <p className="text-lg font-mono font-bold text-[#F8FAFC] tabular-nums">
+                      {formatINR(cat.revenueBilled)}
+                    </p>
+                    <p className="text-[11px] font-mono text-[#10B981]">
+                      Collected: {formatINR(cat.revenueCollected)}
+                    </p>
+                  </div>
+                  <div className="pt-2 border-t border-[#1E3A5F] flex items-center justify-between text-[11px] text-[#94A3B8]">
+                    <span>{cat.projectsCount} Project(s)</span>
+                    <span className="font-semibold text-[#2DD4BF]">
+                      {cat.repeatClientsCount} Repeat Client(s)
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Recent Projects & Inquiries Split */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6">
@@ -897,33 +1056,93 @@ export const AdminInquiriesPage: React.FC = () => {
         adminNotes: `Converted from inquiry (${inq.id}). Budget range: ${inq.budgetRange}`,
       });
 
+      const servicesList = await fetchAllServicesAdmin().catch(() => []);
+      const aiDraftedQuote = await generateAIDraftedQuotationFromInquiry(inq, servicesList);
+
       const today = new Date().toISOString().split('T')[0];
+      const expiryDate = new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0];
+      const quoteSubtotal = aiDraftedQuote.lineItems.reduce(
+        (sum, li) => sum + (Number(li.amount) || Number(li.quantity) * Number(li.unitPrice) || 0),
+        0
+      );
+      const quoteNumber = `PE-QTN-${new Date().getFullYear()}-${String(
+        Math.floor(100 + Math.random() * 900)
+      )}`;
+      const projectTitle =
+        aiDraftedQuote.projectTitle || `${inq.serviceRequired} — ${inq.companyName || inq.fullName}`;
+
       const projectId = await saveProjectAdmin(
         {
           clientId,
           clientUserId: '',
           clientName: inq.fullName,
           clientEmail: inq.email,
-          title: `${inq.serviceRequired} — ${inq.companyName || inq.fullName}`,
+          title: projectTitle,
           description: inq.description,
           serviceType: inq.serviceRequired,
           brief: inq.description,
-          budget: 0,
+          budget: quoteSubtotal || 1500,
           startDate: today,
           deadline: inq.preferredDeadline || today,
           priority: 'Medium',
           status: 'Planned',
           progress: 10,
-          latestUpdate: 'Converted from inquiry. Scope and project brief initialized.',
+          latestUpdate: 'Converted from inquiry with auto-drafted INR Quotation & milestones.',
         },
         `Converted from inquiry ID ${inq.id}. Internal notes: ${inq.internalNotes || 'None'}`
       );
 
+      // Initialize default production milestones for the new project
+      const defaultTasks = buildTasksFromMilestoneTemplate(
+        /thumbnail/i.test(inq.serviceRequired)
+          ? 'tpl-yt-thumb'
+          : /video|reel/i.test(inq.serviceRequired)
+          ? 'tpl-yt-video'
+          : 'tpl-social-ads',
+        projectId,
+        '',
+        today
+      );
+      for (const taskItem of defaultTasks) {
+        await saveTaskAdmin(taskItem).catch(() => {});
+      }
+
+      // Save the draft INR Quotation linked to the new Client & Project
+      const savedQuote = await saveQuotationAdmin({
+        quotationNumber: quoteNumber,
+        documentType: 'Quotation',
+        version: 1,
+        inquiryId: inq.id,
+        clientId,
+        clientUserId: '',
+        clientName: inq.fullName,
+        clientEmail: inq.email,
+        projectTitle,
+        serviceCategory: aiDraftedQuote.serviceCategory || inq.serviceRequired,
+        scopeSummary: aiDraftedQuote.scopeSummary,
+        deliverables: aiDraftedQuote.deliverables,
+        estimatedTimeline: aiDraftedQuote.estimatedTimeline,
+        issueDate: today,
+        expiryDate,
+        lineItems: aiDraftedQuote.lineItems,
+        subtotal: quoteSubtotal,
+        discount: 0,
+        taxRate: 0,
+        taxAmount: 0,
+        total: quoteSubtotal,
+        currency: 'INR',
+        status: 'Draft',
+        termsAndConditions:
+          '50% advance via UPI/NEFT to initiate production. Remaining 50% balance payable upon final preview approval in Client Portal.',
+        notes: `Auto-converted from website inquiry (${inq.budgetRange}).`,
+        convertedProjectId: projectId,
+      });
+
       await updateInquiryAdmin(inq, { status: 'Converted' });
       showToast(
         'success',
-        'Converted to Client & Project',
-        `Client and Project created for ${inq.fullName}.`
+        '1-Click Converted: Client + Project + Draft INR Quote!',
+        `Created Client, Project (${defaultTasks.length} milestones), and Quote ${savedQuote.quotationNumber} (${formatINR(savedQuote.total)}).`
       );
       navigate(`/admin/projects/${projectId}`);
     } catch (err) {
@@ -1172,9 +1391,9 @@ export const AdminInquiriesPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => handleConvertInquiry(selected)}
-                  className="px-3.5 py-2 text-xs font-semibold text-[#F8FAFC] border border-[#10B981] hover:bg-[#040D1A] hover:text-white rounded-lg transition-colors"
+                  className="px-3.5 py-2 text-xs font-bold text-[#040D1A] bg-gradient-to-r from-[#10B981] via-[#2DD4BF] to-[#0EA5E9] hover:opacity-95 rounded-lg transition-all shadow-sm"
                 >
-                  Convert to Client & Project →
+                  ⚡ 1-Click Convert to Client + Project + Quote →
                 </button>
               </div>
             </div>
@@ -3277,19 +3496,34 @@ export const AdminProjectsPage: React.FC = () => {
                         {formatINR(p.budget)}
                       </td>
                       <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                        <RecordActionBar
-                          onView={() => setViewingProject(p)}
-                          onEdit={() => handleOpenEdit(p)}
-                          onDuplicate={() => handleDuplicateProject(p)}
-                          onArchiveOrVoid={async () => {
-                            const nextStatus = p.status === 'Cancelled' ? 'Planned' : 'Cancelled';
-                            await archiveProjectAdmin(p, nextStatus as 'Cancelled' | 'On Hold');
-                            showToast('success', `Project Marked ${nextStatus}`, p.title);
-                            await loadData();
-                          }}
-                          archiveLabel={p.status === 'Cancelled' ? 'Restore' : 'Cancel'}
-                          onDelete={() => handleTriggerDeleteProject(p)}
-                        />
+                        <div className="inline-flex items-center justify-end gap-1.5 flex-wrap">
+                          <a
+                            href={buildWhatsAppProjectStatusTemplateLink(
+                              p,
+                              p.status === 'In Review' ? 'draft_ready' : 'milestone_update',
+                              clients.find((c) => c.id === p.clientId)?.phone
+                            )}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="Send 1-Click WhatsApp Status / Draft-Ready Alert to Client"
+                            className="px-2 py-1 text-[11px] font-semibold text-[#10B981] bg-[#10B981]/10 hover:bg-[#10B981]/20 border border-[#10B981]/30 rounded-md"
+                          >
+                            WhatsApp Alert
+                          </a>
+                          <RecordActionBar
+                            onView={() => setViewingProject(p)}
+                            onEdit={() => handleOpenEdit(p)}
+                            onDuplicate={() => handleDuplicateProject(p)}
+                            onArchiveOrVoid={async () => {
+                              const nextStatus = p.status === 'Cancelled' ? 'Planned' : 'Cancelled';
+                              await archiveProjectAdmin(p, nextStatus as 'Cancelled' | 'On Hold');
+                              showToast('success', `Project Marked ${nextStatus}`, p.title);
+                              await loadData();
+                            }}
+                            archiveLabel={p.status === 'Cancelled' ? 'Restore' : 'Cancel'}
+                            onDelete={() => handleTriggerDeleteProject(p)}
+                          />
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -3710,6 +3944,52 @@ export const AdminProjectDetailsPage: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* 1-Click WhatsApp Client Status & Draft-Ready Templates Bar */}
+      {(() => {
+        const linkedClient = clients.find(
+          (c) => c.id === project.clientId || c.email.toLowerCase() === project.clientEmail.toLowerCase()
+        );
+        return (
+          <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-xs">
+              <MessageSquare className="w-4 h-4 text-[#10B981]" />
+              <span className="font-semibold text-[#F8FAFC]">
+                1-Click WhatsApp Client Status Templates:
+              </span>
+              <span className="text-[#94A3B8]">
+                ({linkedClient?.phone || 'Select recipient in WhatsApp'})
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <a
+                href={buildWhatsAppProjectStatusTemplateLink(project, 'draft_ready', linkedClient?.phone)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-[#040D1A] bg-gradient-to-r from-[#10B981] to-[#2DD4BF] hover:opacity-95"
+              >
+                <span>🎬 Send "Draft Ready for Review" Alert</span>
+              </a>
+              <a
+                href={buildWhatsAppProjectStatusTemplateLink(project, 'milestone_update', linkedClient?.phone)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-[#F8FAFC] bg-[#132A4A] hover:bg-[#1E3A5F] border border-[#1E3A5F]"
+              >
+                <span>📊 Send Progress Update ({project.progress}%)</span>
+              </a>
+              <a
+                href={buildWhatsAppProjectStatusTemplateLink(project, 'payment_reminder', linkedClient?.phone)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-[#2DD4BF] bg-[#132A4A] hover:bg-[#1E3A5F] border border-[#10B981]/30"
+              >
+                <span>🔓 Send Master File Unlock Notice</span>
+              </a>
+            </div>
+          </div>
+        );
+      })()}
 
       <form onSubmit={handleSaveProject} className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 space-y-4">
         <div className="flex items-center justify-between">

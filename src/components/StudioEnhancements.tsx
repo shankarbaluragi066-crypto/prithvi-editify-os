@@ -43,6 +43,7 @@ interface UpiQrCodeCardProps {
   payeeName?: string;
   label?: string;
   compact?: boolean;
+  onSubmitUtrClick?: () => void;
 }
 
 function generateDeterministicQrMatrix(payload: string, size = 21): boolean[][] {
@@ -97,6 +98,7 @@ export const UpiQrCodeCard: React.FC<UpiQrCodeCardProps> = ({
   payeeName,
   label = 'Scan & Pay via Any UPI App (GPay · PhonePe · Paytm)',
   compact = false,
+  onSubmitUtrClick,
 }) => {
   const [copiedUpi, setCopiedUpi] = useState(false);
   const studioUpi = getStudioUpiSettings();
@@ -203,8 +205,18 @@ export const UpiQrCodeCard: React.FC<UpiQrCodeCardProps> = ({
           className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-colors"
         >
           <span>Open UPI App ({formatINR(safeAmount)})</span>
-          <ExternalLink className="w-3.5 h-3.5 text-[#10B981]" />
+          <ExternalLink className="w-3.5 h-3.5 text-white" />
         </a>
+        {onSubmitUtrClick && (
+          <button
+            type="button"
+            onClick={onSubmitUtrClick}
+            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-semibold text-[#2DD4BF] bg-[#0D1F38] hover:bg-[#1E3A5F] border border-[#10B981]/40 rounded-lg transition-colors"
+          >
+            <CheckCircle2 className="w-3.5 h-3.5 text-[#10B981]" />
+            <span>Submit 12-Digit UTR Number</span>
+          </button>
+        )}
         <span className="text-[10px] text-[#94A3B8] text-center sm:text-right">
           Supports Google Pay, PhonePe, Paytm & BHIM
         </span>
@@ -519,9 +531,10 @@ interface InstantPriceCalculatorProps {
 export const InstantPriceCalculatorWidget: React.FC<InstantPriceCalculatorProps> = ({
   whatsappNumber = '919876543210',
 }) => {
-  const [thumbnailsCount, setThumbnailsCount] = useState<number>(2);
-  const [reelsCount, setReelsCount] = useState<number>(2);
-  const [socialPostsCount, setSocialPostsCount] = useState<number>(4);
+  const { showToast } = useToast();
+  const [thumbnailsCount, setThumbnailsCount] = useState<number>(5);
+  const [reelsCount, setReelsCount] = useState<number>(4);
+  const [socialPostsCount, setSocialPostsCount] = useState<number>(0);
   const [longVideoCount, setLongVideoCount] = useState<number>(0);
   const [rushDelivery, setRushDelivery] = useState<boolean>(false);
   const [includeSourceFiles, setIncludeSourceFiles] = useState<boolean>(false);
@@ -544,6 +557,19 @@ export const InstantPriceCalculatorWidget: React.FC<InstantPriceCalculatorProps>
   const rushFee = rushDelivery ? Math.round((baseSubtotal - volumeDiscount) * 0.25) : 0;
   const sourceFilesFee = includeSourceFiles ? 750 : 0;
   const estimatedTotal = Math.max(0, baseSubtotal - volumeDiscount + rushFee + sourceFilesFee);
+  const rangeMin = Math.max(0, Math.round(estimatedTotal * 0.9));
+  const rangeMax = Math.max(0, Math.round(estimatedTotal * 1.15));
+
+  const matchedBudgetBracket =
+    estimatedTotal < 2500
+      ? 'Under ₹2,500'
+      : estimatedTotal <= 5000
+      ? '₹2,500 – ₹5,000'
+      : estimatedTotal <= 15000
+      ? '₹5,000 – ₹15,000'
+      : estimatedTotal <= 35000
+      ? '₹15,000 – ₹35,000'
+      : '₹35,000+ (Monthly Retainer / Campaign)';
 
   const summaryItems: string[] = [];
   if (thumbnailsCount > 0) summaryItems.push(`${thumbnailsCount} YouTube Thumbnails`);
@@ -555,15 +581,50 @@ export const InstantPriceCalculatorWidget: React.FC<InstantPriceCalculatorProps>
 
   const bundleSummaryText =
     summaryItems.length > 0
-      ? `${summaryItems.join(' + ')} — Estimated Total: ${formatINR(estimatedTotal)}`
+      ? `${summaryItems.join(' + ')} (${formatINR(rangeMin)} – ${formatINR(rangeMax)})`
       : 'Custom Creative Bundle';
 
+  const detailedScopeDescription = [
+    `Selected Instant Quote Package:`,
+    ...summaryItems.map((item) => `• ${item}`),
+    `Estimated INR Range: ${formatINR(rangeMin)} – ${formatINR(rangeMax)} (Standard Bundle: ${formatINR(estimatedTotal)})`,
+    `Please share the next available production slot and milestone schedule.`,
+  ].join('\n');
+
+  const handleSendScopeToShankar = () => {
+    const inquiryEl = document.getElementById('home-inquiry-section');
+    window.dispatchEvent(
+      new CustomEvent('pe-prefill-inquiry', {
+        detail: {
+          serviceRequired: bundleSummaryText,
+          budgetRange: matchedBudgetBracket,
+          description: detailedScopeDescription,
+        },
+      })
+    );
+    if (inquiryEl) {
+      inquiryEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      showToast(
+        'success',
+        'Scope Prefilled Below!',
+        'Your selected deliverables and INR estimate are ready in the inquiry form.'
+      );
+    } else {
+      window.location.hash = '';
+      window.location.assign(
+        `/contact?service=${encodeURIComponent(bundleSummaryText)}&budget=${encodeURIComponent(
+          matchedBudgetBracket
+        )}&scope=${encodeURIComponent(detailedScopeDescription)}`
+      );
+    }
+  };
+
   const whatsappText = [
-    `Hello Prithvi Editify, I used the Instant Project Estimator and would like to book this package:`,
+    `Hello Shankar (Prithvi Editify), I configured this scope using the Instant Quote Calculator:`,
     ``,
     ...summaryItems.map((i) => `• ${i}`),
     ``,
-    `*Estimated Bundle Total:* ${formatINR(estimatedTotal)} INR`,
+    `*Estimated INR Range:* ${formatINR(rangeMin)} – ${formatINR(rangeMax)} (Bundle Rate: ${formatINR(estimatedTotal)})`,
   ].join('\n');
 
   const cleanPhone = whatsappNumber.replace(/\D/g, '') || '919876543210';
@@ -576,14 +637,57 @@ export const InstantPriceCalculatorWidget: React.FC<InstantPriceCalculatorProps>
           <div>
             <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#10B981]">
               <Calculator className="w-3.5 h-3.5" />
-              <span>Interactive INR Bundle Estimator</span>
+              <span>Interactive Instant Quote & Package Calculator</span>
             </div>
             <h2 className="font-editorial text-2xl sm:text-3xl font-semibold text-[#F8FAFC] mt-1">
-              Instant Project Price Calculator
+              Build Your Custom Creative Scope & Instant INR Quote
             </h2>
             <p className="text-xs sm:text-sm text-[#94A3B8] mt-1">
-              Mix and match deliverables to build your custom monthly or campaign bundle. Bundles over ₹8,000 automatically unlock a 10% studio retainer discount.
+              Select your deliverables (e.g., 5 YouTube Thumbnails + 4 Instagram Reels) to see an instant estimated INR range and click <strong>"Send This Scope to Shankar"</strong> to prefill your project brief.
             </p>
+          </div>
+
+          {/* Quick Package Presets */}
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <span className="text-[11px] font-mono uppercase tracking-wider text-[#94A3B8] mr-1">
+              Quick Presets:
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setThumbnailsCount(5);
+                setReelsCount(4);
+                setSocialPostsCount(0);
+                setLongVideoCount(0);
+              }}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#132A4A] hover:bg-[#1E3A5F] text-[#2DD4BF] border border-[#10B981]/30 transition-colors"
+            >
+              Creator Pack (5 Thumbnails + 4 Reels)
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setThumbnailsCount(8);
+                setReelsCount(8);
+                setSocialPostsCount(10);
+                setLongVideoCount(0);
+              }}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#132A4A] hover:bg-[#1E3A5F] text-[#F8FAFC] border border-[#1E3A5F] transition-colors"
+            >
+              Growth Retainer (8 Thumbnails + 8 Reels + 10 Posts)
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setThumbnailsCount(4);
+                setReelsCount(4);
+                setSocialPostsCount(4);
+                setLongVideoCount(2);
+              }}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#132A4A] hover:bg-[#1E3A5F] text-[#F8FAFC] border border-[#1E3A5F] transition-colors"
+            >
+              YouTube + Reels Pro Suite
+            </button>
           </div>
 
           <div className="space-y-4">
@@ -741,30 +845,39 @@ export const InstantPriceCalculatorWidget: React.FC<InstantPriceCalculatorProps>
                 <span className="font-mono">+{formatINR(sourceFilesFee)}</span>
               </div>
             )}
-            <div className="flex items-baseline justify-between pt-3 border-t border-white/10">
-              <span className="text-sm font-semibold">Estimated Total:</span>
-              <span className="font-mono text-2xl font-bold text-[#10B981] tabular-nums">
-                {formatINR(estimatedTotal)}
-              </span>
+            <div className="pt-3 border-t border-white/10 space-y-1">
+              <div className="flex items-baseline justify-between">
+                <span className="text-xs text-[#94A3B8]">Estimated INR Range:</span>
+                <span className="font-mono text-sm font-semibold text-[#2DD4BF] tabular-nums">
+                  {formatINR(rangeMin)} – {formatINR(rangeMax)}
+                </span>
+              </div>
+              <div className="flex items-baseline justify-between">
+                <span className="text-sm font-semibold">Standard Bundle Rate:</span>
+                <span className="font-mono text-2xl font-bold text-[#10B981] tabular-nums">
+                  {formatINR(estimatedTotal)}
+                </span>
+              </div>
             </div>
           </div>
 
           <div className="space-y-2.5 pt-2">
-            <Link
-              to={`/contact?service=${encodeURIComponent(bundleSummaryText)}`}
-              className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-colors"
+            <button
+              type="button"
+              onClick={handleSendScopeToShankar}
+              className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-xs font-semibold text-[#040D1A] bg-gradient-to-r from-[#10B981] via-[#2DD4BF] to-[#0EA5E9] hover:opacity-95 rounded-lg transition-all shadow-md"
             >
-              <span>Lock This Estimate in Project Brief</span>
+              <span>Send This Scope to Shankar</span>
               <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
+            </button>
             <a
               href={waHref}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full inline-flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-semibold text-white bg-[#132A4A] hover:bg-[#2f455e] border border-white/10 rounded-lg transition-colors"
+              className="w-full inline-flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-semibold text-white bg-[#132A4A] hover:bg-[#1E3A5F] border border-white/10 rounded-lg transition-colors"
             >
               <MessageSquare className="w-3.5 h-3.5 text-[#10B981]" />
-              <span>Send Bundle Estimate on WhatsApp</span>
+              <span>Send Scope via WhatsApp Direct</span>
             </a>
           </div>
         </div>

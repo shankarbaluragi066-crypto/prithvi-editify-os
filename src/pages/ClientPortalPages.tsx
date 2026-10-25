@@ -11,6 +11,9 @@ import {
   RotateCcw,
   Eye,
   Lock,
+  Unlock,
+  ShieldCheck,
+  MapPin,
 } from 'lucide-react';
 import {
   fetchClientProjects,
@@ -39,6 +42,10 @@ import {
 import {
   checkProjectMasterUnlockStatus,
   getProofingPins,
+  formatVideoTimestamp,
+  getMilestoneApprovalSignOff,
+  recordMilestoneApprovalSignOff,
+  MilestoneApprovalSignOffRecord,
   submitClientPaymentProof,
   getClientPaymentProofs,
   ClientPaymentProofSubmission,
@@ -314,6 +321,7 @@ export const ClientProjectDetailsPage: React.FC = () => {
   const [commentText, setCommentText] = useState('');
   const [revisionNote, setRevisionNote] = useState('');
   const [previewItem, setPreviewItem] = useState<PreviewableMediaItem | null>(null);
+  const [signOffRecord, setSignOffRecord] = useState<MilestoneApprovalSignOffRecord | null>(null);
 
   const loadAll = useCallback(async () => {
     if (!user || !projectId) return;
@@ -329,6 +337,7 @@ export const ClientProjectDetailsPage: React.FC = () => {
     setFiles(fls.filter((f) => f.projectId === projectId));
     setInvoices(invs);
     setMessages(msgs);
+    setSignOffRecord(getMilestoneApprovalSignOff(projectId));
   }, [user, projectId]);
 
   useEffect(() => {
@@ -348,11 +357,33 @@ export const ClientProjectDetailsPage: React.FC = () => {
       const note =
         revisionNote.trim() ||
         (status === 'Completed'
-          ? 'Client approved deliverables.'
+          ? 'Client formally approved final deliverables and signed off on project milestones.'
           : 'Client requested revision.');
       await clientRequestRevisionOrApprove(project, status, note);
+      if (status === 'Completed') {
+        const approver = profile?.displayName || user?.email || 'Client';
+        const recorded = recordMilestoneApprovalSignOff(project.id, approver, note);
+        setSignOffRecord(recorded);
+        if (user) {
+          await postProjectMessage({
+            projectId: project.id,
+            clientUserId: user.uid,
+            senderName: approver,
+            senderRole: 'client',
+            content: `✅ MILESTONE APPROVAL SIGN-OFF: Formally approved final deliverables on ${new Date(
+              recorded.approvedAt
+            ).toLocaleString('en-IN')}. Note: ${note}`,
+            visibility: 'client',
+          }).catch(() => {});
+        }
+      }
       setRevisionNote('');
-      showToast('success', status === 'Completed' ? 'Deliverables Approved' : 'Revision Requested');
+      showToast(
+        'success',
+        status === 'Completed'
+          ? 'Final Deliverable Formally Approved & Timestamp Logged!'
+          : 'Revision Requested'
+      );
       await loadAll();
     } catch (err) {
       showToast('error', 'Action Failed', err instanceof Error ? err.message : '');
@@ -401,36 +432,104 @@ export const ClientProjectDetailsPage: React.FC = () => {
           </p>
         )}
 
-        {!['Completed', 'Cancelled'].includes(project.status) && (
-          <div className="pt-4 border-t border-[#1E3A5F] space-y-3">
-            <label className="block text-xs font-semibold text-[#F8FAFC]">
-              Submit Review Decision or Revision Notes
-            </label>
-            <input
-              type="text"
-              value={revisionNote}
-              onChange={(e) => setRevisionNote(e.target.value)}
-              placeholder="Optional note regarding revision details or final approval..."
-              className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
-            />
-            <div className="flex flex-wrap gap-3">
-              <button
-                type="button"
-                onClick={() => handleAction('Revision Requested')}
-                className="px-4 py-2 text-xs font-semibold text-[#F8FAFC] bg-[#132A4A] hover:bg-[#1E3A5F] rounded-lg"
-              >
-                Request Revision
-              </button>
-              <button
-                type="button"
-                onClick={() => handleAction('Completed')}
-                className="px-4 py-2 text-xs font-semibold text-white bg-[#16A34A] hover:bg-[#15803D] rounded-lg"
-              >
-                Approve Final Deliverables
-              </button>
+        {(() => {
+          const unlockStatus = checkProjectMasterUnlockStatus(project.id, invoices);
+          const isApproved = project.status === 'Completed' || Boolean(signOffRecord);
+          return (
+            <div className="pt-4 border-t border-[#1E3A5F] space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-[#10B981]" />
+                  <span className="text-xs font-semibold text-[#F8FAFC]">
+                    Formal Milestone Approval Sign-Off & Master File Unlock
+                  </span>
+                </div>
+                {isApproved && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded bg-[#16A34A]/15 text-[#16A34A] text-[11px] font-semibold">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Signed Off</span>
+                  </span>
+                )}
+              </div>
+
+              {isApproved ? (
+                <div className="p-4 rounded-lg bg-[#16A34A]/10 border border-[#16A34A]/30 space-y-2 text-xs">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="font-semibold text-[#4ADE80]">
+                      ✓ Final Deliverable Formally Approved by{' '}
+                      {signOffRecord?.approvedBy || profile?.displayName || 'Client'}
+                    </p>
+                    <span className="font-mono text-[11px] text-[#94A3B8]">
+                      Logged:{' '}
+                      {signOffRecord?.approvedAt
+                        ? new Date(signOffRecord.approvedAt).toLocaleString('en-IN')
+                        : formatDate(project.updatedAt)}
+                    </span>
+                  </div>
+                  <p className="text-[#F8FAFC]/90">{signOffRecord?.signOffNote || project.latestUpdate}</p>
+                  <div className="pt-2 border-t border-[#16A34A]/20 flex flex-wrap items-center justify-between gap-2">
+                    <span className="inline-flex items-center gap-1.5 text-[11px] text-[#94A3B8]">
+                      {unlockStatus.isUnlocked ? (
+                        <>
+                          <Unlock className="w-3.5 h-3.5 text-[#10B981]" />
+                          <span className="text-[#10B981] font-semibold">
+                            Invoice Balance Settled (₹0 Due) — All Unwatermarked Master Source Files Unlocked Below!
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <Lock className="w-3.5 h-3.5 text-[#D97706]" />
+                          <span className="text-[#FBBF24]">
+                            Approval logged! Settle remaining invoice balance ({formatINR(unlockStatus.balanceDue)}) to unlock master source file downloads.
+                          </span>
+                        </>
+                      )}
+                    </span>
+                    {!unlockStatus.isUnlocked && (
+                      <Link
+                        to="/portal/invoices"
+                        className="px-3 py-1 rounded bg-[#10B981] text-[#040D1A] font-bold text-[11px] hover:opacity-95"
+                      >
+                        Pay Invoice via UPI QR →
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-xs text-[#94A3B8]">
+                    Review your drafts below using timestamped video notes or graphic frame pins. Once satisfied, click{' '}
+                    <strong className="text-[#F8FAFC]">Approve Final Deliverable</strong> to log your formal approval timestamp and unlock master source files upon invoice settlement.
+                  </p>
+                  <input
+                    type="text"
+                    value={revisionNote}
+                    onChange={(e) => setRevisionNote(e.target.value)}
+                    placeholder="Optional note regarding revision details or final milestone sign-off..."
+                    className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
+                  />
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      type="button"
+                      onClick={() => handleAction('Completed')}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-[#16A34A] hover:bg-[#15803D] rounded-lg shadow-sm"
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>Approve Final Deliverable</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAction('Revision Requested')}
+                      className="px-4 py-2 text-xs font-semibold text-[#F8FAFC] bg-[#132A4A] hover:bg-[#1E3A5F] border border-[#1E3A5F] rounded-lg"
+                    >
+                      Request Revision
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-        )}
+          );
+        })()}
       </div>
 
       {/* Deliverables & Milestones */}
@@ -561,6 +660,64 @@ export const ClientProjectDetailsPage: React.FC = () => {
           })()}
         </div>
       </div>
+
+      {/* Timestamped Video & Frame-Pinning Feedback Summary */}
+      {(() => {
+        const allProjectPins = getProofingPins(project.id);
+        return (
+          <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-[#10B981]" />
+                <h3 className="text-sm font-semibold text-[#F8FAFC]">
+                  Timestamped Video & Frame-Pinning Feedback ({allProjectPins.length})
+                </h3>
+              </div>
+              <span className="text-[11px] font-mono text-[#2DD4BF]">
+                Click "Proof & Pin Note" on any file above to pin a spot or video timestamp (e.g., 01:14)
+              </span>
+            </div>
+            {allProjectPins.length === 0 ? (
+              <p className="text-xs text-[#94A3B8]">
+                No timestamped or frame-pinned revision notes recorded yet. Open any deliverable preview above and click on the video timeline or graphic canvas to drop a pin.
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                {allProjectPins.map((pin, idx) => (
+                  <div
+                    key={pin.id}
+                    className="p-3 rounded-lg bg-[#132A4A] border border-[#1E3A5F] flex items-start justify-between gap-3"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="px-2 py-0.5 rounded bg-[#10B981]/20 text-[#2DD4BF] font-mono font-bold text-[10px]">
+                          Pin #{idx + 1} · ({pin.xPercent}%, {pin.yPercent}%)
+                        </span>
+                        {pin.timestampSeconds !== undefined && pin.timestampSeconds !== null && (
+                          <span className="px-2 py-0.5 rounded bg-[#0EA5E9]/20 text-[#38BDF8] font-mono font-bold text-[10px]">
+                            ⏱ {formatVideoTimestamp(pin.timestampSeconds)}
+                          </span>
+                        )}
+                        <span className="text-[11px] text-[#94A3B8]">by {pin.authorName}</span>
+                      </div>
+                      <p className="text-[#F8FAFC]">{pin.comment}</p>
+                    </div>
+                    <span
+                      className={`px-2 py-0.5 rounded text-[10px] font-semibold shrink-0 ${
+                        pin.resolved
+                          ? 'bg-[#16A34A]/20 text-[#4ADE80]'
+                          : 'bg-amber-500/20 text-amber-300'
+                      }`}
+                    >
+                      {pin.resolved ? 'Resolved' : 'Open'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Project Comments */}
       <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 space-y-4">
@@ -1043,10 +1200,24 @@ export const ClientInvoicesPage: React.FC = () => {
             </span>
           </div>
 
-          {/* Dynamic Scannable UPI QR Code with Exact Balance Due */}
+          {/* Dynamic Scannable UPI QR Code with Exact Balance Due + 1-Click UTR Submission */}
           <UpiQrCodeCard
             amount={selected.balanceDue}
             referenceNumber={selected.invoiceNumber}
+            onSubmitUtrClick={
+              selected.balanceDue > 0
+                ? () => {
+                    setProofModalInvoice(selected);
+                    setProofForm({
+                      amount: selected.balanceDue,
+                      method: 'UPI',
+                      utrNumber: '',
+                      receiptScreenshotDataUrl: '',
+                      notes: '',
+                    });
+                  }
+                : undefined
+            }
           />
 
           <p className="text-xs text-[#94A3B8]">{selected.paymentInstructions}</p>

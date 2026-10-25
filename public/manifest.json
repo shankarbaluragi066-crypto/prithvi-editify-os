@@ -1,0 +1,26 @@
+{
+  "name": "Prithvi Editify — Creative Design & Video Studio",
+  "short_name": "Prithvi Editify",
+  "description": "High-CTR YouTube thumbnails, Instagram Reels editing, social media design, branding, and client portal by Shankar Baluragi.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#040D1A",
+  "theme_color": "#040D1A",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/assets/aistudio/image_82a12d7d.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/aistudio/image_82a12d7d.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["design", "business", "productivity", "photo"]
+}

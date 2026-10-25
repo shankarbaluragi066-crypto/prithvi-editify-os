@@ -946,6 +946,16 @@ export const HomePage: React.FC = () => {
         </section>
       )}
 
+      {/* BEFORE / AFTER VISUAL COMPARISON SHOWCASE ON HOMEPAGE */}
+      <section className="max-w-[1200px] mx-auto px-6 pt-16">
+        <BeforeAfterComparisonShowcase />
+      </section>
+
+      {/* INTERACTIVE INSTANT QUOTE / PACKAGE CALCULATOR ON HOMEPAGE */}
+      <section id="instant-quote-calculator" className="max-w-[1200px] mx-auto px-6 pt-14 pb-4 scroll-mt-24">
+        <InstantPriceCalculatorWidget whatsappNumber={settings.whatsappNumber} />
+      </section>
+
       {/* PROCESS SECTION */}
       {custom.showProcessSection !== false && (
         <section className="max-w-[1200px] mx-auto px-6 py-20">
@@ -1021,7 +1031,7 @@ export const HomePage: React.FC = () => {
 
       {/* CONTACT / INQUIRY SECTION */}
       {custom.showHomeContactSection !== false && (
-        <section className="max-w-[1200px] mx-auto px-6 py-20">
+        <section id="home-inquiry-section" className="max-w-[1200px] mx-auto px-6 py-20 scroll-mt-20">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
             <div className="lg:col-span-5 space-y-6">
               <p className="text-xs font-semibold text-[#94A3B8] tracking-wide">
@@ -1627,8 +1637,105 @@ export const ServiceDetailPage: React.FC = () => {
     service.isCustomQuote ? 'Custom quote' : `Starting ${service.priceDisplay}`
   })`;
 
+  const serviceJsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Service',
+        name: service.title,
+        serviceType: displayCategory,
+        description: service.description,
+        provider: {
+          '@type': 'ProfessionalService',
+          name: studioName,
+          url: 'https://prithvieditify.netlify.app/',
+          founder: {
+            '@type': 'Person',
+            name: creatorName,
+          },
+          areaServed: 'IN',
+        },
+        areaServed: {
+          '@type': 'Country',
+          name: 'India',
+        },
+        offers: service.isCustomQuote
+          ? {
+              '@type': 'Offer',
+              priceCurrency: 'INR',
+              description: service.priceDisplay || 'Custom INR Quote',
+              availability: 'https://schema.org/InStock',
+            }
+          : packages.map((pkg) => ({
+              '@type': 'Offer',
+              name: `${service.title} — ${pkg.tier} Package (${pkg.name})`,
+              description: pkg.description,
+              priceCurrency: 'INR',
+              price: String(pkg.price || service.startingPrice || 500),
+              availability: 'https://schema.org/InStock',
+            })),
+      },
+      {
+        '@type': 'FAQPage',
+        mainEntity: [
+          {
+            '@type': 'Question',
+            name: `How much does ${service.title} cost at ${studioName}?`,
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: service.isCustomQuote
+                ? `${service.title} is scoped on a custom INR quotation basis depending on deliverables. Contact ${creatorName} for an itemized INR quote.`
+                : `${service.title} starts at ${service.priceDisplay} with Basic, Standard, and Premium package tiers available in Indian Rupees (INR).`,
+            },
+          },
+          {
+            '@type': 'Question',
+            name: `What is the turnaround time and revision policy for ${service.title}?`,
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: `Standard delivery for ${service.title} is ${
+                service.turnaroundTime || '24–48 hours'
+              } and includes ${
+                service.revisions || '2 structured revision rounds'
+              } via the Prithvi Editify Client Portal.`,
+            },
+          },
+        ],
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          {
+            '@type': 'ListItem',
+            position: 1,
+            name: 'Home',
+            item: 'https://prithvieditify.netlify.app/',
+          },
+          {
+            '@type': 'ListItem',
+            position: 2,
+            name: 'Creative Services',
+            item: 'https://prithvieditify.netlify.app/services',
+          },
+          {
+            '@type': 'ListItem',
+            position: 3,
+            name: service.title,
+            item: `https://prithvieditify.netlify.app/services/${encodeURIComponent(
+              service.slug || service.id
+            )}`,
+          },
+        ],
+      },
+    ],
+  };
+
   return (
     <div className="max-w-[1200px] mx-auto px-6 py-10 lg:py-14 space-y-10">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceJsonLd) }}
+      />
       {/* 1. Breadcrumb & Service Marketplace Header */}
       <div className="space-y-4 border-b border-[#1E3A5F] pb-6">
         <nav
@@ -2832,8 +2939,61 @@ export const PortfolioDetailPage: React.FC = () => {
   }, I viewed "${project.title}" in your Creative Portfolio and would like to discuss a similar ${displayCategory} project.`;
   const whatsappUrl = buildWhatsAppLink(settings.whatsappNumber, whatsappMessage);
 
+  const portfolioJsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'CreativeWork',
+        name: project.title,
+        headline: project.title,
+        genre: displayCategory,
+        description: project.description,
+        image: primaryCover,
+        keywords: Array.isArray(project.tags) ? project.tags.join(', ') : displayCategory,
+        creator: {
+          '@type': 'Person',
+          name: settings.ownerName || 'Shankar Baluragi',
+        },
+        publisher: {
+          '@type': 'Organization',
+          name: settings.businessName || 'Prithvi Editify',
+          url: 'https://prithvieditify.netlify.app/',
+        },
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          {
+            '@type': 'ListItem',
+            position: 1,
+            name: 'Home',
+            item: 'https://prithvieditify.netlify.app/',
+          },
+          {
+            '@type': 'ListItem',
+            position: 2,
+            name: 'Portfolio',
+            item: 'https://prithvieditify.netlify.app/portfolio',
+          },
+          {
+            '@type': 'ListItem',
+            position: 3,
+            name: project.title,
+            item: `https://prithvieditify.netlify.app/portfolio/${encodeURIComponent(
+              project.slug || project.id
+            )}`,
+          },
+        ],
+      },
+    ],
+  };
+
   return (
     <div className="max-w-[1200px] mx-auto px-6 py-10 lg:py-14 space-y-10">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(portfolioJsonLd) }}
+      />
       {/* Top Breadcrumb & Project Header */}
       <div className="space-y-5 border-b border-[#1E3A5F] pb-6">
         <nav

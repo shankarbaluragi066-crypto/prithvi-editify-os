@@ -1,6 +1,7 @@
 import {
   InquiryRecord,
   InvoiceRecord,
+  ProjectRecord,
   QuotationLineItem,
   QuotationRecord,
   ServiceItem,
@@ -976,4 +977,163 @@ export function buildTasksFromMilestoneTemplate(
     };
   });
 }
+
+// ============================================================================
+// 8. MILESTONE APPROVAL SIGN-OFF & WHATSAPP STATUS/INVOICE TEMPLATES
+// ============================================================================
+
+export interface MilestoneApprovalSignOffRecord {
+  projectId: string;
+  approvedBy: string;
+  approvedAt: string;
+  signOffNote: string;
+}
+
+const SIGN_OFF_STORAGE_KEY = 'pe_milestone_signoffs_v1';
+
+export function getMilestoneApprovalSignOff(projectId: string): MilestoneApprovalSignOffRecord | null {
+  try {
+    const raw = localStorage.getItem(SIGN_OFF_STORAGE_KEY);
+    if (!raw) return null;
+    const map = JSON.parse(raw) as Record<string, MilestoneApprovalSignOffRecord>;
+    return map[projectId] || null;
+  } catch {
+    return null;
+  }
+}
+
+export function recordMilestoneApprovalSignOff(
+  projectId: string,
+  approvedBy: string,
+  signOffNote = 'Final deliverable reviewed and formally approved by client.'
+): MilestoneApprovalSignOffRecord {
+  const record: MilestoneApprovalSignOffRecord = {
+    projectId,
+    approvedBy: approvedBy || 'Client',
+    approvedAt: new Date().toISOString(),
+    signOffNote,
+  };
+  try {
+    const raw = localStorage.getItem(SIGN_OFF_STORAGE_KEY);
+    const map: Record<string, MilestoneApprovalSignOffRecord> = raw ? JSON.parse(raw) : {};
+    map[projectId] = record;
+    localStorage.setItem(SIGN_OFF_STORAGE_KEY, JSON.stringify(map));
+  } catch {
+    // ignore storage errors
+  }
+  return record;
+}
+
+export function buildWhatsAppProjectStatusTemplateLink(
+  project: ProjectRecord,
+  templateType: 'draft_ready' | 'milestone_update' | 'payment_reminder',
+  clientPhone?: string
+): string {
+  const cleanPhone = (clientPhone || '').replace(/\D/g, '');
+  const phonePrefix = cleanPhone
+    ? cleanPhone.length === 10
+      ? `91${cleanPhone}`
+      : cleanPhone
+    : '';
+
+  const projRef = project.id.slice(0, 8).toUpperCase();
+  let message = '';
+  if (templateType === 'draft_ready') {
+    message = [
+      `Hi *${project.clientName || 'there'}* 👋,`,
+      ``,
+      `Your new creative draft for *${project.title}* (#${projRef}) is now uploaded and ready for review in your *Prithvi Editify Client Portal*!`,
+      ``,
+      `🎬 *Service:* ${project.serviceType}`,
+      `📊 *Current Progress:* ${project.progress}% (${project.status})`,
+      ``,
+      `You can preview the deliverable, click any video timestamp (e.g., 01:14) or pin a spot on the graphic to leave revision notes, or click *"Approve Final Deliverable"* once satisfied.`,
+      ``,
+      `— *Shankar Baluragi* | Prithvi Editify Studio`,
+    ].join('\n');
+  } else if (templateType === 'milestone_update') {
+    message = [
+      `Hi *${project.clientName || 'there'}* ✨,`,
+      ``,
+      `Quick studio update on your project *${project.title}* (#${projRef}):`,
+      `• *Stage:* ${project.status}`,
+      `• *Completion:* ${project.progress}%`,
+      `• *Deadline:* ${project.deadline || 'On schedule'}`,
+      ``,
+      `Check your Client Portal anytime for live milestone updates and previews.`,
+      ``,
+      `— *Shankar Baluragi* | Prithvi Editify Studio`,
+    ].join('\n');
+  } else {
+    message = [
+      `Hi *${project.clientName || 'there'}* 🙏,`,
+      ``,
+      `Your final deliverables for *${project.title}* (#${projRef}) are ready! Once the remaining invoice balance is settled via UPI in your Client Portal, your unwatermarked master source files will automatically unlock for instant download.`,
+      ``,
+      `Let me know if you need any assistance with the UPI QR code or invoice.`,
+      ``,
+      `— *Shankar Baluragi* | Prithvi Editify Studio`,
+    ].join('\n');
+  }
+
+  return phonePrefix
+    ? `https://wa.me/${phonePrefix}?text=${encodeURIComponent(message)}`
+    : `https://wa.me/?text=${encodeURIComponent(message)}`;
+}
+
+export function buildWhatsAppInvoiceReminderLink(
+  invoice: InvoiceRecord,
+  templateType: 'summary' | 'polite_reminder',
+  clientPhone?: string,
+  upiId = 'shankarbaluragi@ybl'
+): string {
+  const cleanPhone = (clientPhone || '').replace(/\D/g, '');
+  const phonePrefix = cleanPhone
+    ? cleanPhone.length === 10
+      ? `91${cleanPhone}`
+      : cleanPhone
+    : '';
+
+  const upiUri = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(
+    'Prithvi Editify'
+  )}&am=${invoice.balanceDue}&cu=INR&tn=${encodeURIComponent(invoice.invoiceNumber)}`;
+
+  const message =
+    templateType === 'polite_reminder'
+      ? [
+          `Hi *${invoice.clientName}* 🙏,`,
+          ``,
+          `Hope you're doing well! Sending a gentle reminder regarding Invoice *${invoice.invoiceNumber}* for *${invoice.projectTitle || 'Creative Services'}*.`,
+          ``,
+          `• *Invoice Total:* ₹${Number(invoice.total || 0).toLocaleString('en-IN')}`,
+          `• *Amount Paid:* ₹${Number(invoice.amountPaid || 0).toLocaleString('en-IN')}`,
+          `• *Balance Due:* *₹${Number(invoice.balanceDue || 0).toLocaleString('en-IN')}*`,
+          `• *Due Date:* ${invoice.dueDate || 'Due on receipt'}`,
+          ``,
+          `💳 *Instant UPI Payment (${upiId}):*`,
+          `${upiUri}`,
+          ``,
+          `Once paid, you can submit your 12-digit UTR number directly inside the Prithvi Editify Client Portal to unlock your master deliverables immediately. Thank you!`,
+          ``,
+          `— *Shankar Baluragi* | Prithvi Editify`,
+        ].join('\n')
+      : [
+          `Hi *${invoice.clientName}* 👋,`,
+          ``,
+          `Here is the summary for your Prithvi Editify Invoice *${invoice.invoiceNumber}* (*${invoice.projectTitle || 'Creative Project'}*):`,
+          ``,
+          `• *Total Amount:* ₹${Number(invoice.total || 0).toLocaleString('en-IN')}`,
+          `• *Status:* ${invoice.status}`,
+          `• *Balance Due:* *₹${Number(invoice.balanceDue || 0).toLocaleString('en-IN')}*`,
+          ``,
+          `You can view, print, or scan the one-click UPI QR code directly in your Client Portal.`,
+          ``,
+          `— *Shankar Baluragi* | Prithvi Editify`,
+        ].join('\n');
+
+  return phonePrefix
+    ? `https://wa.me/${phonePrefix}?text=${encodeURIComponent(message)}`
+    : `https://wa.me/?text=${encodeURIComponent(message)}`;
+}
+
 

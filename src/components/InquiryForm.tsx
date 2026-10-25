@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { CheckCircle2, Send, Paperclip } from 'lucide-react';
+import { CheckCircle2, Send, Paperclip, Sparkles } from 'lucide-react';
 import { inquirySchema, InquiryFormValues } from '../schemas/validation';
 import {
   submitInquiryRecord,
@@ -9,7 +9,7 @@ import {
   fetchPublishedServices,
 } from '../services/crmService';
 import { useToast } from '../contexts/ToastContext';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
 const SERVICE_OPTIONS = [
   'Graphic Design',
@@ -38,10 +38,12 @@ export const InquiryForm: React.FC<{
   customBudgetRanges?: string[];
 }> = ({ defaultService, customBudgetRanges }) => {
   const { showToast } = useToast();
+  const [searchParams] = useSearchParams();
   const [referenceFile, setReferenceFile] = useState<File | null>(null);
   const [submittedId, setSubmittedId] = useState<string | null>(null);
   const [lastFingerprint, setLastFingerprint] = useState<string>('');
   const [serviceOptions, setServiceOptions] = useState<string[]>(SERVICE_OPTIONS);
+  const [prefillNotice, setPrefillNotice] = useState<string | null>(null);
 
   const activeBudgetRanges =
     customBudgetRanges && customBudgetRanges.length > 0 ? customBudgetRanges : BUDGET_RANGES;
@@ -78,32 +80,75 @@ export const InquiryForm: React.FC<{
             'Custom Creative Project',
           ];
           setServiceOptions(mapped);
-          if (!defaultService) {
+          if (!defaultService && !searchParams.get('service')) {
             setValue('serviceRequired', mapped[0]);
           }
         }
       })
       .catch(() => {});
-  }, [defaultService, setValue]);
+  }, [defaultService, searchParams, setValue]);
 
   useEffect(() => {
-    if (!defaultService) return;
-    const cleanTarget = defaultService.trim().toLowerCase();
-    const matched = serviceOptions.find(
-      (opt) =>
-        opt.toLowerCase() === cleanTarget ||
-        opt.toLowerCase().startsWith(cleanTarget) ||
-        opt.toLowerCase().includes(cleanTarget)
-    );
-    if (matched) {
-      setValue('serviceRequired', matched);
-    } else {
-      setServiceOptions((prev) =>
-        prev.includes(defaultService) ? prev : [defaultService, ...prev]
+    const queryService = searchParams.get('service');
+    const queryBudget = searchParams.get('budget');
+    const queryScope = searchParams.get('scope');
+    const targetService = queryService || defaultService;
+
+    if (targetService) {
+      const cleanTarget = targetService.trim().toLowerCase();
+      const matched = serviceOptions.find(
+        (opt) =>
+          opt.toLowerCase() === cleanTarget ||
+          opt.toLowerCase().startsWith(cleanTarget) ||
+          opt.toLowerCase().includes(cleanTarget)
       );
-      setValue('serviceRequired', defaultService);
+      if (matched) {
+        setValue('serviceRequired', matched);
+      } else {
+        setServiceOptions((prev) =>
+          prev.includes(targetService) ? prev : [targetService, ...prev]
+        );
+        setValue('serviceRequired', targetService);
+      }
     }
-  }, [defaultService, serviceOptions, setValue]);
+
+    if (queryBudget) {
+      setValue('budgetRange', queryBudget);
+    }
+
+    if (queryScope) {
+      setValue('description', queryScope, { shouldValidate: true });
+      setPrefillNotice('Instant Quote package scope & estimated INR range prefilled below — add your contact details and send to Shankar!');
+    }
+  }, [defaultService, searchParams, serviceOptions, setValue]);
+
+  useEffect(() => {
+    const handleCustomPrefill = (event: Event) => {
+      const customEvent = event as CustomEvent<{
+        serviceRequired?: string;
+        budgetRange?: string;
+        description?: string;
+      }>;
+      if (!customEvent.detail) return;
+      const { serviceRequired, budgetRange, description } = customEvent.detail;
+      if (serviceRequired) {
+        setServiceOptions((prev) =>
+          prev.includes(serviceRequired) ? prev : [serviceRequired, ...prev]
+        );
+        setValue('serviceRequired', serviceRequired);
+      }
+      if (budgetRange) {
+        setValue('budgetRange', budgetRange);
+      }
+      if (description) {
+        setValue('description', description, { shouldValidate: true });
+      }
+      setPrefillNotice('Instant Quote package scope & estimated INR range prefilled below — add your contact details and send to Shankar!');
+    };
+
+    window.addEventListener('pe-prefill-inquiry', handleCustomPrefill);
+    return () => window.removeEventListener('pe-prefill-inquiry', handleCustomPrefill);
+  }, [setValue]);
 
   const onSubmit = async (values: InquiryFormValues) => {
     const fingerprint = `${values.email.toLowerCase()}_${values.serviceRequired}_${values.description.slice(0, 30)}`;
@@ -174,6 +219,12 @@ export const InquiryForm: React.FC<{
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="pe-card-interactive bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 sm:p-8 space-y-5 shadow-[0_1px_2px_rgba(0,0,0,0.35)]">
+      {prefillNotice && (
+        <div className="p-3.5 bg-[#10B981]/10 border border-[#10B981]/30 rounded-lg text-xs text-[#2DD4BF] font-medium flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-[#10B981] shrink-0" />
+          <span>{prefillNotice}</span>
+        </div>
+      )}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
         <div>
           <label htmlFor="inq-fullName" className="block text-xs font-medium text-[#F8FAFC] mb-1.5">

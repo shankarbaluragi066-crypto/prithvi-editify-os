@@ -70,6 +70,7 @@ import {
   GstTaxMode,
   computeGstBreakdown,
   buildWhatsAppInvoiceShareLink,
+  buildWhatsAppInvoiceReminderLink,
   getClientPaymentProofs,
   updateClientPaymentProofStatus,
   ClientPaymentProofSubmission,
@@ -2776,16 +2777,31 @@ export const AdminInvoicesPage: React.FC = () => {
               Edit Invoice
             </button>
             <a
-              href={buildWhatsAppInvoiceShareLink(
+              href={buildWhatsAppInvoiceReminderLink(
                 printInvoice,
+                'summary',
                 clients.find((c) => c.id === printInvoice.clientId)?.phone
               )}
               target="_blank"
               rel="noopener noreferrer"
               className="px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg"
             >
-              Send on WhatsApp →
+              WhatsApp Invoice Summary →
             </a>
+            {printInvoice.balanceDue > 0 && printInvoice.status !== 'Void' && (
+              <a
+                href={buildWhatsAppInvoiceReminderLink(
+                  printInvoice,
+                  'polite_reminder',
+                  clients.find((c) => c.id === printInvoice.clientId)?.phone
+                )}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-4 py-2 text-xs font-semibold text-[#2DD4BF] bg-[#132A4A] hover:bg-[#1E3A5F] border border-[#10B981]/40 rounded-lg"
+              >
+                WhatsApp Polite Payment Reminder →
+              </a>
+            )}
             <button
               type="button"
               onClick={() => setPrintInvoice(null)}
@@ -2900,13 +2916,29 @@ export const AdminInvoicesPage: React.FC = () => {
                           </button>
                         )}
                         <a
-                          href={buildWhatsAppInvoiceShareLink(inv, clientObj?.phone)}
+                          href={buildWhatsAppInvoiceReminderLink(inv, 'summary', clientObj?.phone)}
                           target="_blank"
                           rel="noopener noreferrer"
+                          title="Send WhatsApp Invoice Summary"
                           className="px-2 py-1 text-[11px] font-semibold text-[#16A34A] bg-[#16A34A]/10 hover:bg-[#16A34A]/20 rounded-md"
                         >
-                          WhatsApp
+                          WA Summary
                         </a>
+                        {inv.balanceDue > 0 && inv.status !== 'Void' && (
+                          <a
+                            href={buildWhatsAppInvoiceReminderLink(
+                              inv,
+                              'polite_reminder',
+                              clientObj?.phone
+                            )}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="Send Polite WhatsApp Payment Reminder with UPI Link"
+                            className="px-2 py-1 text-[11px] font-semibold text-[#2DD4BF] bg-[#10B981]/10 hover:bg-[#10B981]/20 border border-[#10B981]/30 rounded-md"
+                          >
+                            WA Reminder
+                          </a>
+                        )}
                         <RecordActionBar
                           onView={() => handleOpenPrintInvoice(inv)}
                           viewLabel="View / PDF"
