@@ -449,7 +449,10 @@ function mapServiceRow(row: Record<string, any>, idx = 0): ServiceItem {
     deliverablesSummary,
     turnaroundTime,
     revisions,
-    imageUrl: String(row.image_url || createStudioArtworkDataUri(title, category, '#2563EB')),
+    imageUrl:
+      row.image_url && !String(row.image_url).startsWith('data:image/svg+xml')
+        ? String(row.image_url)
+        : createStudioArtworkDataUri(title, category, '#10B981', '#040D1A', '#0D1F38'),
     videoPreviewUrl: String(row.video_preview_url || ''),
     mediaUrls: resolvedMediaUrls,
     packages: resolvedPackages,
@@ -463,9 +466,11 @@ function mapServiceRow(row: Record<string, any>, idx = 0): ServiceItem {
 function mapPortfolioRow(row: Record<string, any>, idx = 0): PortfolioItem {
   const title = String(row.title || row.name || 'Studio Project');
   const category = (row.category || 'Graphic Design') as PortfolioItem['category'];
-  const coverImage = String(
-    row.cover_image || row.image_url || createStudioArtworkDataUri(title, category, '#0B1220')
-  );
+  const rawCover = String(row.cover_image || row.image_url || '').trim();
+  const coverImage =
+    rawCover && !rawCover.startsWith('data:image/svg+xml')
+      ? rawCover
+      : createStudioArtworkDataUri(title, category, '#10B981', '#040D1A', '#0D1F38');
   const videoUrl = String(row.video_url || '');
   const detectedType = videoUrl
     ? 'video'
@@ -835,7 +840,7 @@ export async function updateUserProfileDetails(
 // ============================================================================
 // PUBLIC & PRIVATE SETTINGS (WITH FULL A–Z WEBSITE CUSTOMIZATION)
 // ============================================================================
-const LOCAL_PUBLIC_SETTINGS_KEY = 'pe_public_settings_v2';
+const LOCAL_PUBLIC_SETTINGS_KEY = 'pe_public_settings_v3';
 const SITE_CONFIG_FILENAME = '__site_customization_json__';
 
 function readLocalPublicSettings(): PublicSettings | null {

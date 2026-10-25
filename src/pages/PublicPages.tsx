@@ -261,10 +261,12 @@ const MarketplaceServiceCard: React.FC<MarketplaceServiceCardProps> = ({
   onQuickPreview,
 }) => {
   const detailPath = `/services/${encodeURIComponent(srv.slug || srv.id)}`;
-  const hasCustomImage = Boolean(srv.imageUrl);
-  const coverSrc =
-    srv.imageUrl ||
-    createStudioArtworkDataUri(srv.title, srv.category, accentColor, primaryBg, secondaryBg);
+  const hasCustomImage = Boolean(
+    srv.imageUrl && !srv.imageUrl.startsWith('data:image/svg+xml')
+  );
+  const coverSrc = hasCustomImage
+    ? srv.imageUrl!
+    : createStudioArtworkDataUri(srv.title, srv.category, accentColor, primaryBg, secondaryBg);
   const displayCategory = formatServiceCategoryLabel(srv.category, srv.title);
   const creatorName = settings.ownerName || 'Shankar Baluragi';
   const studioName = settings.businessName || 'Prithvi Editify';
@@ -438,10 +440,12 @@ const MarketplacePortfolioCard: React.FC<MarketplacePortfolioCardProps> = ({
   onQuickPreview,
 }) => {
   const detailPath = `/portfolio/${encodeURIComponent(item.slug || item.id)}`;
-  const hasCustomCover = Boolean(item.coverImage);
-  const coverSrc =
-    item.coverImage ||
-    createStudioArtworkDataUri(item.title, item.category, accentColor, primaryBg, secondaryBg);
+  const hasCustomCover = Boolean(
+    item.coverImage && !item.coverImage.startsWith('data:image/svg+xml')
+  );
+  const coverSrc = hasCustomCover
+    ? item.coverImage!
+    : createStudioArtworkDataUri(item.title, item.category, accentColor, primaryBg, secondaryBg);
   const displayCat = formatPortfolioCategoryLabel(item.category);
   const creatorName = settings?.ownerName || 'Shankar Baluragi';
   const studioName = settings?.businessName || 'Prithvi Editify';

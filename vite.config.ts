@@ -55,6 +55,19 @@ function githubPagesSpaPlugin(): Plugin {
       if (fs.existsSync(resolvedOutDir)) {
         fs.writeFileSync(path.join(resolvedOutDir, '404.html'), SPA_REDIRECT_404_HTML, 'utf-8');
         fs.writeFileSync(path.join(resolvedOutDir, '.nojekyll'), '\n', 'utf-8');
+
+        // Keep ./bundle/app.css in sync with the latest compiled Tailwind CSS bundle
+        const assetsDir = path.join(resolvedOutDir, 'assets');
+        const bundleDir = path.resolve(__dirname, 'bundle');
+        if (fs.existsSync(assetsDir) && fs.existsSync(bundleDir)) {
+          const cssFiles = fs.readdirSync(assetsDir).filter((f) => f.endsWith('.css'));
+          if (cssFiles.length > 0) {
+            fs.copyFileSync(
+              path.join(assetsDir, cssFiles[0]),
+              path.join(bundleDir, 'app.css')
+            );
+          }
+        }
       }
     },
   };
