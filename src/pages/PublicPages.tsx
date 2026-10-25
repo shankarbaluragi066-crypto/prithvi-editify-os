@@ -646,7 +646,7 @@ export const HomePage: React.FC = () => {
     <div>
       {/* HERO SECTION */}
       <section
-        className="text-[#132A4A] border-b"
+        className="text-[#F8FAFC] border-b"
         style={{ backgroundColor: primaryBg, borderColor: secondaryBg }}
       >
         <div className="max-w-[1200px] mx-auto px-6 py-16 lg:py-24">
@@ -975,7 +975,7 @@ export const HomePage: React.FC = () => {
       {/* TRUST SECTION */}
       {custom.showTrustSection !== false && (
         <section
-          className="text-[#132A4A] py-20 border-y"
+          className="text-[#F8FAFC] py-20 border-y"
           style={{ backgroundColor: primaryBg, borderColor: secondaryBg }}
         >
           <div className="max-w-[1200px] mx-auto px-6">
@@ -1801,7 +1801,7 @@ export const ServiceDetailPage: React.FC = () => {
                     onClick={() => setActiveMediaIndex(idx)}
                     className={`w-20 h-14 rounded-md overflow-hidden border bg-[#040D1A] transition-all ${
                       activeMediaIndex === idx
-                        ? 'border-[#040D1A] ring-2 ring-[#10B981]/20'
+                        ? 'border-[#10B981] ring-2 ring-[#10B981]/20'
                         : 'border-[#1E3A5F] opacity-70 hover:opacity-100'
                     }`}
                   >
@@ -2952,7 +2952,7 @@ export const PortfolioDetailPage: React.FC = () => {
                     onClick={() => setActiveImageIndex(idx)}
                     className={`w-20 h-16 rounded-md overflow-hidden border bg-[#040D1A] transition-all ${
                       activeImageIndex === idx
-                        ? 'border-[#040D1A] ring-2 ring-[#10B981]/20'
+                        ? 'border-[#10B981] ring-2 ring-[#10B981]/20'
                         : 'border-[#1E3A5F] opacity-75 hover:opacity-100'
                     }`}
                   >

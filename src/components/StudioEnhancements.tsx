@@ -143,7 +143,7 @@ export const UpiQrCodeCard: React.FC<UpiQrCodeCardProps> = ({
     >
       <div className="flex items-center gap-4">
         {/* Crisp SVG QR Code */}
-        <div className="bg-[#0D1F38] p-2.5 rounded-lg border border-[#040D1A]/20 shadow-2xs shrink-0">
+        <div className="bg-[#0D1F38] p-2.5 rounded-lg border border-[#1E3A5F] shadow-2xs shrink-0">
           <svg
             viewBox="0 0 25 25"
             className={compact ? 'w-24 h-24' : 'w-28 h-28'}
@@ -437,7 +437,7 @@ export const BeforeAfterComparisonShowcase: React.FC = () => {
           setIsDragging(true);
           if (e.touches[0]) updatePositionFromClientX(e.touches[0].clientX);
         }}
-        className="relative aspect-[16/9] max-h-[440px] w-full rounded-xl overflow-hidden border border-[#040D1A]/20 select-none cursor-ew-resize bg-[#040D1A]"
+        className="relative aspect-[16/9] max-h-[440px] w-full rounded-xl overflow-hidden border border-[#1E3A5F] select-none cursor-ew-resize bg-[#040D1A]"
       >
         {/* Base Layer: AFTER (Full width) */}
         <img
@@ -835,7 +835,7 @@ export const PublicQuotationApprovalPage: React.FC = () => {
         <div className="flex justify-center gap-3">
           <Link
             to="/login"
-            className="px-4 py-2 text-xs font-semibold text-white bg-[#040D1A] rounded-lg"
+            className="px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg"
           >
             Client Portal Sign In
           </Link>
@@ -1020,7 +1020,7 @@ export const PublicQuotationApprovalPage: React.FC = () => {
                 </button>
                 <Link
                   to="/portal"
-                  className="px-3.5 py-1.5 font-semibold text-white bg-[#040D1A] rounded-md"
+                  className="px-3.5 py-1.5 font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-md"
                 >
                   Open Client Portal →
                 </Link>

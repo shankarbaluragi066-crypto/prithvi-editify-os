@@ -585,7 +585,7 @@ export const ClientProjectDetailsPage: React.FC = () => {
           />
           <button
             type="submit"
-            className="px-4 py-2 text-xs font-semibold text-white bg-[#040D1A] rounded-lg"
+            className="px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg"
           >
             Send
           </button>
@@ -862,7 +862,7 @@ export const ClientInvoicesPage: React.FC = () => {
 
       {/* Selected Quotation Printable Preview */}
       {selectedQuote && (
-        <div className="bg-[#0D1F38] border border-[#040D1A] rounded-lg p-8 space-y-5">
+        <div className="bg-[#0D1F38] border border-[#10B981] rounded-lg p-8 space-y-5">
           <div className="flex justify-between border-b border-[#1E3A5F] pb-4">
             <div>
               <p className="text-[11px] font-semibold text-[#10B981]">PROJECT QUOTATION · SAC 9983</p>
@@ -938,7 +938,7 @@ export const ClientInvoicesPage: React.FC = () => {
             <button
               type="button"
               onClick={() => window.print()}
-              className="px-4 py-2 text-xs font-semibold text-white bg-[#040D1A] rounded-lg"
+              className="px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg"
             >
               Print / Save PDF
             </button>
@@ -1018,7 +1018,7 @@ export const ClientInvoicesPage: React.FC = () => {
       )}
 
       {selected && (
-        <div className="bg-[#0D1F38] border border-[#040D1A] rounded-lg p-8 space-y-5">
+        <div className="bg-[#0D1F38] border border-[#10B981] rounded-lg p-8 space-y-5">
           <div className="flex justify-between border-b border-[#1E3A5F] pb-4">
             <div>
               <p className="text-[11px] font-semibold text-[#10B981]">OFFICIAL TAX / STUDIO INVOICE · SAC 9983</p>
@@ -1072,7 +1072,7 @@ export const ClientInvoicesPage: React.FC = () => {
             <button
               type="button"
               onClick={() => window.print()}
-              className="px-4 py-2 text-xs font-semibold text-white bg-[#040D1A] rounded-lg"
+              className="px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg"
             >
               Print / Save PDF
             </button>

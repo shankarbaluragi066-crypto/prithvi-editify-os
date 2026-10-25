@@ -30,7 +30,7 @@ export const DEFAULT_AI_BRAND_PROFILE: AIBrandProfile = {
   preferredWritingStyle:
     'Clear visual hierarchy, concrete deliverables, persuasive yet honest language without hype or exaggerated claims',
   brandColors:
-    'Midnight Slate (#0B1220), Warm Alabaster (#F7F9FC), Terracotta Accent (#2563EB), Deep Slate (#14213D)',
+    'Midnight Sapphire (#040D1A), Rich Sapphire Card (#0D1F38), Cerulean Cyan (#0EA5E9), Luminous Emerald (#10B981)',
   servicesOffered:
     'Graphic design, photo editing, YouTube thumbnail design, YouTube video editing, Instagram Reels editing, social media creatives, promotional advertisements, banners, logo & brand identity design',
   wordsToAvoid:

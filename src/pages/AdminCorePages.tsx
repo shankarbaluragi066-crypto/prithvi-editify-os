@@ -188,12 +188,12 @@ export const AdminDashboardPage: React.FC = () => {
       {
         name: 'In Progress',
         value: projects.filter((p) => p.status === 'In Progress').length,
-        color: '#040D1A',
+        color: '#0EA5E9',
       },
       {
         name: 'Planned / Inquiry',
         value: projects.filter((p) => ['Planned', 'Inquiry'].includes(p.status)).length,
-        color: '#132A4A',
+        color: '#2DD4BF',
       },
       {
         name: 'In Review',
@@ -228,8 +228,8 @@ export const AdminDashboardPage: React.FC = () => {
       { horizon: 'Overdue', count: 0, color: '#DC2626' },
       { horizon: '≤ 3 Days', count: 0, color: '#10B981' },
       { horizon: '4–7 Days', count: 0, color: '#D97706' },
-      { horizon: '8–14 Days', count: 0, color: '#040D1A' },
-      { horizon: '15+ Days', count: 0, color: '#132A4A' },
+      { horizon: '8–14 Days', count: 0, color: '#0EA5E9' },
+      { horizon: '15+ Days', count: 0, color: '#2DD4BF' },
     ];
 
     const withDays: { project: ProjectRecord; diffDays: number }[] = [];
@@ -483,7 +483,7 @@ export const AdminDashboardPage: React.FC = () => {
                     innerRadius={45}
                     outerRadius={70}
                     paddingAngle={2}
-                    stroke="#FFFFFF"
+                    stroke="#0D1F38"
                     strokeWidth={2}
                   >
                     {projectStatusChartData.map((entry, idx) => (
@@ -492,12 +492,14 @@ export const AdminDashboardPage: React.FC = () => {
                   </Pie>
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: '#FFFFFF',
+                      backgroundColor: '#081629',
                       borderColor: '#1E3A5F',
                       borderRadius: '8px',
                       fontSize: '12px',
-                      color: '#040D1A',
+                      color: '#F8FAFC',
                     }}
+                    itemStyle={{ color: '#F8FAFC' }}
+                    labelStyle={{ color: '#94A3B8' }}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -580,12 +582,14 @@ export const AdminDashboardPage: React.FC = () => {
                   <Tooltip
                     cursor={{ fill: '#132A4A' }}
                     contentStyle={{
-                      backgroundColor: '#FFFFFF',
+                      backgroundColor: '#081629',
                       borderColor: '#1E3A5F',
                       borderRadius: '8px',
                       fontSize: '12px',
-                      color: '#040D1A',
+                      color: '#F8FAFC',
                     }}
+                    itemStyle={{ color: '#F8FAFC' }}
+                    labelStyle={{ color: '#94A3B8' }}
                   />
                   <Bar dataKey="count" name="Pending Projects" radius={[4, 4, 0, 0]}>
                     {deadlineChartData.map((entry, idx) => (
@@ -682,12 +686,14 @@ export const AdminDashboardPage: React.FC = () => {
                     cursor={{ fill: '#132A4A' }}
                     formatter={(value) => formatINR(Number(value) || 0)}
                     contentStyle={{
-                      backgroundColor: '#FFFFFF',
+                      backgroundColor: '#081629',
                       borderColor: '#1E3A5F',
                       borderRadius: '8px',
                       fontSize: '12px',
-                      color: '#040D1A',
+                      color: '#F8FAFC',
                     }}
+                    itemStyle={{ color: '#F8FAFC' }}
+                    labelStyle={{ color: '#94A3B8' }}
                   />
                   <Bar dataKey="paid" name="Paid (INR)" stackId="a" fill="#16A34A" radius={[0, 0, 0, 0]} />
                   <Bar dataKey="due" name="Balance Due (INR)" stackId="a" fill="#10B981" radius={[4, 4, 0, 0]} />
@@ -1166,7 +1172,7 @@ export const AdminInquiriesPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => handleConvertInquiry(selected)}
-                  className="px-3.5 py-2 text-xs font-semibold text-[#F8FAFC] border border-[#040D1A] hover:bg-[#040D1A] hover:text-white rounded-lg transition-colors"
+                  className="px-3.5 py-2 text-xs font-semibold text-[#F8FAFC] border border-[#10B981] hover:bg-[#040D1A] hover:text-white rounded-lg transition-colors"
                 >
                   Convert to Client & Project →
                 </button>
@@ -1496,7 +1502,7 @@ export const AdminClientsPage: React.FC = () => {
       {showForm && (
         <form
           onSubmit={handleSubmitForm}
-          className="bg-[#0D1F38] border border-[#040D1A] rounded-lg p-6 space-y-4 shadow-sm"
+          className="bg-[#0D1F38] border border-[#10B981] rounded-lg p-6 space-y-4 shadow-sm"
         >
           <div className="flex items-center justify-between border-b border-[#1E3A5F] pb-3">
             <div>
@@ -2951,7 +2957,7 @@ export const AdminProjectsPage: React.FC = () => {
       {showBuilder && (
         <form
           onSubmit={handleSubmitForm}
-          className="bg-[#0D1F38] border border-[#040D1A] rounded-lg p-6 space-y-4 shadow-sm"
+          className="bg-[#0D1F38] border border-[#10B981] rounded-lg p-6 space-y-4 shadow-sm"
         >
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#1E3A5F] pb-3">
             <div>

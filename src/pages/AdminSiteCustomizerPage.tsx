@@ -44,32 +44,32 @@ type CustomizerTab =
 
 const COLOR_PRESETS = [
   {
-    name: 'Editorial Navy & Amber (Default)',
+    name: 'Prithvi Editify Sapphire & Emerald (Default)',
     primaryColor: '#040D1A',
-    secondaryColor: '#132A4A',
+    secondaryColor: '#081629',
     accentColor: '#10B981',
-    backgroundColor: '#132A4A',
+    backgroundColor: '#040D1A',
   },
   {
-    name: 'Obsidian & Cinema Gold',
-    primaryColor: '#141413',
-    secondaryColor: '#232321',
-    accentColor: '#D99B26',
-    backgroundColor: '#F6F5F0',
+    name: 'Oceanic Cerulean & Aqua Mint',
+    primaryColor: '#061326',
+    secondaryColor: '#0C213D',
+    accentColor: '#0EA5E9',
+    backgroundColor: '#061326',
   },
   {
-    name: 'Deep Forest & Terracotta',
-    primaryColor: '#162A24',
-    secondaryColor: '#223D35',
-    accentColor: '#E06D53',
-    backgroundColor: '#F4F6F4',
+    name: 'Midnight Obsidian & Cinema Gold',
+    primaryColor: '#090D16',
+    secondaryColor: '#111827',
+    accentColor: '#F59E0B',
+    backgroundColor: '#090D16',
   },
   {
-    name: 'Royal Slate & Crimson',
-    primaryColor: '#1B2038',
-    secondaryColor: '#293052',
-    accentColor: '#E04F5F',
-    backgroundColor: '#F7F7FA',
+    name: 'Deep Slate & Electric Indigo',
+    primaryColor: '#070B14',
+    secondaryColor: '#0F172A',
+    accentColor: '#6366F1',
+    backgroundColor: '#070B14',
   },
 ];
 
@@ -375,11 +375,11 @@ export const AdminSiteCustomizerPage: React.FC = () => {
               onClick={() => setActiveTab(tab.id as CustomizerTab)}
               className={`inline-flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-xs font-semibold transition-colors ${
                 active
-                  ? 'bg-[#040D1A] text-[#132A4A]'
-                  : 'text-[#526071] hover:text-[#F8FAFC] hover:bg-[#132A4A]'
+                  ? 'bg-gradient-to-r from-[#0EA5E9] to-[#10B981] text-white shadow-xs'
+                  : 'text-[#94A3B8] hover:text-[#F8FAFC] hover:bg-[#132A4A]'
               }`}
             >
-              <Icon className={`w-3.5 h-3.5 ${active ? 'text-[#10B981]' : ''}`} />
+              <Icon className={`w-3.5 h-3.5 ${active ? 'text-white' : 'text-[#10B981]'}`} />
               {tab.label}
             </button>
           );
@@ -693,8 +693,8 @@ export const AdminSiteCustomizerPage: React.FC = () => {
                   Live Theme Swatch Preview
                 </span>
                 <span
-                  className="px-2.5 py-0.5 rounded text-[11px] font-semibold"
-                  style={{ backgroundColor: site.primaryColor, color: '#132A4A' }}
+                  className="px-2.5 py-0.5 rounded text-[11px] font-semibold border border-[#1E3A5F]"
+                  style={{ backgroundColor: site.primaryColor, color: '#F8FAFC' }}
                 >
                   {settings.businessName || 'Prithvi Editify'}
                 </span>
@@ -2131,7 +2131,7 @@ export const AdminSiteCustomizerPage: React.FC = () => {
       )}
 
       {/* Bottom Sticky Save Bar */}
-      <div className="bg-[#040D1A] text-[#132A4A] rounded-xl p-4 flex flex-wrap items-center justify-between gap-4">
+      <div className="bg-[#081629] text-[#F8FAFC] border border-[#1E3A5F] rounded-xl p-4 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-2.5 text-xs">
           <CheckCircle2 className="w-4 h-4 text-[#10B981] shrink-0" />
           <span>
@@ -2143,7 +2143,7 @@ export const AdminSiteCustomizerPage: React.FC = () => {
             to="/"
             target="_blank"
             rel="noreferrer"
-            className="px-3.5 py-2 text-xs font-semibold text-[#132A4A] bg-white/10 hover:bg-[#132A4A]/15 rounded-lg transition-colors"
+            className="px-3.5 py-2 text-xs font-semibold text-[#F8FAFC] bg-[#132A4A] border border-[#1E3A5F] hover:border-[#10B981] rounded-lg transition-colors"
           >
             Open Live Website
           </Link>

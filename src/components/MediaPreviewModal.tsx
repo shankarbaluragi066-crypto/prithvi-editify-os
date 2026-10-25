@@ -204,7 +204,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top Control Bar */}
-        <div className="px-5 py-3.5 bg-[#040D1A] text-[#132A4A] flex flex-wrap items-center justify-between gap-3 border-b border-[#132A4A]">
+        <div className="px-5 py-3.5 bg-[#040D1A] text-[#F8FAFC] flex flex-wrap items-center justify-between gap-3 border-b border-[#1E3A5F]">
           <div className="flex items-center gap-2.5 min-w-0">
             {mediaCategory === 'image' && <ImageIcon className="w-4 h-4 text-[#10B981] shrink-0" />}
             {mediaCategory === 'video' && <Film className="w-4 h-4 text-[#10B981] shrink-0" />}
@@ -511,7 +511,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
               />
             </div>
           ) : (
-            <div className="bg-[#040D1A] border border-[#132A4A] rounded-lg p-8 max-w-md w-full text-center space-y-4">
+            <div className="bg-[#040D1A] border border-[#1E3A5F] rounded-lg p-8 max-w-md w-full text-center space-y-4">
               <div className="w-14 h-14 mx-auto rounded-lg bg-[#132A4A] flex items-center justify-center text-[#10B981]">
                 <FileArchive className="w-7 h-7" />
               </div>
@@ -610,7 +610,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                   setDraftPinCoords(null);
                   setDraftPinComment('');
                 }}
-                className="flex flex-wrap items-center gap-2 bg-[#0D1F38] p-2.5 rounded-lg border border-[#040D1A]"
+                className="flex flex-wrap items-center gap-2 bg-[#0D1F38] p-2.5 rounded-lg border border-[#10B981]"
               >
                 <span className="px-2 py-1 text-[11px] font-mono font-semibold bg-[#10B981]/20 text-[#0EA5E9] rounded">
                   {mediaCategory === 'video'
@@ -628,7 +628,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                 />
                 <button
                   type="submit"
-                  className="px-3 py-1.5 text-xs font-semibold text-white bg-[#040D1A] rounded-md"
+                  className="px-3 py-1.5 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-md"
                 >
                   Save Pin Note
                 </button>
@@ -649,7 +649,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                     key={pin.id}
                     className={`p-2.5 rounded-lg border text-xs flex items-start justify-between gap-2 ${
                       pin.resolved
-                        ? 'bg-white/60 border-[#1E3A5F] text-[#94A3B8]'
+                        ? 'bg-[#132A4A]/60 border-[#1E3A5F] text-[#94A3B8]'
                         : 'bg-[#0D1F38] border-[#1E3A5F] text-[#F8FAFC]'
                     }`}
                   >

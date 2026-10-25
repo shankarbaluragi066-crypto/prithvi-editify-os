@@ -3584,7 +3584,7 @@ export const AdminQuotationsPage: React.FC<{
 
       {/* Printable Quotation / Estimate View */}
       {printQuotation && (
-        <div className="bg-[#0D1F38] border border-[#040D1A] rounded-lg p-8 space-y-6">
+        <div className="bg-[#0D1F38] border border-[#10B981] rounded-lg p-8 space-y-6">
           <div className="flex items-start justify-between border-b border-[#1E3A5F] pb-6">
             <div>
               <p className="text-xs font-semibold text-[#10B981]">
@@ -3812,7 +3812,7 @@ export const AdminQuotationsPage: React.FC<{
             <button
               type="button"
               onClick={() => window.print()}
-              className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-[#040D1A] rounded-lg"
+              className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg"
             >
               <Printer className="w-3.5 h-3.5" />
               <span>Print / Export PDF</span>
