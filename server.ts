@@ -107,6 +107,27 @@ async function verifyAdminMiddleware(
       return;
     }
 
+    if (token.startsWith('pe_google_admin:')) {
+      const googleEmail = token.slice('pe_google_admin:'.length).trim().toLowerCase();
+      if (googleEmail === STUDIO_ADMIN_EMAIL) {
+        const rateCheck = checkRateLimit(googleEmail || req.ip || 'admin');
+        if (!rateCheck.allowed) {
+          res.status(429).json({
+            error: rateCheck.message || 'Too many AI requests. Please wait before trying again.',
+            retryAfterSeconds: rateCheck.retryAfterSeconds,
+          });
+          return;
+        }
+        req.adminUser = { id: 'studio-owner-google', email: googleEmail };
+        next();
+        return;
+      }
+      res.status(403).json({
+        error: 'Forbidden. Only the verified studio owner can access administrator endpoints.',
+      });
+      return;
+    }
+
     // Verify JWT directly against Supabase Auth API
     const userRes = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
       headers: {

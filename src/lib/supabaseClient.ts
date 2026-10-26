@@ -10,12 +10,12 @@ const envKey = (
   ''
 ).trim();
 
-const supabaseUrl =
+export const supabaseUrl =
   envUrl && !envUrl.includes('YOUR_SUPABASE') && !envUrl.includes('YOUR_PROJECT_REF')
     ? envUrl
     : DEFAULT_SUPABASE_URL;
 
-const supabasePublishableKey =
+export const supabasePublishableKey =
   envKey && !envKey.includes('YOUR_SUPABASE')
     ? envKey
     : DEFAULT_SUPABASE_PUBLISHABLE_KEY;
@@ -39,6 +39,7 @@ export const supabase = createClient(
 );
 
 export const STUDIO_OWNER_EMAIL = 'shankarbaluragi066@gmail.com';
+export const LOCAL_GOOGLE_SESSION_KEY = 'pe_google_auth_session_v1';
 
 type SchemaStatusListener = (missing: boolean) => void;
 let missingSchemaDetected = false;

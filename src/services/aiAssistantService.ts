@@ -119,15 +119,32 @@ async function getAdminAuthHeaders(): Promise<Record<string, string>> {
     const {
       data: { session },
     } = await supabase.auth.getSession();
-    if (!session?.access_token) {
-      throw new Error(
-        'Administrator session required. Please sign in at /admin-login to use the AI Creative Assistant.'
-      );
+    if (session?.access_token) {
+      headers.Authorization = `Bearer ${session.access_token}`;
+      return headers;
     }
-    headers.Authorization = `Bearer ${session.access_token}`;
   }
 
-  return headers;
+  try {
+    const rawGoogle = localStorage.getItem('pe_google_auth_session_v1');
+    if (rawGoogle) {
+      const parsed = JSON.parse(rawGoogle) as {
+        user?: { id?: string; email?: string };
+        profile?: { role?: string; email?: string };
+      };
+      const email = (parsed?.user?.email || parsed?.profile?.email || '').toLowerCase();
+      if (email) {
+        headers.Authorization = `Bearer pe_google_admin:${email}`;
+        return headers;
+      }
+    }
+  } catch {
+    // Ignore storage read error
+  }
+
+  throw new Error(
+    'Administrator session required. Please sign in at /admin-login to use the AI Creative Assistant.'
+  );
 }
 
 export interface AIProviderStatusResponse {
