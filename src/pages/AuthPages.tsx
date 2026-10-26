@@ -291,7 +291,7 @@ export const LoginPage: React.FC = () => {
 
             <div>
               <label htmlFor="reg-pass" className="block text-xs font-medium text-[#F8FAFC] mb-1">
-                Password (min 8 characters) *
+                Password (min 6 characters) *
               </label>
               <input
                 id="reg-pass"
@@ -346,21 +346,23 @@ export const AdminLoginPage: React.FC = () => {
     if (!loading && user && profile) {
       if (isAdmin && user.email?.toLowerCase() === STUDIO_OWNER_EMAIL.toLowerCase()) {
         navigate('/admin', { replace: true });
-      } else {
-        setAuthError(
-          'Access Denied: This private portal is strictly restricted to the verified Studio Administrator.'
-        );
-        logout();
       }
     }
-  }, [loading, user, profile, isAdmin, navigate, logout]);
+  }, [loading, user, profile, isAdmin, navigate]);
 
   const handleAdminGoogleSignIn = async () => {
     setAuthError(null);
     setGoogleBusy(true);
     try {
-      await loginWithGoogle('/admin-login');
+      const prof = await loginWithGoogle('/admin-login');
+      if (prof.role === 'admin') {
+        showToast('success', 'Studio Admin Authenticated', `Welcome back, ${prof.displayName}`);
+        navigate('/admin', { replace: true });
+      }
     } catch (err) {
+      if (err instanceof Error && err.message.includes('cancelled')) {
+        return;
+      }
       showToast(
         'error',
         'Google Sign-In Failed',

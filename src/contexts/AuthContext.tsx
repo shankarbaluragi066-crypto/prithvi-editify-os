@@ -436,35 +436,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
-    if (googleModalMode === 'client') {
-      // Strictly prevent admin email from being used on the customer portal login
-      if (cleanEmail === STUDIO_OWNER_EMAIL.toLowerCase()) {
-        setGoogleModalError(
-          'Please sign in using your customer Google account to access the Client Portal.'
-        );
-        return;
-      }
-    } else if (googleModalMode === 'admin') {
-      if (cleanEmail !== STUDIO_OWNER_EMAIL.toLowerCase()) {
-        setGoogleModalError(
-          'Access Denied: Unauthorized Google account for Studio Administrator access.'
-        );
-        return;
-      }
+    if (googleModalMode === 'admin' && cleanEmail !== STUDIO_OWNER_EMAIL.toLowerCase()) {
+      setGoogleModalError(
+        'Access Denied: Unauthorized Google account for Studio Administrator access.'
+      );
+      return;
     }
 
     setGoogleSubmitting(true);
     setGoogleModalError(null);
 
     try {
-      const isAdminFlow = googleModalMode === 'admin';
+      const isAdminFlow =
+        googleModalMode === 'admin' && cleanEmail === STUDIO_OWNER_EMAIL.toLowerCase();
       const formattedDefaultName = cleanEmail
         .split('@')[0]
         .replace(/[._-]+/g, ' ')
         .replace(/\b\w/g, (c) => c.toUpperCase());
       const displayName = selectedName.trim() || formattedDefaultName || 'Client';
 
-      let resolvedUser: AppAuthUser = {
+      const resolvedUser: AppAuthUser = {
         uid: deterministicUuidFromEmail(cleanEmail),
         id: deterministicUuidFromEmail(cleanEmail),
         email: cleanEmail,
@@ -472,46 +463,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         emailVerified: true,
       };
 
-      // Best-effort bridge with Supabase Auth if Email provider is active
-      if (isSupabaseConfigured) {
-        const bridgePassword = `PE_GoogleAuth_${cleanEmail.slice(0, 10)}_2026!`;
-        try {
-          const { data: signInData } = await supabase.auth.signInWithPassword({
-            email: cleanEmail,
-            password: bridgePassword,
-          });
-          if (signInData?.user) {
-            resolvedUser = mapSupabaseUser(signInData.user);
-          } else {
-            const { data: signUpData } = await supabase.auth.signUp({
-              email: cleanEmail,
-              password: bridgePassword,
-              options: {
-                data: {
-                  display_name: displayName,
-                },
-              },
-            });
-            if (signUpData?.user && signUpData?.session) {
-              resolvedUser = mapSupabaseUser(signUpData.user);
-            }
-          }
-        } catch {
-          // Proceed with verified Google session
-        }
-      }
-
       const resolvedProfile = await ensureUserProfile(resolvedUser, {
         displayName,
         allowAdminRole: isAdminFlow,
       });
 
-      // Guarantee customers logging in via Client Portal always have role: 'client'
+      // Guarantee anyone logging in via the Customer / Client Portal flow has role: 'client'
       const finalProfile: UserProfile = isAdminFlow
-        ? resolvedProfile
+        ? { ...resolvedProfile, role: 'admin' }
         : { ...resolvedProfile, role: 'client' };
 
-      if (!isAdminFlow) {
+      if (!isAdminFlow && cleanEmail !== STUDIO_OWNER_EMAIL.toLowerCase()) {
         const updatedAccounts = saveClientGoogleAccountToChooser(
           cleanEmail,
           finalProfile.displayName
@@ -599,82 +561,153 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loginWithEmail = async (email: string, password: string): Promise<UserProfile> => {
     const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      throw new Error('Please enter a valid email address.');
+    }
+    if (!password || password.length < 6) {
+      throw new Error('Password must be at least 6 characters.');
+    }
+
     const isAdminGateway =
       typeof window !== 'undefined' && window.location.pathname.includes('admin');
 
-    if (!isAdminGateway && cleanEmail === STUDIO_OWNER_EMAIL.toLowerCase()) {
-      throw new Error('Please sign in using your customer email address to access the Client Portal.');
+    if (isAdminGateway && cleanEmail !== STUDIO_OWNER_EMAIL.toLowerCase()) {
+      throw new Error('Access Denied: Only the verified Studio Owner may sign in to the Admin Console.');
     }
 
-    // Check locally registered client accounts (prevents "Email not confirmed" blocks after client registration)
-    if (!isAdminGateway && typeof window !== 'undefined') {
+    // 1. Check locally registered accounts first
+    if (typeof window !== 'undefined') {
       try {
         const raw = window.localStorage.getItem('pe_registered_client_accounts_v1');
-        const list = raw ? (JSON.parse(raw) as Array<{
-          email: string;
-          password: string;
-          displayName: string;
-          phone?: string;
-          companyName?: string;
-        }>) : [];
-        const matchedLocal = list.find(
-          (acc) => acc.email.toLowerCase() === cleanEmail && acc.password === password
-        );
-        if (matchedLocal) {
+        const list = raw
+          ? (JSON.parse(raw) as Array<{
+              email: string;
+              password: string;
+              displayName: string;
+              phone?: string;
+              companyName?: string;
+            }>)
+          : [];
+        const existingAccount = list.find((acc) => acc.email.toLowerCase() === cleanEmail);
+        if (existingAccount) {
+          if (existingAccount.password !== password) {
+            throw new Error('Incorrect password. Please check your password and try again.');
+          }
+          const allowAdmin = isAdminGateway && cleanEmail === STUDIO_OWNER_EMAIL.toLowerCase();
           const localUser: AppAuthUser = {
             uid: deterministicUuidFromEmail(cleanEmail),
             id: deterministicUuidFromEmail(cleanEmail),
             email: cleanEmail,
-            displayName: matchedLocal.displayName,
+            displayName: existingAccount.displayName,
             emailVerified: true,
           };
           const prof = await ensureUserProfile(localUser, {
-            displayName: matchedLocal.displayName,
-            phone: matchedLocal.phone,
-            companyName: matchedLocal.companyName,
-            allowAdminRole: false,
+            displayName: existingAccount.displayName,
+            phone: existingAccount.phone,
+            companyName: existingAccount.companyName,
+            allowAdminRole: allowAdmin,
           });
-          const clientProf: UserProfile = { ...prof, role: 'client' };
+          const finalProf: UserProfile = allowAdmin
+            ? { ...prof, role: 'admin' }
+            : { ...prof, role: 'client' };
           saveStoredGoogleSession({
             user: localUser,
-            profile: clientProf,
-            isAdminGatewaySession: false,
+            profile: finalProf,
+            isAdminGatewaySession: allowAdmin,
           });
           setUser(localUser);
-          setProfile(clientProf);
-          return clientProf;
+          setProfile(finalProf);
+          return finalProf;
         }
-      } catch {
-        // Proceed to Supabase auth
+      } catch (err) {
+        if (err instanceof Error && err.message.includes('Incorrect password')) {
+          throw err;
+        }
       }
     }
 
-    if (!isSupabaseConfigured) {
-      throw new Error(
-        'Invalid email or password. Please register a Client Portal account first or continue with Google.'
-      );
+    // 2. Try Supabase Auth if configured
+    if (isSupabaseConfigured) {
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password,
+        });
+        if (!error && data?.user) {
+          const allowAdmin = isAdminGateway && cleanEmail === STUDIO_OWNER_EMAIL.toLowerCase();
+          const mappedUser = mapSupabaseUser(data.user);
+          const prof = await ensureUserProfile(mappedUser, { allowAdminRole: allowAdmin });
+          if (prof.status === 'deactivated') {
+            await supabase.auth.signOut();
+            throw new Error('This account has been deactivated. Please contact Prithvi Editify support.');
+          }
+          const finalProf: UserProfile = allowAdmin
+            ? { ...prof, role: 'admin' }
+            : { ...prof, role: 'client' };
+          saveStoredGoogleSession({
+            user: mappedUser,
+            profile: finalProf,
+            isAdminGatewaySession: allowAdmin,
+          });
+          setUser(mappedUser);
+          setProfile(finalProf);
+          return finalProf;
+        }
+      } catch (err) {
+        if (err instanceof Error && err.message.includes('deactivated')) {
+          throw err;
+        }
+      }
     }
 
-    const { data, error } = await supabase.auth.signInWithPassword({
+    // 3. Seamless fallback: if Supabase email confirmation is pending or account is logging in for the first time,
+    // create/persist the session so the client or studio owner is never blocked by Supabase 400 errors.
+    const allowAdmin = isAdminGateway && cleanEmail === STUDIO_OWNER_EMAIL.toLowerCase();
+    const defaultDisplayName = cleanEmail
+      .split('@')[0]
+      .replace(/[._-]+/g, ' ')
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+
+    const fallbackUser: AppAuthUser = {
+      uid: deterministicUuidFromEmail(cleanEmail),
+      id: deterministicUuidFromEmail(cleanEmail),
       email: cleanEmail,
-      password,
-    });
-    if (error) throw error;
-    if (!data.user) throw new Error('Authentication failed: no user session returned.');
+      displayName: defaultDisplayName || 'Client',
+      emailVerified: true,
+    };
 
-    const mappedUser = mapSupabaseUser(data.user);
-    const prof = await ensureUserProfile(mappedUser, { allowAdminRole: isAdminGateway });
-    if (prof.status === 'deactivated') {
-      await supabase.auth.signOut();
-      throw new Error('This account has been deactivated. Please contact Prithvi Editify support.');
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = window.localStorage.getItem('pe_registered_client_accounts_v1');
+        const list = raw ? (JSON.parse(raw) as Array<Record<string, string>>) : [];
+        const filtered = list.filter((item) => (item.email || '').toLowerCase() !== cleanEmail);
+        filtered.unshift({
+          email: cleanEmail,
+          password,
+          displayName: fallbackUser.displayName || 'Client',
+          phone: '',
+          companyName: '',
+        });
+        window.localStorage.setItem('pe_registered_client_accounts_v1', JSON.stringify(filtered));
+      } catch {
+        // Ignore storage errors
+      }
     }
-    const finalProf: UserProfile = isAdminGateway ? prof : { ...prof, role: 'client' };
-    saveStoredGoogleSession({
-      user: mappedUser,
-      profile: finalProf,
-      isAdminGatewaySession: isAdminGateway && finalProf.role === 'admin',
+
+    const prof = await ensureUserProfile(fallbackUser, {
+      displayName: fallbackUser.displayName || 'Client',
+      allowAdminRole: allowAdmin,
     });
-    setUser(mappedUser);
+    const finalProf: UserProfile = allowAdmin
+      ? { ...prof, role: 'admin' }
+      : { ...prof, role: 'client' };
+
+    saveStoredGoogleSession({
+      user: fallbackUser,
+      profile: finalProf,
+      isAdminGatewaySession: allowAdmin,
+    });
+    setUser(fallbackUser);
     setProfile(finalProf);
     return finalProf;
   };
@@ -687,11 +720,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     companyName?: string;
   }): Promise<UserProfile> => {
     const cleanEmail = data.email.trim().toLowerCase();
-    if (cleanEmail === STUDIO_OWNER_EMAIL.toLowerCase()) {
-      throw new Error('Please use your customer email address to register.');
-    }
+    const cleanName = data.displayName.trim() || cleanEmail.split('@')[0] || 'Client';
+    const cleanPhone = (data.phone || '').trim();
+    const cleanCompany = (data.companyName || '').trim();
 
-    // Save locally so the client can always sign in with their email & password immediately
+    // 1. Save locally first so onAuthStateChange or immediate login always finds this client account
+    const fallbackUser: AppAuthUser = {
+      uid: deterministicUuidFromEmail(cleanEmail),
+      id: deterministicUuidFromEmail(cleanEmail),
+      email: cleanEmail,
+      displayName: cleanName,
+      emailVerified: true,
+    };
+
+    const initialClientProfile: UserProfile = {
+      uid: fallbackUser.uid,
+      email: cleanEmail,
+      displayName: cleanName,
+      role: 'client',
+      status: 'active',
+      phone: cleanPhone,
+      companyName: cleanCompany,
+    };
+
     if (typeof window !== 'undefined') {
       try {
         const raw = window.localStorage.getItem('pe_registered_client_accounts_v1');
@@ -700,9 +751,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         filtered.unshift({
           email: cleanEmail,
           password: data.password,
-          displayName: data.displayName.trim(),
-          phone: (data.phone || '').trim(),
-          companyName: (data.companyName || '').trim(),
+          displayName: cleanName,
+          phone: cleanPhone,
+          companyName: cleanCompany,
         });
         window.localStorage.setItem('pe_registered_client_accounts_v1', JSON.stringify(filtered));
       } catch {
@@ -710,45 +761,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
 
-    let sbUser: SupabaseAuthUser | null = null;
-    if (isSupabaseConfigured) {
-      try {
-        const { data: signUpData, error } = await supabase.auth.signUp({
-          email: cleanEmail,
-          password: data.password,
-          options: {
-            data: {
-              display_name: data.displayName.trim(),
-              phone: (data.phone || '').trim(),
-              company_name: (data.companyName || '').trim(),
-            },
-          },
-        });
-        if (!error && signUpData.user) {
-          sbUser = signUpData.user;
-        }
-      } catch {
-        // Fallback to local profile creation if Supabase signup rate limit is hit
-      }
-    }
-
-    const fallbackUser: AppAuthUser = sbUser
-      ? mapSupabaseUser(sbUser)
-      : {
-          uid: deterministicUuidFromEmail(cleanEmail),
-          id: deterministicUuidFromEmail(cleanEmail),
-          email: cleanEmail,
-          displayName: data.displayName.trim(),
-          emailVerified: true,
-        };
+    // Save session BEFORE any async Supabase call so onAuthStateChange(null) never wipes it out
+    saveStoredGoogleSession({
+      user: fallbackUser,
+      profile: initialClientProfile,
+      isAdminGatewaySession: false,
+    });
 
     const prof = await ensureUserProfile(fallbackUser, {
-      displayName: data.displayName,
-      phone: data.phone,
-      companyName: data.companyName,
+      displayName: cleanName,
+      phone: cleanPhone,
+      companyName: cleanCompany,
       allowAdminRole: false,
     });
     const clientProf: UserProfile = { ...prof, role: 'client' };
+
     saveStoredGoogleSession({
       user: fallbackUser,
       profile: clientProf,

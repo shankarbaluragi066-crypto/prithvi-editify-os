@@ -32,9 +32,9 @@ export type LoginFormValues = z.infer<typeof loginSchema>;
 export const registerSchema = z.object({
   displayName: z.string().trim().min(2, 'Full name is required').max(120),
   email: z.string().trim().email('Enter a valid email address').max(254),
-  phone: z.string().trim().max(40),
-  companyName: z.string().trim().max(150),
-  password: z.string().min(8, 'Password must be at least 8 characters').max(128),
+  phone: z.string().trim().max(40).optional().or(z.literal('')),
+  companyName: z.string().trim().max(150).optional().or(z.literal('')),
+  password: z.string().min(6, 'Password must be at least 6 characters').max(128),
 });
 
 export type RegisterFormValues = z.infer<typeof registerSchema>;
