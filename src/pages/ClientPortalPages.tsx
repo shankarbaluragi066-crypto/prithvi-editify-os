@@ -26,6 +26,7 @@ import {
   resolveStoragePreviewUrl,
 } from '../services/crmService';
 import { MediaPreviewModal, PreviewableMediaItem } from '../components/MediaPreviewModal';
+import { InquiryForm } from '../components/InquiryForm';
 import {
   ProjectRecord,
   TaskRecord,
@@ -103,7 +104,7 @@ export const ClientDashboardPage: React.FC = () => {
           </p>
         </div>
         <Link
-          to="/contact"
+          to="/portal/book"
           className="px-4 py-2.5 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg whitespace-nowrap shrink-0"
         >
           Submit New Brief
@@ -1524,3 +1525,34 @@ export const ClientMessagesPage: React.FC = () => {
     </div>
   );
 };
+
+export const ClientNewInquiryPage: React.FC = () => {
+  return (
+    <div className="max-w-3xl mx-auto space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold text-[#10B981] uppercase tracking-wider">
+            Client Portal · Service Booking
+          </p>
+          <h1 className="font-editorial text-2xl sm:text-3xl font-semibold text-[#F8FAFC] mt-1">
+            Request a New Project or Service
+          </h1>
+          <p className="text-xs text-[#94A3B8] mt-1">
+            Submit your project brief, custom INR budget range, and reference links directly from your Client Portal.
+          </p>
+        </div>
+        <Link
+          to="/portal"
+          className="px-3.5 py-2 text-xs font-semibold text-[#F8FAFC] bg-[#132A4A] hover:bg-[#1E3A5F] border border-[#1E3A5F] rounded-lg transition-colors"
+        >
+          ← Back to Overview
+        </Link>
+      </div>
+
+      <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-xl p-6 sm:p-8 shadow-xl">
+        <InquiryForm />
+      </div>
+    </div>
+  );
+};
+

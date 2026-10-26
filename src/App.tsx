@@ -73,6 +73,7 @@ import {
   ClientInvoicesPage,
   ClientPaymentInstructionsPage,
   ClientMessagesPage,
+  ClientNewInquiryPage,
 } from './pages/ClientPortalPages';
 
 const SupabaseSchemaBanner: React.FC = () => {
@@ -284,6 +285,7 @@ export default function App() {
                 }
               >
                 <Route index element={<ClientDashboardPage />} />
+                <Route path="book" element={<ClientNewInquiryPage />} />
                 <Route path="projects" element={<ClientProjectsPage />} />
                 <Route path="projects/:projectId" element={<ClientProjectDetailsPage />} />
                 <Route path="timeline" element={<ClientTimelinePage />} />

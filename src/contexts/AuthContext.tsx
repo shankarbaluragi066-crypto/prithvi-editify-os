@@ -22,7 +22,16 @@ export interface AppAuthUser {
 interface StoredGoogleSession {
   user: AppAuthUser;
   profile: UserProfile;
+  isAdminGatewaySession?: boolean;
 }
+
+interface SavedClientGoogleAccount {
+  email: string;
+  displayName: string;
+  lastUsedAt: string;
+}
+
+const SAVED_CLIENT_GOOGLE_ACCOUNTS_KEY = 'pe_saved_client_google_accounts_v1';
 
 interface AuthContextValue {
   user: AppAuthUser | null;
@@ -54,6 +63,14 @@ function readStoredGoogleSession(): StoredGoogleSession | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as StoredGoogleSession;
     if (parsed?.user?.uid && parsed?.profile?.email) {
+      // If an older session had the studio owner email without explicit admin gateway flag, clear it so customers never inherit admin access
+      if (
+        parsed.profile.email.toLowerCase() === STUDIO_OWNER_EMAIL.toLowerCase() &&
+        !parsed.isAdminGatewaySession
+      ) {
+        window.localStorage.removeItem(LOCAL_GOOGLE_SESSION_KEY);
+        return null;
+      }
       return parsed;
     }
     return null;
@@ -73,6 +90,69 @@ function saveStoredGoogleSession(session: StoredGoogleSession | null): void {
   } catch {
     // Ignore storage errors
   }
+}
+
+function readSavedClientGoogleAccounts(): SavedClientGoogleAccount[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = window.localStorage.getItem(SAVED_CLIENT_GOOGLE_ACCOUNTS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (item): item is SavedClientGoogleAccount =>
+        Boolean(
+          item &&
+            typeof item.email === 'string' &&
+            item.email.includes('@') &&
+            item.email.toLowerCase() !== STUDIO_OWNER_EMAIL.toLowerCase()
+        )
+    );
+  } catch {
+    return [];
+  }
+}
+
+function saveClientGoogleAccountToChooser(email: string, displayName: string): SavedClientGoogleAccount[] {
+  const cleanEmail = email.trim().toLowerCase();
+  if (!cleanEmail || cleanEmail === STUDIO_OWNER_EMAIL.toLowerCase()) {
+    return readSavedClientGoogleAccounts();
+  }
+  const existing = readSavedClientGoogleAccounts().filter(
+    (acc) => acc.email.toLowerCase() !== cleanEmail
+  );
+  const updated: SavedClientGoogleAccount[] = [
+    {
+      email: cleanEmail,
+      displayName: displayName.trim() || cleanEmail.split('@')[0] || 'Client',
+      lastUsedAt: new Date().toISOString(),
+    },
+    ...existing,
+  ].slice(0, 5);
+
+  if (typeof window !== 'undefined') {
+    try {
+      window.localStorage.setItem(SAVED_CLIENT_GOOGLE_ACCOUNTS_KEY, JSON.stringify(updated));
+    } catch {
+      // Ignore storage errors
+    }
+  }
+  return updated;
+}
+
+function removeSavedClientGoogleAccount(email: string): SavedClientGoogleAccount[] {
+  const cleanEmail = email.trim().toLowerCase();
+  const updated = readSavedClientGoogleAccounts().filter(
+    (acc) => acc.email.toLowerCase() !== cleanEmail
+  );
+  if (typeof window !== 'undefined') {
+    try {
+      window.localStorage.setItem(SAVED_CLIENT_GOOGLE_ACCOUNTS_KEY, JSON.stringify(updated));
+    } catch {
+      // Ignore storage errors
+    }
+  }
+  return updated;
 }
 
 function deterministicUuidFromEmail(email: string): string {
@@ -146,9 +226,13 @@ function mapSupabaseUser(sbUser: SupabaseAuthUser): AppAuthUser {
   };
 }
 
-function mapProfileRow(row: Record<string, any>, fallbackUser: AppAuthUser): UserProfile {
+function mapProfileRow(
+  row: Record<string, any>,
+  fallbackUser: AppAuthUser,
+  allowAdminRole = false
+): UserProfile {
   const email = String(row.email || fallbackUser.email || '').toLowerCase();
-  const isOwner = email === STUDIO_OWNER_EMAIL.toLowerCase();
+  const isOwner = allowAdminRole && email === STUDIO_OWNER_EMAIL.toLowerCase();
   return {
     uid: String(row.id || fallbackUser.uid),
     email,
@@ -166,16 +250,22 @@ function mapProfileRow(row: Record<string, any>, fallbackUser: AppAuthUser): Use
 
 async function ensureUserProfile(
   authUser: AppAuthUser,
-  extra?: { phone?: string; companyName?: string; displayName?: string }
+  extra?: {
+    phone?: string;
+    companyName?: string;
+    displayName?: string;
+    allowAdminRole?: boolean;
+  }
 ): Promise<UserProfile> {
   const emailLower = (authUser.email || '').toLowerCase();
-  const isOwnerAdmin = emailLower === STUDIO_OWNER_EMAIL.toLowerCase();
+  const isOwnerAdmin =
+    Boolean(extra?.allowAdminRole) && emailLower === STUDIO_OWNER_EMAIL.toLowerCase();
 
   if (!isSupabaseConfigured) {
     return {
       uid: authUser.uid,
       email: emailLower,
-      displayName: extra?.displayName || authUser.displayName || 'User',
+      displayName: extra?.displayName || authUser.displayName || 'Client',
       role: isOwnerAdmin ? 'admin' : 'client',
       status: 'active',
       phone: extra?.phone || '',
@@ -191,7 +281,7 @@ async function ensureUserProfile(
       .maybeSingle();
 
     if (!selectErr && existing) {
-      const prof = mapProfileRow(existing, authUser);
+      const prof = mapProfileRow(existing, authUser, Boolean(extra?.allowAdminRole));
       if (isOwnerAdmin && existing.role !== 'admin') {
         await supabase
           .from('profiles')
@@ -209,7 +299,8 @@ async function ensureUserProfile(
   const displayName = (
     extra?.displayName ||
     authUser.displayName ||
-    (isOwnerAdmin ? 'Shankar Baluragi' : emailLower.split('@')[0] || 'Client')
+    emailLower.split('@')[0] ||
+    'Client'
   ).slice(0, 120);
 
   const newProfile: UserProfile = {
@@ -245,12 +336,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Built-in Google Account Chooser Modal state (used when Supabase Google OAuth provider is disabled)
+  // Built-in Google Account Chooser Modal state
   const [googleModalOpen, setGoogleModalOpen] = useState(false);
   const [googleModalMode, setGoogleModalMode] = useState<'admin' | 'client'>('client');
+  const [savedClientAccounts, setSavedClientAccounts] = useState<SavedClientGoogleAccount[]>([]);
   const [customGoogleEmail, setCustomGoogleEmail] = useState('');
   const [customGoogleName, setCustomGoogleName] = useState('');
-  const [showCustomGoogleForm, setShowCustomGoogleForm] = useState(false);
+  const [showCustomGoogleForm, setShowCustomGoogleForm] = useState(true);
   const [googleSubmitting, setGoogleSubmitting] = useState(false);
   const [googleModalError, setGoogleModalError] = useState<string | null>(null);
 
@@ -275,18 +367,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     const mappedUser = mapSupabaseUser(sbUser);
+    const storedGoogle = readStoredGoogleSession();
+    const allowAdmin =
+      Boolean(storedGoogle?.isAdminGatewaySession) ||
+      (typeof window !== 'undefined' && window.location.pathname.includes('admin'));
+
     setUser(mappedUser);
 
     try {
-      const prof = await ensureUserProfile(mappedUser);
+      const prof = await ensureUserProfile(mappedUser, { allowAdminRole: allowAdmin });
       setProfile(prof);
     } catch {
       const isOwner =
-        mappedUser.email?.toLowerCase() === STUDIO_OWNER_EMAIL.toLowerCase();
+        allowAdmin && mappedUser.email?.toLowerCase() === STUDIO_OWNER_EMAIL.toLowerCase();
       setProfile({
         uid: mappedUser.uid,
         email: mappedUser.email || '',
-        displayName: mappedUser.displayName || (isOwner ? 'Shankar Baluragi' : 'User'),
+        displayName: mappedUser.displayName || 'Client',
         role: isOwner ? 'admin' : 'client',
         status: 'active',
         phone: '',
@@ -298,6 +395,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
+    setSavedClientAccounts(readSavedClientGoogleAccounts());
+
     if (!isSupabaseConfigured) {
       const storedGoogle = readStoredGoogleSession();
       if (storedGoogle) {
@@ -333,27 +432,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const completeBuiltInGoogleSignIn = async (selectedEmail: string, selectedName: string) => {
     const cleanEmail = selectedEmail.trim().toLowerCase();
     if (!cleanEmail || !cleanEmail.includes('@')) {
-      setGoogleModalError('Please enter a valid Google email address.');
+      setGoogleModalError('Please enter a valid Google email address (e.g. yourname@gmail.com).');
       return;
     }
-    if (
-      googleModalMode === 'admin' &&
-      cleanEmail !== STUDIO_OWNER_EMAIL.toLowerCase()
-    ) {
-      setGoogleModalError(
-        `Access Denied: Only the verified Studio Owner (${STUDIO_OWNER_EMAIL}) can sign in to the Admin Portal.`
-      );
-      return;
+
+    if (googleModalMode === 'client') {
+      // Strictly prevent admin email from being used on the customer portal login
+      if (cleanEmail === STUDIO_OWNER_EMAIL.toLowerCase()) {
+        setGoogleModalError(
+          'Please sign in using your customer Google account to access the Client Portal.'
+        );
+        return;
+      }
+    } else if (googleModalMode === 'admin') {
+      if (cleanEmail !== STUDIO_OWNER_EMAIL.toLowerCase()) {
+        setGoogleModalError(
+          'Access Denied: Unauthorized Google account for Studio Administrator access.'
+        );
+        return;
+      }
     }
 
     setGoogleSubmitting(true);
     setGoogleModalError(null);
 
     try {
-      const isOwner = cleanEmail === STUDIO_OWNER_EMAIL.toLowerCase();
-      const displayName =
-        selectedName.trim() ||
-        (isOwner ? 'Shankar Baluragi' : cleanEmail.split('@')[0] || 'Client');
+      const isAdminFlow = googleModalMode === 'admin';
+      const formattedDefaultName = cleanEmail
+        .split('@')[0]
+        .replace(/[._-]+/g, ' ')
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+      const displayName = selectedName.trim() || formattedDefaultName || 'Client';
 
       let resolvedUser: AppAuthUser = {
         uid: deterministicUuidFromEmail(cleanEmail),
@@ -388,26 +497,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
           }
         } catch {
-          // Proceed with verified studio Google session
+          // Proceed with verified Google session
         }
       }
 
       const resolvedProfile = await ensureUserProfile(resolvedUser, {
         displayName,
+        allowAdminRole: isAdminFlow,
       });
+
+      // Guarantee customers logging in via Client Portal always have role: 'client'
+      const finalProfile: UserProfile = isAdminFlow
+        ? resolvedProfile
+        : { ...resolvedProfile, role: 'client' };
+
+      if (!isAdminFlow) {
+        const updatedAccounts = saveClientGoogleAccountToChooser(
+          cleanEmail,
+          finalProfile.displayName
+        );
+        setSavedClientAccounts(updatedAccounts);
+      }
 
       saveStoredGoogleSession({
         user: resolvedUser,
-        profile: resolvedProfile,
+        profile: finalProfile,
+        isAdminGatewaySession: isAdminFlow,
       });
 
       setUser(resolvedUser);
-      setProfile(resolvedProfile);
+      setProfile(finalProfile);
       setGoogleModalOpen(false);
       setGoogleSubmitting(false);
 
       if (pendingGoogleResolver.current) {
-        pendingGoogleResolver.current.resolve(resolvedProfile);
+        pendingGoogleResolver.current.resolve(finalProfile);
         pendingGoogleResolver.current = null;
       }
     } catch (err) {
@@ -429,6 +553,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const loginWithGoogle = async (redirectPath = '/login'): Promise<UserProfile> => {
+    const isAdminFlow = redirectPath.includes('admin');
+
     // 1. Check whether the Google OAuth provider is enabled on the Supabase backend first
     const googleEnabledOnSupabase = await checkSupabaseGoogleProviderEnabled();
 
@@ -436,7 +562,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: getAppRedirectUrl(redirectPath),
+          redirectTo: getAppRedirectUrl(isAdminFlow ? '/admin-login' : '/portal'),
+          queryParams: {
+            prompt: 'select_account',
+          },
         },
       });
       if (error) throw error;
@@ -453,11 +582,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       );
     }
 
-    // 2. If Google provider is not enabled on Supabase (prevents 400 "Unsupported provider: provider is not enabled"),
-    // open the built-in Google Account Chooser Modal directly inside the application.
-    const isAdminFlow = redirectPath.includes('admin');
+    // 2. Open the Google Account Selector Modal (never displays admin email to customers)
+    const currentSaved = readSavedClientGoogleAccounts();
+    setSavedClientAccounts(currentSaved);
     setGoogleModalMode(isAdminFlow ? 'admin' : 'client');
-    setShowCustomGoogleForm(!isAdminFlow);
+    setShowCustomGoogleForm(isAdminFlow || currentSaved.length === 0);
     setCustomGoogleEmail('');
     setCustomGoogleName('');
     setGoogleModalError(null);
@@ -481,13 +610,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (error) throw error;
     if (!data.user) throw new Error('Authentication failed: no user session returned.');
 
+    const isAdminGateway =
+      typeof window !== 'undefined' && window.location.pathname.includes('admin');
     const mappedUser = mapSupabaseUser(data.user);
-    const prof = await ensureUserProfile(mappedUser);
+    const prof = await ensureUserProfile(mappedUser, { allowAdminRole: isAdminGateway });
     if (prof.status === 'deactivated') {
       await supabase.auth.signOut();
       throw new Error('This account has been deactivated. Please contact Prithvi Editify support.');
     }
-    saveStoredGoogleSession({ user: mappedUser, profile: prof });
+    saveStoredGoogleSession({
+      user: mappedUser,
+      profile: prof,
+      isAdminGatewaySession: isAdminGateway && prof.role === 'admin',
+    });
     setUser(mappedUser);
     setProfile(prof);
     return prof;
@@ -506,7 +641,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       );
     }
     if (data.email.trim().toLowerCase() === STUDIO_OWNER_EMAIL.toLowerCase()) {
-      throw new Error('This email address cannot be used for public client self-registration.');
+      throw new Error('Please use your customer email address to register.');
     }
     const { data: signUpData, error } = await supabase.auth.signUp({
       email: data.email.trim(),
@@ -537,11 +672,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       displayName: data.displayName,
       phone: data.phone,
       companyName: data.companyName,
+      allowAdminRole: false,
     });
-    saveStoredGoogleSession({ user: fallbackUser, profile: prof });
+    saveStoredGoogleSession({
+      user: fallbackUser,
+      profile: { ...prof, role: 'client' },
+      isAdminGatewaySession: false,
+    });
     setUser(fallbackUser);
-    setProfile(prof);
-    return prof;
+    setProfile({ ...prof, role: 'client' });
+    return { ...prof, role: 'client' };
   };
 
   const sendResetLink = async (email: string) => {
@@ -585,7 +725,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const isAdmin = Boolean(
-    user && user.email?.toLowerCase() === STUDIO_OWNER_EMAIL.toLowerCase()
+    user &&
+      profile?.role === 'admin' &&
+      user.email?.toLowerCase() === STUDIO_OWNER_EMAIL.toLowerCase()
   );
   const isClient = Boolean(user && !isAdmin);
 
@@ -608,7 +750,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     >
       {children}
 
-      {/* Built-in Google Account Chooser Modal (prevents Supabase 400 "Unsupported provider: provider is not enabled") */}
+      {/* Google Account Selector Modal (Customer accounts only — Admin ID is never shown) */}
       {googleModalOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-[#040D1A]/85 backdrop-blur-xs p-4"
@@ -628,7 +770,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     Sign in with Google
                   </h2>
                   <p className="text-[11px] text-[#94A3B8]">
-                    Continue to Prithvi Editify
+                    {googleModalMode === 'admin'
+                      ? 'Verify Studio Administrator Account'
+                      : 'Choose an account to continue to Prithvi Editify Client Portal'}
                   </p>
                 </div>
               </div>
@@ -650,115 +794,168 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 </div>
               )}
 
-              <div className="space-y-2.5">
-                <p className="text-xs font-medium text-[#94A3B8]">
-                  Choose a Google account
-                </p>
-
-                {/* Studio Owner Account Option */}
-                <button
-                  type="button"
-                  disabled={googleSubmitting}
-                  onClick={() =>
-                    completeBuiltInGoogleSignIn(STUDIO_OWNER_EMAIL, 'Shankar Baluragi')
-                  }
-                  className="w-full flex items-center justify-between gap-3 p-3.5 bg-[#132A4A]/80 hover:bg-[#132A4A] border border-[#1E3A5F] hover:border-[#10B981] rounded-xl text-left transition-all cursor-pointer group"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#0EA5E9] to-[#10B981] flex items-center justify-center text-xs font-bold text-white shrink-0">
-                      SB
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-[#F8FAFC] truncate">
-                          Shankar Baluragi
-                        </span>
-                        <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-[#10B981]/15 text-[#10B981] rounded">
-                          Studio Owner
-                        </span>
-                      </div>
-                      <p className="text-xs text-[#94A3B8] truncate font-mono">
-                        {STUDIO_OWNER_EMAIL}
-                      </p>
-                    </div>
+              {/* Saved Customer Google Accounts on this device (Never includes Admin ID) */}
+              {googleModalMode === 'client' && savedClientAccounts.length > 0 && (
+                <div className="space-y-2.5">
+                  <p className="text-xs font-medium text-[#94A3B8]">
+                    Choose your Google account
+                  </p>
+                  <div className="space-y-2">
+                    {savedClientAccounts.map((acc) => {
+                      const initials = (acc.displayName || acc.email)
+                        .split(' ')
+                        .map((part) => part[0])
+                        .join('')
+                        .slice(0, 2)
+                        .toUpperCase();
+                      return (
+                        <div
+                          key={acc.email}
+                          className="flex items-center gap-2 p-2.5 bg-[#132A4A]/80 hover:bg-[#132A4A] border border-[#1E3A5F] hover:border-[#10B981] rounded-xl transition-all group"
+                        >
+                          <button
+                            type="button"
+                            disabled={googleSubmitting}
+                            onClick={() =>
+                              completeBuiltInGoogleSignIn(acc.email, acc.displayName)
+                            }
+                            className="flex-1 flex items-center justify-between gap-3 text-left cursor-pointer min-w-0"
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#0EA5E9] to-[#10B981] flex items-center justify-center text-xs font-bold text-white shrink-0">
+                                {initials}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-sm font-semibold text-[#F8FAFC] truncate">
+                                  {acc.displayName}
+                                </p>
+                                <p className="text-xs text-[#94A3B8] truncate font-mono">
+                                  {acc.email}
+                                </p>
+                              </div>
+                            </div>
+                            <ArrowRight className="w-4 h-4 text-[#94A3B8] group-hover:text-[#10B981] shrink-0 transition-colors" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const next = removeSavedClientGoogleAccount(acc.email);
+                              setSavedClientAccounts(next);
+                              if (next.length === 0) {
+                                setShowCustomGoogleForm(true);
+                              }
+                            }}
+                            title="Remove account from device"
+                            className="p-1.5 text-[#94A3B8] hover:text-[#DC2626] rounded-lg transition-colors shrink-0"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
-                  <ArrowRight className="w-4 h-4 text-[#94A3B8] group-hover:text-[#10B981] shrink-0 transition-colors" />
-                </button>
-              </div>
+                </div>
+              )}
 
-              {/* Client / Custom Google Account Input */}
-              {googleModalMode === 'client' && (
-                <div className="pt-2 border-t border-[#1E3A5F] space-y-3">
-                  {!showCustomGoogleForm ? (
-                    <button
-                      type="button"
-                      onClick={() => setShowCustomGoogleForm(true)}
-                      className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-semibold text-[#F8FAFC] bg-[#081629] hover:bg-[#132A4A] border border-[#1E3A5F] rounded-lg transition-colors"
-                    >
-                      <UserCheck className="w-4 h-4 text-[#0EA5E9]" />
-                      <span>Use another Google account</span>
-                    </button>
-                  ) : (
-                    <form
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        completeBuiltInGoogleSignIn(customGoogleEmail, customGoogleName);
-                      }}
-                      className="space-y-3"
-                    >
+              {/* Add / Enter Google Account */}
+              <div
+                className={
+                  googleModalMode === 'client' && savedClientAccounts.length > 0
+                    ? 'pt-2 border-t border-[#1E3A5F] space-y-3'
+                    : 'space-y-3'
+                }
+              >
+                {googleModalMode === 'client' &&
+                savedClientAccounts.length > 0 &&
+                !showCustomGoogleForm ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowCustomGoogleForm(true)}
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-semibold text-[#F8FAFC] bg-[#081629] hover:bg-[#132A4A] border border-[#1E3A5F] rounded-lg transition-colors cursor-pointer"
+                  >
+                    <UserCheck className="w-4 h-4 text-[#0EA5E9]" />
+                    <span>Use another Google account</span>
+                  </button>
+                ) : (
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      completeBuiltInGoogleSignIn(customGoogleEmail, customGoogleName);
+                    }}
+                    className="space-y-3.5"
+                  >
+                    {googleModalMode === 'client' && (
                       <p className="text-xs font-semibold text-[#F8FAFC]">
-                        Or sign in with your Google Email
+                        {savedClientAccounts.length > 0
+                          ? 'Use another Google account'
+                          : 'Enter your Google account to access your Client Portal'}
                       </p>
+                    )}
+
+                    {googleModalMode === 'client' && (
                       <div>
                         <label
                           htmlFor="google-modal-name"
                           className="block text-[11px] font-medium text-[#94A3B8] mb-1"
                         >
-                          Your Name
+                          Your Full Name *
                         </label>
                         <input
                           id="google-modal-name"
                           type="text"
+                          required
                           value={customGoogleName}
                           onChange={(e) => setCustomGoogleName(e.target.value)}
                           placeholder="e.g. Aarav Sharma"
                           className="w-full px-3 py-2 text-xs bg-[#081629] border border-[#1E3A5F] rounded-lg text-[#F8FAFC] focus:outline-none focus:border-[#10B981]"
                         />
                       </div>
-                      <div>
-                        <label
-                          htmlFor="google-modal-email"
-                          className="block text-[11px] font-medium text-[#94A3B8] mb-1"
-                        >
-                          Google Email Address *
-                        </label>
-                        <div className="relative">
-                          <Mail className="w-3.5 h-3.5 text-[#94A3B8] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                          <input
-                            id="google-modal-email"
-                            type="email"
-                            required
-                            value={customGoogleEmail}
-                            onChange={(e) => setCustomGoogleEmail(e.target.value)}
-                            placeholder="yourname@gmail.com"
-                            className="w-full pl-8 pr-3 py-2 text-xs bg-[#081629] border border-[#1E3A5F] rounded-lg text-[#F8FAFC] focus:outline-none focus:border-[#10B981]"
-                          />
-                        </div>
-                      </div>
-                      <button
-                        type="submit"
-                        disabled={googleSubmitting}
-                        className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-colors cursor-pointer disabled:opacity-60"
+                    )}
+
+                    <div>
+                      <label
+                        htmlFor="google-modal-email"
+                        className="block text-[11px] font-medium text-[#94A3B8] mb-1"
                       >
-                        <ShieldCheck className="w-4 h-4" />
-                        <span>
-                          {googleSubmitting ? 'Signing in...' : 'Continue with Google Email'}
-                        </span>
-                      </button>
-                    </form>
-                  )}
-                </div>
-              )}
+                        {googleModalMode === 'admin'
+                          ? 'Authorized Owner Google Email *'
+                          : 'Your Google Email Address *'}
+                      </label>
+                      <div className="relative">
+                        <Mail className="w-3.5 h-3.5 text-[#94A3B8] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        <input
+                          id="google-modal-email"
+                          type="email"
+                          required
+                          value={customGoogleEmail}
+                          onChange={(e) => setCustomGoogleEmail(e.target.value)}
+                          placeholder={
+                            googleModalMode === 'admin'
+                              ? 'Enter studio owner Google email'
+                              : 'yourname@gmail.com'
+                          }
+                          className="w-full pl-8 pr-3 py-2 text-xs bg-[#081629] border border-[#1E3A5F] rounded-lg text-[#F8FAFC] focus:outline-none focus:border-[#10B981]"
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={googleSubmitting}
+                      className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-colors cursor-pointer disabled:opacity-60"
+                    >
+                      <ShieldCheck className="w-4 h-4" />
+                      <span>
+                        {googleSubmitting
+                          ? 'Signing in...'
+                          : googleModalMode === 'admin'
+                          ? 'Verify & Open Admin Console'
+                          : 'Continue to Client Portal'}
+                      </span>
+                    </button>
+                  </form>
+                )}
+              </div>
             </div>
           </div>
         </div>

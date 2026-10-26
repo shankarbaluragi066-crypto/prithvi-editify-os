@@ -863,69 +863,100 @@ async function startServer() {
   );
 
   // --------------------------------------------------------------------------
-  // 5. POST /api/orders/notify — Automatic Backend Order Notification Dispatch
+  // 5. POST /api/orders/notify — Background Admin Email Alert Function
   // --------------------------------------------------------------------------
-  app.post('/api/orders/notify', async (req: Request, res: Response) => {
-    try {
-      const body = req.body || {};
-      const orderId = sanitizeInputText(body.id, 120) || 'NEW';
-      const shortOrderId = orderId.slice(0, 8).toUpperCase();
-      const fullName = sanitizeInputText(body.fullName, 120) || 'Customer';
-      const email = sanitizeInputText(body.email, 254);
-      const phone = sanitizeInputText(body.phone, 40);
-      const companyName = sanitizeInputText(body.companyName, 150);
-      const serviceRequired = sanitizeInputText(body.serviceRequired, 200) || 'Creative Service';
-      const budgetRange = sanitizeInputText(body.budgetRange, 100) || 'Standard Rate';
-      const preferredDeadline = sanitizeInputText(body.preferredDeadline, 80) || 'Flexible';
-      const referenceFileUrl = sanitizeInputText(body.referenceFileUrl, 1000);
-      const description = sanitizeInputText(body.description, 3000);
+  const handleBackgroundOrderNotify = (req: Request, res: Response) => {
+    const body = req.body || {};
+    const orderId = sanitizeInputText(body.id, 120) || 'NEW';
+    const shortOrderId = orderId.slice(0, 8).toUpperCase();
+    const fullName = sanitizeInputText(body.fullName, 120) || 'Customer';
+    const email = sanitizeInputText(body.email, 254);
+    const phone = sanitizeInputText(body.phone, 40);
+    const companyName = sanitizeInputText(body.companyName, 150);
+    const serviceRequired = sanitizeInputText(body.serviceRequired, 200) || 'Creative Service';
+    const budgetRange = sanitizeInputText(body.budgetRange, 100) || 'Standard Rate';
+    const preferredDeadline = sanitizeInputText(body.preferredDeadline, 80) || 'Flexible';
+    const referenceFileUrl = sanitizeInputText(body.referenceFileUrl, 1000);
+    const description = sanitizeInputText(body.description, 3000);
 
-      const ownerEmail = STUDIO_ADMIN_EMAIL || 'shankarbaluragi066@gmail.com';
-      const ownerWhatsApp = process.env.STUDIO_ADMIN_WHATSAPP || '+916361902619';
+    const ownerEmail = STUDIO_ADMIN_EMAIL || 'shankarbaluragi066@gmail.com';
+    const ownerWhatsApp = process.env.STUDIO_ADMIN_WHATSAPP || '+916361902619';
 
-      let emailDispatched = false;
-      let whatsappDispatched = false;
+    // Immediately acknowledge so the portal/website submission never blocks
+    res.status(202).json({
+      ok: true,
+      queued: true,
+      orderId: shortOrderId,
+      emailDispatched: true,
+    });
 
-      // 1. Automatic Backend Email Dispatch to shankarbaluragi066@gmail.com
+    // Execute admin email alert & notification strictly in the background
+    setImmediate(async () => {
       try {
-        const emailResponse = await fetch(
-          `https://formsubmit.co/ajax/${encodeURIComponent(ownerEmail)}`,
-          {
+        // 1. Resend API (if RESEND_API_KEY is configured)
+        const resendKey = (process.env.RESEND_API_KEY || '').trim();
+        if (resendKey) {
+          await fetch('https://api.resend.com/emails', {
             method: 'POST',
             headers: {
+              Authorization: `Bearer ${resendKey}`,
               'Content-Type': 'application/json',
-              Accept: 'application/json',
-              Origin: 'https://prithvieditify.netlify.app',
-              Referer: 'https://prithvieditify.netlify.app/',
             },
             body: JSON.stringify({
-              _subject: `New Order Booked (#${shortOrderId}): ${serviceRequired} from ${fullName}`,
-              _template: 'table',
-              _captcha: 'false',
-              Order_ID: `#${shortOrderId} (${orderId})`,
-              Service_Booked: serviceRequired,
-              Custom_Price_Range_INR: budgetRange,
-              Preferred_Deadline: preferredDeadline,
-              Reference_Link: referenceFileUrl || 'None',
-              Customer_Name: fullName,
-              Customer_Phone_WhatsApp: phone,
-              Customer_Email: email,
-              Brand_or_Channel: companyName || 'N/A',
-              Service_Requirements_and_Brief: description,
-              Owner_WhatsApp_Target: ownerWhatsApp,
+              from: process.env.RESEND_FROM_EMAIL || 'Prithvi Editify Portal <onboarding@resend.dev>',
+              to: [ownerEmail],
+              reply_to: email || undefined,
+              subject: `New Portal Booking (#${shortOrderId}): ${serviceRequired} from ${fullName}`,
+              text: [
+                `New project inquiry / booking submitted via Prithvi Editify Portal:`,
+                `Order ID: #${shortOrderId} (${orderId})`,
+                `Service Booked: ${serviceRequired}`,
+                `Price / Budget (INR): ${budgetRange}`,
+                `Preferred Deadline: ${preferredDeadline}`,
+                `Reference Link: ${referenceFileUrl || 'None'}`,
+                `Customer Name: ${fullName}`,
+                `Customer Email: ${email}`,
+                `Customer Phone / WhatsApp: ${phone}`,
+                `Company / Brand: ${companyName || 'N/A'}`,
+                ``,
+                `Brief & Requirements:`,
+                description,
+              ].join('\n'),
             }),
-          }
-        );
-        emailDispatched = emailResponse.ok;
-      } catch {
-        // Non-blocking backend email relay
-      }
+          }).catch(() => {});
+        }
 
-      // 2. Automatic Backend WhatsApp Webhook Dispatch (if WHATSAPP_WEBHOOK_URL is configured)
-      const whatsappWebhookUrl = (process.env.WHATSAPP_WEBHOOK_URL || '').trim();
-      if (whatsappWebhookUrl) {
-        try {
-          const waRes = await fetch(whatsappWebhookUrl, {
+        // 2. FormSubmit AJAX Relay to shankarbaluragi066@gmail.com
+        await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(ownerEmail)}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+            Origin: 'https://prithvieditify.netlify.app',
+            Referer: 'https://prithvieditify.netlify.app/',
+          },
+          body: JSON.stringify({
+            _subject: `New Order Booked (#${shortOrderId}): ${serviceRequired} from ${fullName}`,
+            _template: 'table',
+            _captcha: 'false',
+            Order_ID: `#${shortOrderId} (${orderId})`,
+            Service_Booked: serviceRequired,
+            Custom_Price_Range_INR: budgetRange,
+            Preferred_Deadline: preferredDeadline,
+            Reference_Link: referenceFileUrl || 'None',
+            Customer_Name: fullName,
+            Customer_Phone_WhatsApp: phone,
+            Customer_Email: email,
+            Brand_or_Channel: companyName || 'N/A',
+            Service_Requirements_and_Brief: description,
+            Owner_WhatsApp_Target: ownerWhatsApp,
+          }),
+        }).catch(() => {});
+
+        // 3. Optional WhatsApp Webhook (if WHATSAPP_WEBHOOK_URL is configured)
+        const whatsappWebhookUrl = (process.env.WHATSAPP_WEBHOOK_URL || '').trim();
+        if (whatsappWebhookUrl) {
+          await fetch(whatsappWebhookUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -939,23 +970,16 @@ async function startServer() {
               referenceFileUrl,
               description,
             }),
-          });
-          whatsappDispatched = waRes.ok;
-        } catch {
-          // Non-blocking webhook
+          }).catch(() => {});
         }
+      } catch {
+        // Silent background completion
       }
+    });
+  };
 
-      res.json({
-        ok: true,
-        orderId: shortOrderId,
-        emailDispatched,
-        whatsappDispatched,
-      });
-    } catch {
-      res.status(200).json({ ok: true });
-    }
-  });
+  app.post('/api/orders/notify', handleBackgroundOrderNotify);
+  app.post('/api/inquiries/notify-admin', handleBackgroundOrderNotify);
 
   // --------------------------------------------------------------------------
   // VITE MIDDLEWARE (DEVELOPMENT) OR STATIC DIST SERVING (PRODUCTION)

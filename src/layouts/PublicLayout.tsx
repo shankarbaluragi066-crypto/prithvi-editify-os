@@ -53,12 +53,8 @@ export const PublicLayout: React.FC = () => {
     }
   }, [custom.seoTitle, custom.seoDescription]);
 
-  const portalDestination = user ? (isAdmin ? '/admin' : '/portal') : '/login';
-  const portalLabel = user
-    ? isAdmin
-      ? 'Admin Console'
-      : custom.navPortalButtonLabel || 'Client Portal'
-    : custom.navPortalButtonLabel || 'Client Portal';
+  const portalDestination = user ? '/portal' : '/login';
+  const portalLabel = custom.navPortalButtonLabel || 'Client Portal';
   const whatsappUrl = buildWhatsAppLink(settings.whatsappNumber, settings.whatsappDefaultMessage);
 
   const primaryBg = custom.primaryColor || '#040D1A';

@@ -21,6 +21,7 @@ import {
 } from '../services/crmService';
 import { ServiceItem } from '../types/crm';
 import { useToast } from '../contexts/ToastContext';
+import { useAuth } from '../contexts/AuthContext';
 import { Link, useSearchParams } from 'react-router-dom';
 
 const SERVICE_OPTIONS = [
@@ -87,6 +88,7 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({
   onSuccessClose,
 }) => {
   const { showToast } = useToast();
+  const { user, profile, isClient } = useAuth();
   const [searchParams] = useSearchParams();
   const [referenceFile, setReferenceFile] = useState<File | null>(null);
   const [referenceLink, setReferenceLink] = useState<string>(defaultReferenceLink || '');
@@ -112,10 +114,10 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({
   } = useForm<InquiryFormValues>({
     resolver: zodResolver(inquirySchema),
     defaultValues: {
-      fullName: '',
-      email: '',
-      phone: '',
-      companyName: '',
+      fullName: isClient ? profile?.displayName || user?.displayName || '' : '',
+      email: isClient ? profile?.email || user?.email || '' : '',
+      phone: isClient ? profile?.phone || '' : '',
+      companyName: isClient ? profile?.companyName || '' : '',
       serviceRequired: defaultService || SERVICE_OPTIONS[0],
       budgetRange: defaultCustomPrice || activeBudgetRanges[1] || activeBudgetRanges[0],
       preferredDeadline: '',
@@ -125,6 +127,23 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({
   });
 
   const currentBudgetRange = watch('budgetRange');
+
+  useEffect(() => {
+    if (isClient && (profile || user)) {
+      if (profile?.displayName || user?.displayName) {
+        setValue('fullName', profile?.displayName || user?.displayName || '');
+      }
+      if (profile?.email || user?.email) {
+        setValue('email', profile?.email || user?.email || '');
+      }
+      if (profile?.phone) {
+        setValue('phone', profile.phone);
+      }
+      if (profile?.companyName) {
+        setValue('companyName', profile.companyName);
+      }
+    }
+  }, [isClient, profile, user, setValue]);
 
   useEffect(() => {
     if (defaultCustomPrice !== undefined) {

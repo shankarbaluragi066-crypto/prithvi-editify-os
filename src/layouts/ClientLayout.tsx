@@ -227,7 +227,7 @@ export const ClientLayout: React.FC = () => {
 
           <div className="flex items-center gap-2.5 shrink-0">
             <Link
-              to="/contact"
+              to="/portal/book"
               className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-all whitespace-nowrap shrink-0"
             >
               <Plus className="w-3.5 h-3.5" />

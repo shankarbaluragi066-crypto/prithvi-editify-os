@@ -15,35 +15,27 @@ import { STUDIO_OWNER_EMAIL } from '../lib/supabaseClient';
 import { DEFAULT_STUDIO_LOGO_URL } from '../utils/seedData';
 
 export const LoginPage: React.FC = () => {
-  const { user, profile, isAdmin, loading, loginWithGoogle, loginWithEmail, registerClientWithEmail } = useAuth();
+  const { user, profile, loading, loginWithGoogle } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
-  const [mode, setMode] = useState<'login' | 'register'>('login');
   const [googleBusy, setGoogleBusy] = useState(false);
 
   useEffect(() => {
     if (!loading && user && profile) {
-      navigate(isAdmin ? '/admin' : '/portal', { replace: true });
+      navigate('/portal', { replace: true });
     }
-  }, [loading, user, profile, isAdmin, navigate]);
-
-  const loginForm = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: { email: '', password: '' },
-  });
-
-  const registerForm = useForm<RegisterFormValues>({
-    resolver: zodResolver(registerSchema),
-    defaultValues: { displayName: '', email: '', phone: '', companyName: '', password: '' },
-  });
+  }, [loading, user, profile, navigate]);
 
   const handleGoogleSignIn = async () => {
     setGoogleBusy(true);
     try {
       const prof = await loginWithGoogle('/login');
-      showToast('success', 'Signed In', `Welcome back, ${prof.displayName}`);
-      navigate(prof.role === 'admin' ? '/admin' : '/portal');
+      showToast('success', 'Signed In', `Welcome to your Client Portal, ${prof.displayName}`);
+      navigate('/portal', { replace: true });
     } catch (err) {
+      if (err instanceof Error && err.message.includes('cancelled')) {
+        return;
+      }
       showToast(
         'error',
         'Google Sign-In Failed',
@@ -54,230 +46,44 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  const onEmailLogin = async (values: LoginFormValues) => {
-    try {
-      const prof = await loginWithEmail(values.email, values.password);
-      showToast('success', 'Signed In', `Welcome back, ${prof.displayName}`);
-      navigate(prof.role === 'admin' ? '/admin' : '/portal');
-    } catch (err) {
-      showToast(
-        'error',
-        'Authentication Failed',
-        err instanceof Error ? err.message : 'Unable to sign in.'
-      );
-    }
-  };
-
-  const onClientRegister = async (values: RegisterFormValues) => {
-    try {
-      await registerClientWithEmail(values);
-      showToast(
-        'success',
-        'Client Account Created',
-        'A verification email has been sent. Welcome to the Prithvi Editify Client Portal.'
-      );
-      navigate('/portal');
-    } catch (err) {
-      showToast(
-        'error',
-        'Registration Failed',
-        err instanceof Error ? err.message : 'Unable to register account.'
-      );
-    }
-  };
-
   return (
     <div className="max-w-md mx-auto px-6 py-16">
-      <div className="pe-card-interactive bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-8 space-y-6">
+      <div className="pe-card-interactive bg-[#0D1F38] border border-[#1E3A5F] rounded-xl p-8 space-y-6 shadow-xl">
         <div>
           <img
             src={DEFAULT_STUDIO_LOGO_URL}
             alt="Prithvi Editify"
             className="h-12 w-auto rounded-md bg-white p-1 object-contain border border-[#1E3A5F] mb-3"
           />
-          <p className="text-xs font-semibold text-[#94A3B8]">Prithvi Editify Client Workspace</p>
+          <p className="text-xs font-semibold text-[#10B981] uppercase tracking-wider">
+            Prithvi Editify · Client Portal
+          </p>
           <h1 className="font-editorial text-2xl font-semibold text-[#F8FAFC] mt-1">
-            {mode === 'login' ? 'Sign in to Client Portal' : 'Create Client Portal Account'}
+            Sign in to Your Client Portal
           </h1>
           <p className="text-xs text-[#94A3B8] mt-1.5 leading-relaxed">
-            Access your active projects, deliverables, timelines, and INR invoices.
+            Sign in with your Google account to access your active projects, deliverables, timelines, and INR invoices.
           </p>
         </div>
 
-        {/* Mode Switcher */}
-        <div className="grid grid-cols-2 gap-1 p-1 bg-[#132A4A] rounded-lg">
+        {/* Customer Google Account Selector Sign-In */}
+        <div className="space-y-4 pt-2">
           <button
             type="button"
-            onClick={() => setMode('login')}
-            className={`py-2 text-xs font-semibold rounded-md transition-colors ${
-              mode === 'login' ? 'bg-[#0D1F38] text-[#F8FAFC] shadow-sm' : 'text-[#94A3B8] hover:text-[#F8FAFC]'
-            }`}
+            disabled={googleBusy}
+            onClick={handleGoogleSignIn}
+            className="w-full flex items-center justify-center gap-3 px-4 py-3.5 text-sm font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-xl shadow-[0_8px_20px_-4px_rgba(16,185,129,0.4)] transition-all cursor-pointer disabled:opacity-60"
           >
-            Sign In
+            <span className="w-6 h-6 rounded-full bg-white flex items-center justify-center text-xs font-bold text-[#040D1A] shrink-0">
+              G
+            </span>
+            <span>{googleBusy ? 'Opening Google Account Selector...' : 'Continue with Google'}</span>
           </button>
-          <button
-            type="button"
-            onClick={() => setMode('register')}
-            className={`py-2 text-xs font-semibold rounded-md transition-colors ${
-              mode === 'register' ? 'bg-[#0D1F38] text-[#F8FAFC] shadow-sm' : 'text-[#94A3B8] hover:text-[#F8FAFC]'
-            }`}
-          >
-            Client Registration
-          </button>
+
+          <div className="p-3.5 rounded-lg bg-[#132A4A]/60 border border-[#1E3A5F] text-[11px] text-[#94A3B8] leading-relaxed">
+            Select your personal or business Google account in the selector to open your dedicated Client Portal workspace.
+          </div>
         </div>
-
-        {/* Google Sign-In */}
-        <button
-          type="button"
-          disabled={googleBusy}
-          onClick={handleGoogleSignIn}
-          className="w-full flex items-center justify-center gap-2.5 px-4 py-3 text-sm font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-colors disabled:opacity-60"
-        >
-          <ShieldCheck className="w-4 h-4 text-[#10B981]" />
-          <span>{googleBusy ? 'Connecting to Google...' : 'Continue with Google'}</span>
-        </button>
-
-        <div className="relative flex py-1 items-center">
-          <div className="flex-grow border-t border-[#1E3A5F]" />
-          <span className="flex-shrink mx-3 text-[11px] text-[#94A3B8]">OR EMAIL & PASSWORD</span>
-          <div className="flex-grow border-t border-[#1E3A5F]" />
-        </div>
-
-        {mode === 'login' ? (
-          <form onSubmit={loginForm.handleSubmit(onEmailLogin)} noValidate className="space-y-4">
-            <div>
-              <label htmlFor="login-email" className="block text-xs font-medium text-[#F8FAFC] mb-1">
-                Email Address
-              </label>
-              <input
-                id="login-email"
-                type="email"
-                {...loginForm.register('email')}
-                placeholder="you@example.com"
-                className="w-full px-3.5 py-2.5 text-sm bg-[#132A4A]/60 border border-[#1E3A5F] rounded-lg focus:outline-none focus:border-[#10B981]"
-              />
-              {loginForm.formState.errors.email && (
-                <p className="text-xs text-[#DC2626] mt-1">{loginForm.formState.errors.email.message}</p>
-              )}
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label htmlFor="login-password" className="block text-xs font-medium text-[#F8FAFC]">
-                  Password
-                </label>
-                <Link to="/forgot-password" className="text-xs text-[#94A3B8] hover:text-[#F8FAFC] underline">
-                  Forgot password?
-                </Link>
-              </div>
-              <input
-                id="login-password"
-                type="password"
-                {...loginForm.register('password')}
-                placeholder="••••••••"
-                className="w-full px-3.5 py-2.5 text-sm bg-[#132A4A]/60 border border-[#1E3A5F] rounded-lg focus:outline-none focus:border-[#10B981]"
-              />
-              {loginForm.formState.errors.password && (
-                <p className="text-xs text-[#DC2626] mt-1">{loginForm.formState.errors.password.message}</p>
-              )}
-            </div>
-
-            <button
-              type="submit"
-              disabled={loginForm.formState.isSubmitting}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-colors"
-            >
-              <LogIn className="w-4 h-4" />
-              <span>{loginForm.formState.isSubmitting ? 'Signing in...' : 'Sign In with Email'}</span>
-            </button>
-          </form>
-        ) : (
-          <form onSubmit={registerForm.handleSubmit(onClientRegister)} noValidate className="space-y-4">
-            <div>
-              <label htmlFor="reg-name" className="block text-xs font-medium text-[#F8FAFC] mb-1">
-                Full Name *
-              </label>
-              <input
-                id="reg-name"
-                type="text"
-                {...registerForm.register('displayName')}
-                placeholder="Your full name"
-                className="w-full px-3.5 py-2 text-sm bg-[#132A4A]/60 border border-[#1E3A5F] rounded-lg"
-              />
-              {registerForm.formState.errors.displayName && (
-                <p className="text-xs text-[#DC2626] mt-1">{registerForm.formState.errors.displayName.message}</p>
-              )}
-            </div>
-
-            <div>
-              <label htmlFor="reg-email" className="block text-xs font-medium text-[#F8FAFC] mb-1">
-                Email Address *
-              </label>
-              <input
-                id="reg-email"
-                type="email"
-                {...registerForm.register('email')}
-                placeholder="you@company.com"
-                className="w-full px-3.5 py-2 text-sm bg-[#132A4A]/60 border border-[#1E3A5F] rounded-lg"
-              />
-              {registerForm.formState.errors.email && (
-                <p className="text-xs text-[#DC2626] mt-1">{registerForm.formState.errors.email.message}</p>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label htmlFor="reg-phone" className="block text-xs font-medium text-[#F8FAFC] mb-1">
-                  WhatsApp / Phone
-                </label>
-                <input
-                  id="reg-phone"
-                  type="tel"
-                  {...registerForm.register('phone')}
-                  placeholder="+91..."
-                  className="w-full px-3 py-2 text-sm bg-[#132A4A]/60 border border-[#1E3A5F] rounded-lg"
-                />
-              </div>
-              <div>
-                <label htmlFor="reg-company" className="block text-xs font-medium text-[#F8FAFC] mb-1">
-                  Company / Brand
-                </label>
-                <input
-                  id="reg-company"
-                  type="text"
-                  {...registerForm.register('companyName')}
-                  placeholder="Brand name"
-                  className="w-full px-3 py-2 text-sm bg-[#132A4A]/60 border border-[#1E3A5F] rounded-lg"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="reg-pass" className="block text-xs font-medium text-[#F8FAFC] mb-1">
-                Password (min 8 characters) *
-              </label>
-              <input
-                id="reg-pass"
-                type="password"
-                {...registerForm.register('password')}
-                placeholder="••••••••"
-                className="w-full px-3.5 py-2 text-sm bg-[#132A4A]/60 border border-[#1E3A5F] rounded-lg"
-              />
-              {registerForm.formState.errors.password && (
-                <p className="text-xs text-[#DC2626] mt-1">{registerForm.formState.errors.password.message}</p>
-              )}
-            </div>
-
-            <button
-              type="submit"
-              disabled={registerForm.formState.isSubmitting}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-colors"
-            >
-              <UserPlus className="w-4 h-4" />
-              <span>{registerForm.formState.isSubmitting ? 'Creating Account...' : 'Create Client Account'}</span>
-            </button>
-          </form>
-        )}
       </div>
     </div>
   );
