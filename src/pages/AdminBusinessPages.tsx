@@ -340,47 +340,6 @@ export const AdminServicesPage: React.FC = () => {
     }
   };
 
-  const handleAutoRegeneratePackages = () => {
-    const generated = buildDefaultServicePackages(
-      form.startingPrice,
-      form.pricingUnit,
-      form.turnaroundTime,
-      form.deliverablesSummary,
-      form.revisions
-    );
-    setForm((prev) => ({ ...prev, packages: generated }));
-    showToast('success', 'Packages Synced', 'Basic, Standard & Premium tiers updated from base price.');
-  };
-
-  const updatePackageField = (
-    tier: 'Basic' | 'Standard' | 'Premium',
-    field: keyof ServicePackageTier,
-    value: any
-  ) => {
-    setForm((prev) => {
-      const updated = prev.packages.map((pkg) => {
-        if (pkg.tier !== tier) return pkg;
-        const nextPkg = { ...pkg, [field]: value };
-        if (field === 'price') {
-          const num = Math.max(0, Number(value) || 0);
-          nextPkg.price = num;
-          nextPkg.priceDisplay = `₹${num.toLocaleString('en-IN')}`;
-        }
-        return nextPkg;
-      });
-      const basicPkg = updated.find((p) => p.tier === 'Basic');
-      return {
-        ...prev,
-        packages: updated,
-        startingPrice: basicPkg ? basicPkg.price : prev.startingPrice,
-        priceDisplay:
-          !prev.isCustomQuote && basicPkg
-            ? `₹${basicPkg.price.toLocaleString('en-IN')}/${prev.pricingUnit || 'design'}`
-            : prev.priceDisplay,
-      };
-    });
-  };
-
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -402,11 +361,6 @@ export const AdminServicesPage: React.FC = () => {
     await loadServices();
   };
 
-  const currentPkg =
-    form.packages.find((p) => p.tier === activePackageTab) ||
-    form.packages[0] ||
-    buildDefaultServicePackages(form.startingPrice, form.pricingUnit)[0];
-
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -415,7 +369,7 @@ export const AdminServicesPage: React.FC = () => {
             Services & INR Pricing Management
           </h1>
           <p className="text-xs text-[#94A3B8] mt-1">
-            Create and manage creative services, gallery samples, deliverables, and Basic / Standard / Premium packages.
+            Create and manage creative services, gallery samples, deliverables, and single INR pricing.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -484,7 +438,7 @@ export const AdminServicesPage: React.FC = () => {
                 {editing ? `Edit Service: ${editing.title}` : 'New Creative Service Listing'}
               </h2>
               <p className="text-xs text-[#94A3B8] mt-0.5">
-                Configure service overview, media gallery, deliverables, and 3-tier packages (Basic, Standard, Premium).
+                Configure service overview, media gallery, deliverables, and single INR pricing.
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -616,11 +570,11 @@ export const AdminServicesPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Row 2: Starting Price, Display Price, Turnaround, Revisions, Sort Order */}
+          {/* Row 2: Single Service Price, Display Price, Turnaround, Revisions, Sort Order */}
           <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
             <div>
               <label className="block text-xs font-medium text-[#F8FAFC] mb-1">
-                Starting Price (INR)
+                Service Price (INR)
               </label>
               <input
                 type="number"
@@ -721,138 +675,7 @@ export const AdminServicesPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Row 4: Service Packages Builder (Basic / Standard / Premium) */}
-          <div className="border border-[#1E3A5F] rounded-lg p-5 bg-[#132A4A]/60 space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h3 className="text-sm font-semibold text-[#F8FAFC]">
-                  Service Packages (Basic · Standard · Premium)
-                </h3>
-                <p className="text-xs text-[#94A3B8]">
-                  Visitors can switch between Basic, Standard, and Premium tabs on the Service Detail page.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={handleAutoRegeneratePackages}
-                className="px-3 py-1.5 text-xs font-semibold text-[#F8FAFC] bg-[#0D1F38] border border-[#1E3A5F] hover:border-[#10B981] rounded-lg transition-colors"
-              >
-                Auto-Calculate Tiers from ₹{form.startingPrice}
-              </button>
-            </div>
-
-            <div className="flex items-center gap-2 border-b border-[#1E3A5F] pb-3">
-              {(['Basic', 'Standard', 'Premium'] as const).map((tier) => {
-                const pkg = form.packages.find((p) => p.tier === tier);
-                const isAct = activePackageTab === tier;
-                return (
-                  <button
-                    key={tier}
-                    type="button"
-                    onClick={() => setActivePackageTab(tier)}
-                    className={`px-4 py-2 text-xs font-semibold rounded-lg border transition-colors ${
-                      isAct
-                        ? 'bg-gradient-to-r from-[#0EA5E9] to-[#10B981] text-white border-[#10B981]'
-                        : 'bg-[#0D1F38] text-[#94A3B8] border-[#1E3A5F] hover:text-[#F8FAFC]'
-                    }`}
-                  >
-                    {tier} ({pkg?.priceDisplay || '₹0'})
-                  </button>
-                );
-              })}
-            </div>
-
-            {currentPkg && (
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 bg-[#0D1F38] p-4 rounded-lg border border-[#1E3A5F]">
-                <div>
-                  <label className="block text-[11px] font-semibold text-[#94A3B8] mb-1">
-                    {currentPkg.tier} Package Title
-                  </label>
-                  <input
-                    type="text"
-                    value={currentPkg.name}
-                    onChange={(e) => updatePackageField(currentPkg.tier, 'name', e.target.value)}
-                    className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-[#94A3B8] mb-1">
-                    {currentPkg.tier} Price (INR)
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={currentPkg.price}
-                    onChange={(e) =>
-                      updatePackageField(currentPkg.tier, 'price', Number(e.target.value))
-                    }
-                    className="w-full px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-[#94A3B8] mb-1">
-                    Delivery Time
-                  </label>
-                  <input
-                    type="text"
-                    value={currentPkg.deliveryTime}
-                    onChange={(e) =>
-                      updatePackageField(currentPkg.tier, 'deliveryTime', e.target.value)
-                    }
-                    className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-[#94A3B8] mb-1">
-                    Revisions
-                  </label>
-                  <input
-                    type="text"
-                    value={currentPkg.revisions}
-                    onChange={(e) =>
-                      updatePackageField(currentPkg.tier, 'revisions', e.target.value)
-                    }
-                    className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="block text-[11px] font-semibold text-[#94A3B8] mb-1">
-                    Short Package Summary
-                  </label>
-                  <input
-                    type="text"
-                    value={currentPkg.description}
-                    onChange={(e) =>
-                      updatePackageField(currentPkg.tier, 'description', e.target.value)
-                    }
-                    className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="block text-[11px] font-semibold text-[#94A3B8] mb-1">
-                    Included Deliverables (comma-separated)
-                  </label>
-                  <input
-                    type="text"
-                    value={currentPkg.features.join(', ')}
-                    onChange={(e) =>
-                      updatePackageField(
-                        currentPkg.tier,
-                        'features',
-                        e.target.value
-                          .split(',')
-                          .map((s) => s.trim())
-                          .filter(Boolean)
-                      )
-                    }
-                    className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Row 5: Cover Image, Gallery Images & Video Preview */}
+          {/* Row 4: Cover Image, Gallery Images & Video Preview */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
             <div>
               <div className="flex items-center justify-between mb-1">
@@ -978,8 +801,8 @@ export const AdminServicesPage: React.FC = () => {
               <th className="py-3 px-4">#</th>
               <th className="py-3 px-4">Service Listing</th>
               <th className="py-3 px-4">Category</th>
-              <th className="py-3 px-4">Starting Price</th>
-              <th className="py-3 px-4">Delivery & Packages</th>
+              <th className="py-3 px-4">Service Price</th>
+              <th className="py-3 px-4">Delivery & Revisions</th>
               <th className="py-3 px-4">Visibility</th>
               <th className="py-3 px-4 text-right">Actions</th>
             </tr>
@@ -1021,7 +844,7 @@ export const AdminServicesPage: React.FC = () => {
                   <td className="py-3.5 px-4 text-[#94A3B8]">
                     <span>{srv.turnaroundTime || '24–48 hours'}</span>
                     <span className="block text-[11px] text-[#16A34A]">
-                      3 Packages (Basic · Std · Prem)
+                      {srv.revisions || '2 Revisions'} · Single Price
                     </span>
                   </td>
                   <td className="py-3.5 px-4">
@@ -1787,6 +1610,7 @@ const INVOICE_STATUS_OPTIONS: InvoiceStatus[] = [
 
 export const AdminInvoicesPage: React.FC = () => {
   const { showToast, confirmAction } = useToast();
+  const location = useLocation();
   const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
   const [clients, setClients] = useState<ClientRecord[]>([]);
   const [projects, setProjects] = useState<ProjectRecord[]>([]);
@@ -1804,9 +1628,21 @@ export const AdminInvoicesPage: React.FC = () => {
   const [printLineItems, setPrintLineItems] = useState<InvoiceLineItem[]>([]);
   const [gstMode, setGstMode] = useState<GstTaxMode>('non_gst');
 
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(() => {
+    const params = new URLSearchParams(location.search);
+    return params.get('q') || '';
+  });
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [deleteModalConfig, setDeleteModalConfig] = useState<SafeDeleteModalConfig | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const qParam = params.get('q');
+    if (qParam !== null) {
+      setSearchQuery(qParam);
+      setStatusFilter('All');
+    }
+  }, [location.search]);
 
   const today = new Date().toISOString().split('T')[0];
   const defaultDue = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];

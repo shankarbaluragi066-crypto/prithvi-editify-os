@@ -401,7 +401,7 @@ export const DEFAULT_PUBLIC_SETTINGS: PublicSettings = {
   ownerName: 'Shankar Baluragi',
   tagline: 'Professional design and video editing for brands, creators, and growing businesses.',
   businessEmail: 'shankarbaluragi066@gmail.com',
-  whatsappNumber: '',
+  whatsappNumber: '+916361902619',
   whatsappDefaultMessage:
     'Hello Prithvi Editify, I would like to discuss a design or video editing project.',
   websiteUrl: '',

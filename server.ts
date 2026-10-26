@@ -842,6 +842,101 @@ async function startServer() {
   );
 
   // --------------------------------------------------------------------------
+  // 5. POST /api/orders/notify — Automatic Backend Order Notification Dispatch
+  // --------------------------------------------------------------------------
+  app.post('/api/orders/notify', async (req: Request, res: Response) => {
+    try {
+      const body = req.body || {};
+      const orderId = sanitizeInputText(body.id, 120) || 'NEW';
+      const shortOrderId = orderId.slice(0, 8).toUpperCase();
+      const fullName = sanitizeInputText(body.fullName, 120) || 'Customer';
+      const email = sanitizeInputText(body.email, 254);
+      const phone = sanitizeInputText(body.phone, 40);
+      const companyName = sanitizeInputText(body.companyName, 150);
+      const serviceRequired = sanitizeInputText(body.serviceRequired, 200) || 'Creative Service';
+      const budgetRange = sanitizeInputText(body.budgetRange, 100) || 'Standard Rate';
+      const preferredDeadline = sanitizeInputText(body.preferredDeadline, 80) || 'Flexible';
+      const referenceFileUrl = sanitizeInputText(body.referenceFileUrl, 1000);
+      const description = sanitizeInputText(body.description, 3000);
+
+      const ownerEmail = STUDIO_ADMIN_EMAIL || 'shankarbaluragi066@gmail.com';
+      const ownerWhatsApp = process.env.STUDIO_ADMIN_WHATSAPP || '+916361902619';
+
+      let emailDispatched = false;
+      let whatsappDispatched = false;
+
+      // 1. Automatic Backend Email Dispatch to shankarbaluragi066@gmail.com
+      try {
+        const emailResponse = await fetch(
+          `https://formsubmit.co/ajax/${encodeURIComponent(ownerEmail)}`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+              Origin: 'https://prithvieditify.netlify.app',
+              Referer: 'https://prithvieditify.netlify.app/',
+            },
+            body: JSON.stringify({
+              _subject: `New Order Booked (#${shortOrderId}): ${serviceRequired} from ${fullName}`,
+              _template: 'table',
+              _captcha: 'false',
+              Order_ID: `#${shortOrderId} (${orderId})`,
+              Service_Booked: serviceRequired,
+              Custom_Price_Range_INR: budgetRange,
+              Preferred_Deadline: preferredDeadline,
+              Reference_Link: referenceFileUrl || 'None',
+              Customer_Name: fullName,
+              Customer_Phone_WhatsApp: phone,
+              Customer_Email: email,
+              Brand_or_Channel: companyName || 'N/A',
+              Service_Requirements_and_Brief: description,
+              Owner_WhatsApp_Target: ownerWhatsApp,
+            }),
+          }
+        );
+        emailDispatched = emailResponse.ok;
+      } catch {
+        // Non-blocking backend email relay
+      }
+
+      // 2. Automatic Backend WhatsApp Webhook Dispatch (if WHATSAPP_WEBHOOK_URL is configured)
+      const whatsappWebhookUrl = (process.env.WHATSAPP_WEBHOOK_URL || '').trim();
+      if (whatsappWebhookUrl) {
+        try {
+          const waRes = await fetch(whatsappWebhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              to: ownerWhatsApp,
+              orderId: shortOrderId,
+              serviceRequired,
+              budgetRange,
+              fullName,
+              phone,
+              email,
+              referenceFileUrl,
+              description,
+            }),
+          });
+          whatsappDispatched = waRes.ok;
+        } catch {
+          // Non-blocking webhook
+        }
+      }
+
+      res.json({
+        ok: true,
+        orderId: shortOrderId,
+        emailDispatched,
+        whatsappDispatched,
+      });
+    } catch {
+      res.status(200).json({ ok: true });
+    }
+  });
+
+  // --------------------------------------------------------------------------
   // VITE MIDDLEWARE (DEVELOPMENT) OR STATIC DIST SERVING (PRODUCTION)
   // --------------------------------------------------------------------------
   if (process.env.NODE_ENV !== 'production') {

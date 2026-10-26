@@ -23,6 +23,7 @@ import {
   HomePage,
   ServicesPage,
   ServiceDetailPage,
+  ServiceBookingPage,
   PortfolioPage,
   PortfolioDetailPage,
   AboutPage,
@@ -227,6 +228,8 @@ export default function App() {
                 <Route path="/" element={<HomePage />} />
                 <Route path="/services" element={<ServicesPage />} />
                 <Route path="/services/:slug" element={<ServiceDetailPage />} />
+                <Route path="/book" element={<ServiceBookingPage />} />
+                <Route path="/book/:slug" element={<ServiceBookingPage />} />
                 <Route path="/portfolio" element={<PortfolioPage />} />
                 <Route path="/portfolio/:slug" element={<PortfolioDetailPage />} />
                 <Route path="/about" element={<AboutPage />} />

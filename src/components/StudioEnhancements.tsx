@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import {
   Check,
   CheckCircle2,
@@ -529,9 +529,9 @@ interface InstantPriceCalculatorProps {
 }
 
 export const InstantPriceCalculatorWidget: React.FC<InstantPriceCalculatorProps> = ({
-  whatsappNumber = '919876543210',
+  whatsappNumber = '916361902619',
 }) => {
-  const { showToast } = useToast();
+  const navigate = useNavigate();
   const [thumbnailsCount, setThumbnailsCount] = useState<number>(5);
   const [reelsCount, setReelsCount] = useState<number>(4);
   const [socialPostsCount, setSocialPostsCount] = useState<number>(0);
@@ -592,31 +592,12 @@ export const InstantPriceCalculatorWidget: React.FC<InstantPriceCalculatorProps>
   ].join('\n');
 
   const handleSendScopeToShankar = () => {
-    const inquiryEl = document.getElementById('home-inquiry-section');
-    window.dispatchEvent(
-      new CustomEvent('pe-prefill-inquiry', {
-        detail: {
-          serviceRequired: bundleSummaryText,
-          budgetRange: matchedBudgetBracket,
-          description: detailedScopeDescription,
-        },
-      })
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    navigate(
+      `/book?service=${encodeURIComponent(bundleSummaryText)}&budget=${encodeURIComponent(
+        matchedBudgetBracket
+      )}&scope=${encodeURIComponent(detailedScopeDescription)}`
     );
-    if (inquiryEl) {
-      inquiryEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      showToast(
-        'success',
-        'Scope Prefilled Below!',
-        'Your selected deliverables and INR estimate are ready in the inquiry form.'
-      );
-    } else {
-      window.location.hash = '';
-      window.location.assign(
-        `/contact?service=${encodeURIComponent(bundleSummaryText)}&budget=${encodeURIComponent(
-          matchedBudgetBracket
-        )}&scope=${encodeURIComponent(detailedScopeDescription)}`
-      );
-    }
   };
 
   const whatsappText = [
@@ -627,7 +608,7 @@ export const InstantPriceCalculatorWidget: React.FC<InstantPriceCalculatorProps>
     `*Estimated INR Range:* ${formatINR(rangeMin)} – ${formatINR(rangeMax)} (Bundle Rate: ${formatINR(estimatedTotal)})`,
   ].join('\n');
 
-  const cleanPhone = whatsappNumber.replace(/\D/g, '') || '919876543210';
+  const cleanPhone = (whatsappNumber || '').replace(/\D/g, '') || '916361902619';
   const waHref = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(whatsappText)}`;
 
   return (

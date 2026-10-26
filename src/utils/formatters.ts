@@ -126,15 +126,15 @@ export function calculateInvoiceTotals(input: InvoiceCalculationInput): InvoiceC
   };
 }
 
-export function buildWhatsAppLink(phone: string, message?: string): string {
-  const digitsOnly = (phone || '').replace(/[^0-9]/g, '');
+export const DEFAULT_STUDIO_WHATSAPP = '+916361902619';
+
+export function buildWhatsAppLink(phone?: string, message?: string): string {
+  const rawPhone = (phone || '').trim() || DEFAULT_STUDIO_WHATSAPP;
+  const digitsOnly = rawPhone.replace(/[^0-9]/g, '') || '916361902619';
   const defaultMsg =
     message ||
     'Hello Prithvi Editify, I would like to discuss a design or video editing project.';
   const encoded = encodeURIComponent(defaultMsg);
-  if (!digitsOnly) {
-    return `https://wa.me/?text=${encoded}`;
-  }
   return `https://wa.me/${digitsOnly}?text=${encoded}`;
 }
 

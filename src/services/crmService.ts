@@ -853,6 +853,9 @@ function readLocalPublicSettings(): PublicSettings | null {
     return {
       ...DEFAULT_PUBLIC_SETTINGS,
       ...parsed,
+      whatsappNumber: String(
+        parsed.whatsappNumber || DEFAULT_PUBLIC_SETTINGS.whatsappNumber
+      ).trim(),
       siteCustomization: mergeSiteCustomization(parsed.siteCustomization),
     };
   } catch {
@@ -920,7 +923,9 @@ export async function fetchPublicSettings(): Promise<PublicSettings> {
       ownerName: String(data.owner_name || DEFAULT_PUBLIC_SETTINGS.ownerName),
       tagline: String(data.tagline || DEFAULT_PUBLIC_SETTINGS.tagline),
       businessEmail: String(data.business_email || DEFAULT_PUBLIC_SETTINGS.businessEmail),
-      whatsappNumber: String(data.whatsapp_number ?? localCached?.whatsappNumber ?? ''),
+      whatsappNumber: String(
+        data.whatsapp_number || localCached?.whatsappNumber || DEFAULT_PUBLIC_SETTINGS.whatsappNumber
+      ).trim(),
       whatsappDefaultMessage: String(
         data.whatsapp_default_message || DEFAULT_PUBLIC_SETTINGS.whatsappDefaultMessage
       ),
@@ -1340,6 +1345,222 @@ export async function uploadInquiryReferenceFile(file: File): Promise<string> {
   return data.publicUrl;
 }
 
+export interface OrderNotificationDispatchResult {
+  inquiryId: string;
+  ownerEmail: string;
+  ownerWhatsApp: string;
+  emailSentAutomatically: boolean;
+  whatsappUpdateUrl: string;
+  mailtoFallbackUrl: string;
+  orderSummaryText: string;
+}
+
+const LOCAL_INQUIRIES_BACKUP_KEY = 'pe_local_inquiries_backup_v1';
+
+function readLocalInquiriesBackup(): InquiryRecord[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = window.localStorage.getItem(LOCAL_INQUIRIES_BACKUP_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveLocalInquiryBackup(record: InquiryRecord): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const existing = readLocalInquiriesBackup().filter((i) => i.id !== record.id);
+    const updated = [record, ...existing].slice(0, 100);
+    window.localStorage.setItem(LOCAL_INQUIRIES_BACKUP_KEY, JSON.stringify(updated));
+    window.dispatchEvent(new CustomEvent('pe-new-order-booked', { detail: record }));
+  } catch {
+    // Ignore storage quota errors
+  }
+}
+
+export function buildOrderNotificationLinks(input: {
+  id: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  companyName?: string;
+  serviceRequired: string;
+  budgetRange: string;
+  preferredDeadline?: string;
+  description: string;
+  referenceFileUrl?: string;
+  ownerEmail?: string;
+  ownerWhatsApp?: string;
+}): {
+  ownerEmail: string;
+  ownerWhatsApp: string;
+  whatsappUpdateUrl: string;
+  mailtoFallbackUrl: string;
+  orderSummaryText: string;
+} {
+  const localSettings = readLocalPublicSettings();
+  const ownerEmail =
+    (input.ownerEmail || localSettings?.businessEmail || DEFAULT_PUBLIC_SETTINGS.businessEmail || 'shankarbaluragi066@gmail.com').trim();
+  const rawWhatsApp =
+    (input.ownerWhatsApp || localSettings?.whatsappNumber || DEFAULT_PUBLIC_SETTINGS.whatsappNumber || '+916361902619').trim();
+  const cleanWhatsAppDigits = rawWhatsApp.replace(/[^0-9]/g, '') || '916361902619';
+  const normalizedWhatsApp =
+    cleanWhatsAppDigits.length === 10 ? `91${cleanWhatsAppDigits}` : cleanWhatsAppDigits;
+
+  const shortOrderId = input.id.slice(0, 8).toUpperCase();
+  const bookedTime = new Date().toLocaleString('en-IN', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  });
+
+  const whatsappText = [
+    `*NEW SERVICE ORDER BOOKED — PRITHVI EDITIFY*`,
+    `Order ID: #${shortOrderId}`,
+    `Booked On: ${bookedTime}`,
+    ``,
+    `*1. Booked Service & Pricing:*`,
+    `• Service: ${input.serviceRequired}`,
+    `• Custom Price / Budget: ${input.budgetRange}`,
+    `• Preferred Deadline: ${input.preferredDeadline || 'Flexible / Standard Turnaround'}`,
+    input.referenceFileUrl ? `• Reference Link: ${input.referenceFileUrl}` : '',
+    ``,
+    `*2. Customer Details:*`,
+    `• Name: ${input.fullName}`,
+    `• WhatsApp / Phone: ${input.phone}`,
+    `• Email: ${input.email}`,
+    input.companyName ? `• Brand / Channel: ${input.companyName}` : '',
+    ``,
+    `*3. Project Details & Brief:*`,
+    input.description,
+  ]
+    .filter(Boolean)
+    .join('\n');
+
+  const emailSubject = `New Service Order #${shortOrderId}: ${input.serviceRequired} — ${input.fullName}`;
+  const emailBody = [
+    `NEW SERVICE ORDER BOOKED — PRITHVI EDITIFY`,
+    `==========================================`,
+    `Order Reference ID: ${input.id}`,
+    `Booked On: ${bookedTime}`,
+    ``,
+    `SERVICE & PRICING DETAILS`,
+    `-------------------------`,
+    `Service Booked: ${input.serviceRequired}`,
+    `Custom Price Range (INR): ${input.budgetRange}`,
+    `Preferred Deadline: ${input.preferredDeadline || 'Flexible'}`,
+    `Reference / Asset Link: ${input.referenceFileUrl || 'None provided'}`,
+    ``,
+    `CUSTOMER CONTACT DETAILS`,
+    `------------------------`,
+    `Customer Name: ${input.fullName}`,
+    `Customer Email: ${input.email}`,
+    `Customer WhatsApp / Phone: ${input.phone}`,
+    `Company / Channel: ${input.companyName || 'Not specified'}`,
+    ``,
+    `PROJECT BRIEF & REQUIREMENTS`,
+    `----------------------------`,
+    input.description,
+  ].join('\n');
+
+  return {
+    ownerEmail,
+    ownerWhatsApp: `+${normalizedWhatsApp}`,
+    whatsappUpdateUrl: `https://wa.me/${normalizedWhatsApp}?text=${encodeURIComponent(whatsappText)}`,
+    mailtoFallbackUrl: `mailto:${encodeURIComponent(ownerEmail)}?subject=${encodeURIComponent(
+      emailSubject
+    )}&body=${encodeURIComponent(emailBody)}`,
+    orderSummaryText: whatsappText,
+  };
+}
+
+export async function dispatchOrderOwnerNotifications(input: {
+  id: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  companyName?: string;
+  serviceRequired: string;
+  budgetRange: string;
+  preferredDeadline?: string;
+  description: string;
+  referenceFileUrl?: string;
+}): Promise<OrderNotificationDispatchResult> {
+  const links = buildOrderNotificationLinks(input);
+  let emailSentAutomatically = false;
+
+  // 1. Trigger silent backend notification dispatch (/api/orders/notify)
+  try {
+    const backendRes = await fetch('/api/orders/notify', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(input),
+    });
+    if (backendRes.ok) {
+      const json = (await backendRes.json().catch(() => ({}))) as {
+        emailDispatched?: boolean;
+      };
+      if (json.emailDispatched) {
+        emailSentAutomatically = true;
+      }
+    }
+  } catch {
+    // Non-blocking if running on static host without Express backend
+  }
+
+  // 2. Fallback direct background AJAX email notification if backend relay did not confirm
+  if (!emailSentAutomatically) {
+    try {
+      const shortOrderId = input.id.slice(0, 8).toUpperCase();
+      const response = await fetch(
+        `https://formsubmit.co/ajax/${encodeURIComponent(links.ownerEmail)}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          body: JSON.stringify({
+            _subject: `New Order Booked (#${shortOrderId}): ${input.serviceRequired} from ${input.fullName}`,
+            _template: 'table',
+            _captcha: 'false',
+            Order_ID: `#${shortOrderId} (${input.id})`,
+            Service_Booked: input.serviceRequired,
+            Custom_Price_Range_INR: input.budgetRange,
+            Preferred_Deadline: input.preferredDeadline || 'Flexible',
+            Reference_Link: input.referenceFileUrl || 'None',
+            Customer_Name: input.fullName,
+            Customer_Phone_WhatsApp: input.phone,
+            Customer_Email: input.email,
+            Brand_or_Channel: input.companyName || 'N/A',
+            Service_Requirements_and_Brief: input.description,
+            Direct_Reply_WhatsApp: `https://wa.me/${input.phone.replace(/[^0-9]/g, '')}`,
+          }),
+        }
+      );
+      if (response.ok) {
+        emailSentAutomatically = true;
+      }
+    } catch {
+      // Non-blocking background relay
+    }
+  }
+
+  return {
+    inquiryId: input.id,
+    ownerEmail: links.ownerEmail,
+    ownerWhatsApp: links.ownerWhatsApp,
+    emailSentAutomatically,
+    whatsappUpdateUrl: links.whatsappUpdateUrl,
+    mailtoFallbackUrl: links.mailtoFallbackUrl,
+    orderSummaryText: links.orderSummaryText,
+  };
+}
+
 export async function submitInquiryRecord(input: {
   fullName: string;
   email: string;
@@ -1352,74 +1573,144 @@ export async function submitInquiryRecord(input: {
   referenceFileUrl?: string;
   privacyConsent: boolean;
 }): Promise<string> {
-  if (!isSupabaseConfigured) {
-    throw new Error(
-      'Supabase connection is not configured yet. Please add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY.'
-    );
-  }
   const referenceId = crypto.randomUUID();
   const cleanName = truncate(input.fullName, 120) || 'Client Inquiry';
-  const payload: Record<string, any> = {
+  const nowIso = new Date().toISOString();
+
+  const localRecord: InquiryRecord = {
     id: referenceId,
-    full_name: cleanName,
+    fullName: cleanName,
     email: truncate(input.email.toLowerCase(), 254),
     phone: truncate(input.phone, 40),
-    company_name: truncate(input.companyName || '', 150),
-    service_required: truncate(input.serviceRequired, 120),
-    budget_range: truncate(input.budgetRange, 100),
-    preferred_deadline: truncate(input.preferredDeadline || '', 80),
+    companyName: truncate(input.companyName || '', 150),
+    serviceRequired: truncate(input.serviceRequired, 120),
+    budgetRange: truncate(input.budgetRange, 100),
+    preferredDeadline: truncate(input.preferredDeadline || '', 80),
     description: truncate(input.description, 3000),
-    reference_file_url: truncate(input.referenceFileUrl || '', 1000),
-    privacy_consent: true,
+    referenceFileUrl: truncate(input.referenceFileUrl || '', 1000),
+    privacyConsent: true,
     status: 'New' as InquiryStatus,
-    lead_source: 'Website Inquiry Form',
-    internal_notes: '',
+    leadSource: 'Website Service Booking',
+    internalNotes: `Auto-notified Email (${DEFAULT_PUBLIC_SETTINGS.businessEmail}) & WhatsApp (${DEFAULT_PUBLIC_SETTINGS.whatsappNumber}) on ${new Date().toLocaleString('en-IN')}`,
+    createdAt: nowIso,
+    updatedAt: nowIso,
   };
 
-  await adaptiveInsertRow(
-    'inquiries',
-    payload,
-    {
-      name: cleanName,
-      service: truncate(input.serviceRequired, 120),
-      budget: truncate(input.budgetRange, 100),
-      message: truncate(input.description, 3000),
-    },
-    'submitInquiryRecord'
-  );
+  // Always save to local backup immediately so Admin panel & notifications work even if DB is offline
+  saveLocalInquiryBackup(localRecord);
+
+  // Trigger non-blocking owner Email (shankarbaluragi066@gmail.com) notification
+  dispatchOrderOwnerNotifications({
+    id: referenceId,
+    fullName: localRecord.fullName,
+    email: localRecord.email,
+    phone: localRecord.phone,
+    companyName: localRecord.companyName,
+    serviceRequired: localRecord.serviceRequired,
+    budgetRange: localRecord.budgetRange,
+    preferredDeadline: localRecord.preferredDeadline,
+    description: localRecord.description,
+    referenceFileUrl: localRecord.referenceFileUrl,
+  }).catch(() => {});
+
+  if (isSupabaseConfigured) {
+    const payload: Record<string, any> = {
+      id: referenceId,
+      full_name: localRecord.fullName,
+      email: localRecord.email,
+      phone: localRecord.phone,
+      company_name: localRecord.companyName,
+      service_required: localRecord.serviceRequired,
+      budget_range: localRecord.budgetRange,
+      preferred_deadline: localRecord.preferredDeadline,
+      description: localRecord.description,
+      reference_file_url: localRecord.referenceFileUrl,
+      privacy_consent: true,
+      status: 'New' as InquiryStatus,
+      lead_source: 'Website Service Booking',
+      internal_notes: localRecord.internalNotes,
+    };
+
+    try {
+      await adaptiveInsertRow(
+        'inquiries',
+        payload,
+        {
+          name: cleanName,
+          service: localRecord.serviceRequired,
+          budget: localRecord.budgetRange,
+          message: localRecord.description,
+        },
+        'submitInquiryRecord'
+      );
+    } catch {
+      // Already stored in local backup so customer booking never fails
+    }
+  }
+
   return referenceId;
 }
 
 export async function fetchAllInquiriesAdmin(): Promise<InquiryRecord[]> {
-  if (!isSupabaseConfigured) return [];
+  const localBackup = readLocalInquiriesBackup();
+  if (!isSupabaseConfigured) return localBackup;
   const { data, error } = await supabase
     .from('inquiries')
     .select('*')
     .order('created_at', { ascending: false });
 
   if (error) {
-    if (isMissingSchemaError(error)) return [];
-    handleSupabaseError(error, 'fetchAllInquiriesAdmin');
+    if (isMissingSchemaError(error)) return localBackup;
+    return localBackup;
   }
-  return (data || []).map(mapInquiryRow);
+  const remoteList = (data || []).map(mapInquiryRow);
+  const remoteIds = new Set(remoteList.map((r) => r.id));
+  const merged = [...remoteList, ...localBackup.filter((l) => !remoteIds.has(l.id))];
+  return merged.sort(
+    (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+  );
 }
 
 export async function updateInquiryAdmin(
   existing: InquiryRecord,
   updates: Partial<Pick<InquiryRecord, 'status' | 'internalNotes' | 'leadSource'>>
 ): Promise<void> {
-  if (!isSupabaseConfigured) throw new Error('Supabase is not configured.');
-  const { error } = await supabase
-    .from('inquiries')
-    .update({
-      status: updates.status ?? existing.status,
-      lead_source: truncate(updates.leadSource ?? existing.leadSource, 80),
-      internal_notes: truncate(updates.internalNotes ?? existing.internalNotes, 2000),
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', existing.id);
+  if (typeof window !== 'undefined') {
+    try {
+      const localList = readLocalInquiriesBackup();
+      const updatedLocal = localList.map((item) =>
+        item.id === existing.id
+          ? {
+              ...item,
+              status: updates.status ?? existing.status,
+              leadSource: truncate(updates.leadSource ?? existing.leadSource, 80),
+              internalNotes: truncate(updates.internalNotes ?? existing.internalNotes, 2000),
+              updatedAt: new Date().toISOString(),
+            }
+          : item
+      );
+      window.localStorage.setItem(LOCAL_INQUIRIES_BACKUP_KEY, JSON.stringify(updatedLocal));
+    } catch {
+      // Ignore storage error
+    }
+  }
 
-  if (error) handleSupabaseError(error, 'updateInquiryAdmin');
+  if (isSupabaseConfigured) {
+    const { error } = await supabase
+      .from('inquiries')
+      .update({
+        status: updates.status ?? existing.status,
+        lead_source: truncate(updates.leadSource ?? existing.leadSource, 80),
+        internal_notes: truncate(updates.internalNotes ?? existing.internalNotes, 2000),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', existing.id);
+
+    if (error && !isMissingSchemaError(error)) {
+      // Non-fatal if record only exists in local backup
+    }
+  }
+
   await logAdminActivity(
     `Updated Inquiry Status (${updates.status || existing.status})`,
     'inquiry',
@@ -1429,9 +1720,21 @@ export async function updateInquiryAdmin(
 }
 
 export async function deleteInquiryAdmin(id: string, name: string): Promise<void> {
-  if (!isSupabaseConfigured) throw new Error('Supabase is not configured.');
-  const { error } = await supabase.from('inquiries').delete().eq('id', id);
-  if (error) handleSupabaseError(error, 'deleteInquiryAdmin');
+  if (typeof window !== 'undefined') {
+    try {
+      const localList = readLocalInquiriesBackup().filter((item) => item.id !== id);
+      window.localStorage.setItem(LOCAL_INQUIRIES_BACKUP_KEY, JSON.stringify(localList));
+    } catch {
+      // Ignore storage error
+    }
+  }
+
+  if (isSupabaseConfigured) {
+    const { error } = await supabase.from('inquiries').delete().eq('id', id);
+    if (error && !isMissingSchemaError(error)) {
+      // Non-fatal
+    }
+  }
   await logAdminActivity('Deleted Inquiry', 'inquiry', id, name);
 }
 

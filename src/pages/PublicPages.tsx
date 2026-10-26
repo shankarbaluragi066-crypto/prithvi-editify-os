@@ -1,5 +1,12 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Link, useSearchParams, useOutletContext, useParams } from 'react-router-dom';
+import {
+  Link,
+  useSearchParams,
+  useOutletContext,
+  useParams,
+  useNavigate,
+  useLocation,
+} from 'react-router-dom';
 import {
   ArrowRight,
   ArrowLeft,
@@ -19,18 +26,19 @@ import {
   RefreshCw,
   ChevronLeft,
   ChevronRight,
+  Link2,
+  IndianRupee,
 } from 'lucide-react';
 import {
   fetchPublishedServices,
   fetchPublishedPortfolio,
-  buildDefaultServicePackages,
 } from '../services/crmService';
 import {
   DEFAULT_SITE_CUSTOMIZATION,
   mergeSiteCustomization,
   createStudioArtworkDataUri,
 } from '../utils/seedData';
-import { ServiceItem, ServicePackageTier, PortfolioItem, PublicSettings } from '../types/crm';
+import { ServiceItem, PortfolioItem, PublicSettings } from '../types/crm';
 import { InquiryForm } from '../components/InquiryForm';
 import { MediaPreviewModal, PreviewableMediaItem } from '../components/MediaPreviewModal';
 import {
@@ -242,6 +250,28 @@ function parseDeliverablesList(summary: string): string[] {
 
 // ============================================================================
 // REUSABLE MARKETPLACE SERVICE & PORTFOLIO CARDS (CONSISTENT 16:10 ASPECT RATIO)
+function buildServiceBookingPageUrl(
+  service: ServiceItem,
+  customPriceRange?: string,
+  referenceLink?: string
+): string {
+  const slug = encodeURIComponent(service.slug || service.id);
+  const serviceLabel = `${service.title} (${
+    service.isCustomQuote ? 'Custom quote' : service.priceDisplay
+  })`;
+  const params = new URLSearchParams();
+  params.set('service', serviceLabel);
+  const effectivePrice = (customPriceRange || '').trim() || service.priceDisplay;
+  if (effectivePrice) {
+    params.set('budget', effectivePrice);
+  }
+  const effectiveLink = (referenceLink || '').trim();
+  if (effectiveLink) {
+    params.set('link', effectiveLink);
+  }
+  return `/book/${slug}?${params.toString()}`;
+}
+
 // ============================================================================
 interface MarketplaceServiceCardProps {
   service: ServiceItem;
@@ -260,6 +290,10 @@ const MarketplaceServiceCard: React.FC<MarketplaceServiceCardProps> = ({
   accentColor,
   onQuickPreview,
 }) => {
+  const navigate = useNavigate();
+  const [customPriceRange, setCustomPriceRange] = useState('');
+  const [referenceLink, setReferenceLink] = useState('');
+
   const detailPath = `/services/${encodeURIComponent(srv.slug || srv.id)}`;
   const hasCustomImage = Boolean(
     srv.imageUrl && !srv.imageUrl.startsWith('data:image/svg+xml')
@@ -385,37 +419,78 @@ const MarketplaceServiceCard: React.FC<MarketplaceServiceCardProps> = ({
               <span>{srv.revisions || '2 Revisions'}</span>
             </span>
             {!srv.isCustomQuote && (
-              <span className="text-[#16A34A] font-semibold">3 Packages</span>
+              <span className="text-[#16A34A] font-semibold">Single Price</span>
             )}
           </div>
         </div>
       </div>
 
-      {/* 3. Marketplace Price & Dual Action Footer */}
+      {/* 3. Single Price, Customer Custom Price Range + Reference Link & Book Now Footer */}
       <div className="px-5 py-3.5 bg-[#132A4A]/75 border-t border-[#1E3A5F] space-y-3">
         <div className="flex items-baseline justify-between gap-2">
           <span className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]">
-            {srv.isCustomQuote ? 'Project Scope' : 'Starting At'}
+            {srv.isCustomQuote ? 'Project Scope' : 'Service Price'}
           </span>
           <span className="font-mono text-base font-bold text-[#F8FAFC] tabular-nums">
             {srv.priceDisplay}
           </span>
         </div>
 
+        {/* Customer Custom Price Range & Reference Link Inputs on Every Service */}
+        <div className="grid grid-cols-1 gap-2 pt-0.5">
+          <div className="relative">
+            <IndianRupee className="w-3.5 h-3.5 text-[#10B981] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              value={customPriceRange}
+              onChange={(e) => setCustomPriceRange(e.target.value)}
+              placeholder={`Custom price range (e.g. ${srv.priceDisplay} – ₹2,500)`}
+              aria-label={`Custom price range for ${srv.title}`}
+              className="w-full pl-7 pr-2.5 py-1.5 text-[11px] bg-[#0D1F38] border border-[#1E3A5F] focus:border-[#10B981] rounded-lg text-[#F8FAFC] placeholder-[#64748B] outline-none transition-colors"
+            />
+          </div>
+          <div className="relative">
+            <Link2 className="w-3.5 h-3.5 text-[#0EA5E9] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="url"
+              value={referenceLink}
+              onChange={(e) => setReferenceLink(e.target.value)}
+              placeholder="Add reference / footage link (Drive, YouTube...)"
+              aria-label={`Reference link for ${srv.title}`}
+              className="w-full pl-7 pr-2.5 py-1.5 text-[11px] bg-[#0D1F38] border border-[#1E3A5F] focus:border-[#10B981] rounded-lg text-[#F8FAFC] placeholder-[#64748B] outline-none transition-colors"
+            />
+          </div>
+        </div>
+
         <div className="grid grid-cols-2 gap-2">
           <Link
-            to={`/contact?service=${encodeURIComponent(srv.title)}`}
+            to={detailPath}
             className="w-full inline-flex items-center justify-center px-3 py-2 text-xs font-medium text-[#F8FAFC] bg-[#0D1F38] border border-[#1E3A5F] hover:border-[#10B981] hover:bg-[#132A4A]/50 rounded-lg transition-colors text-center"
           >
-            Contact for a Project
+            View Details
           </Link>
-          <Link
-            to={detailPath}
-            className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-colors text-center"
+          <button
+            type="button"
+            onClick={() => {
+              const targetUrl = buildServiceBookingPageUrl(
+                srv,
+                customPriceRange,
+                referenceLink
+              );
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+              navigate(targetUrl, {
+                state: {
+                  service: srv,
+                  customPriceRange: customPriceRange.trim() || srv.priceDisplay,
+                  referenceLink: referenceLink.trim(),
+                },
+              });
+            }}
+            className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-colors text-center cursor-pointer"
           >
-            <span>View Service</span>
+            <span>Book Now</span>
             <ArrowRight className="w-3.5 h-3.5 shrink-0 transition-transform duration-200 group-hover:translate-x-0.5" />
-          </Link>
+          </button>
         </div>
       </div>
     </article>
@@ -1081,7 +1156,51 @@ export const HomePage: React.FC = () => {
             </div>
 
             <div className="lg:col-span-7">
-              <InquiryForm customBudgetRanges={custom.inquiryBudgetRanges} />
+              <div className="pe-card-interactive bg-[#0D1F38] border border-[#1E3A5F] rounded-xl p-6 sm:p-8 space-y-6 shadow-[0_1px_2px_rgba(0,0,0,0.35)]">
+                <div className="space-y-2">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#10B981]">
+                    <Sparkles className="w-4 h-4" />
+                    <span>Single-Rate Creative Service Booking</span>
+                  </span>
+                  <h3 className="font-editorial text-2xl font-semibold text-[#F8FAFC]">
+                    Book Your Creative Service in a Dedicated Booking Page
+                  </h3>
+                  <p className="text-sm text-[#94A3B8] leading-relaxed">
+                    Select any service above or open our dedicated booking page to enter your custom price range, attach reference or footage links, and specify your deliverable requirements.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                  <div className="p-3.5 bg-[#132A4A]/60 border border-[#1E3A5F] rounded-lg space-y-1">
+                    <span className="font-mono text-[#10B981] font-bold">01 · Select Service</span>
+                    <p className="text-[#F8FAFC] font-medium">Single transparent pricing</p>
+                  </div>
+                  <div className="p-3.5 bg-[#132A4A]/60 border border-[#1E3A5F] rounded-lg space-y-1">
+                    <span className="font-mono text-[#0EA5E9] font-bold">02 · Custom Budget & Link</span>
+                    <p className="text-[#F8FAFC] font-medium">Add price range & Drive/YouTube URL</p>
+                  </div>
+                  <div className="p-3.5 bg-[#132A4A]/60 border border-[#1E3A5F] rounded-lg space-y-1">
+                    <span className="font-mono text-[#2DD4BF] font-bold">03 · Fast Delivery</span>
+                    <p className="text-[#F8FAFC] font-medium">24–48h studio turnaround</p>
+                  </div>
+                </div>
+
+                <div className="pt-2 flex flex-wrap items-center gap-3">
+                  <Link
+                    to="/book"
+                    className="inline-flex items-center gap-2 px-6 py-3 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-colors shadow-sm"
+                  >
+                    <span>Open Service Booking Page</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                  <Link
+                    to="/services"
+                    className="inline-flex items-center gap-2 px-5 py-3 text-xs font-semibold text-[#F8FAFC] bg-[#132A4A] hover:bg-[#1E3A5F] border border-[#1E3A5F] rounded-lg transition-colors"
+                  >
+                    <span>Browse All Services</span>
+                  </Link>
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -1458,10 +1577,10 @@ export const ServicesPage: React.FC = () => {
         </div>
         <div className="flex flex-wrap items-center gap-3 shrink-0">
           <Link
-            to="/contact"
+            to="/book"
             className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-colors whitespace-nowrap"
           >
-            <span>Contact for a Project</span>
+            <span>Book a Service</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </Link>
           <Link
@@ -1484,20 +1603,23 @@ export const ServicesPage: React.FC = () => {
 // ============================================================================
 export const ServiceDetailPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
+  const navigate = useNavigate();
   const { settings } = useOutletContext<OutletCtx>();
   const custom = mergeSiteCustomization(settings.siteCustomization || DEFAULT_SITE_CUSTOMIZATION);
 
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
-  const [selectedTier, setSelectedTier] = useState<'Basic' | 'Standard' | 'Premium'>('Basic');
   const [previewMedia, setPreviewMedia] = useState<PreviewableMediaItem | null>(null);
+  const [customPriceRange, setCustomPriceRange] = useState('');
+  const [referenceLink, setReferenceLink] = useState('');
 
   useEffect(() => {
     let active = true;
     setLoading(true);
     setActiveMediaIndex(0);
-    setSelectedTier('Basic');
+    setCustomPriceRange('');
+    setReferenceLink('');
     fetchPublishedServices()
       .then((list) => {
         if (!active) return;
@@ -1605,37 +1727,20 @@ export const ServiceDetailPage: React.FC = () => {
   ];
   const currentPreviewUrl = galleryImages[activeMediaIndex] || primaryCover;
 
-  // Resolve 3-Tier Packages (Basic, Standard, Premium)
-  const packages: ServicePackageTier[] =
-    service.packages && service.packages.length > 0
-      ? service.packages
-      : buildDefaultServicePackages(
-          service.startingPrice,
-          service.pricingUnit,
-          service.turnaroundTime,
-          service.deliverablesSummary,
-          service.revisions || '2 Revisions'
-        );
-
-  const activePackage =
-    packages.find((p) => p.tier === selectedTier) || packages[0];
-
   const deliverablesItems = parseDeliverablesList(service.deliverablesSummary);
   const creatorName = settings.ownerName || 'Shankar Baluragi';
   const studioName = settings.businessName || 'Prithvi Editify';
 
-  const whatsappMessage = `Hello ${studioName}, I would like to discuss the "${
-    service.title
-  }" service (${
-    service.isCustomQuote
-      ? 'Custom Project Scope'
-      : `${activePackage.tier} Package — ${activePackage.priceDisplay}`
-  }).`;
-  const whatsappUrl = buildWhatsAppLink(settings.whatsappNumber, whatsappMessage);
-
-  const prefilledServiceOption = `${service.title} (${
-    service.isCustomQuote ? 'Custom quote' : `Starting ${service.priceDisplay}`
-  })`;
+  const whatsappMessage = [
+    `Hello ${studioName}, I would like to discuss the "${service.title}" service (${
+      customPriceRange.trim() || (service.isCustomQuote ? 'Custom Project Scope' : service.priceDisplay)
+    }).`,
+    referenceLink.trim() ? `Reference Link: ${referenceLink.trim()}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
+  const whatsappUrl = buildWhatsAppLink(settings.whatsappNumber || '+916361902619', whatsappMessage);
+  const bookingPageUrl = buildServiceBookingPageUrl(service, customPriceRange, referenceLink);
 
   const serviceJsonLd = {
     '@context': 'https://schema.org',
@@ -1659,21 +1764,16 @@ export const ServiceDetailPage: React.FC = () => {
           '@type': 'Country',
           name: 'India',
         },
-        offers: service.isCustomQuote
-          ? {
-              '@type': 'Offer',
-              priceCurrency: 'INR',
-              description: service.priceDisplay || 'Custom INR Quote',
-              availability: 'https://schema.org/InStock',
-            }
-          : packages.map((pkg) => ({
-              '@type': 'Offer',
-              name: `${service.title} — ${pkg.tier} Package (${pkg.name})`,
-              description: pkg.description,
-              priceCurrency: 'INR',
-              price: String(pkg.price || service.startingPrice || 500),
-              availability: 'https://schema.org/InStock',
-            })),
+        offers: {
+          '@type': 'Offer',
+          name: service.title,
+          description: service.deliverablesSummary || service.description,
+          priceCurrency: 'INR',
+          ...(service.isCustomQuote
+            ? {}
+            : { price: String(service.startingPrice || 500) }),
+          availability: 'https://schema.org/InStock',
+        },
       },
       {
         '@type': 'FAQPage',
@@ -1685,7 +1785,7 @@ export const ServiceDetailPage: React.FC = () => {
               '@type': 'Answer',
               text: service.isCustomQuote
                 ? `${service.title} is scoped on a custom INR quotation basis depending on deliverables. Contact ${creatorName} for an itemized INR quote.`
-                : `${service.title} starts at ${service.priceDisplay} with Basic, Standard, and Premium package tiers available in Indian Rupees (INR).`,
+                : `${service.title} is offered at a transparent single rate of ${service.priceDisplay} in Indian Rupees (INR).`,
             },
           },
           {
@@ -1771,7 +1871,7 @@ export const ServiceDetailPage: React.FC = () => {
           {service.title}
         </h1>
 
-        {/* Fiverr-Style Seller / Studio Attribution Bar */}
+        {/* Studio Attribution Bar */}
         <div className="flex flex-wrap items-center justify-between gap-4 pt-1">
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2.5">
@@ -1814,18 +1914,24 @@ export const ServiceDetailPage: React.FC = () => {
             </div>
           </div>
 
-          <a
-            href="#compare-packages"
-            className="text-xs font-semibold text-[#F8FAFC] hover:text-[#10B981] transition-colors"
+          <Link
+            to={bookingPageUrl}
+            state={{
+              service,
+              customPriceRange: customPriceRange.trim() || service.priceDisplay,
+              referenceLink: referenceLink.trim(),
+            }}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#10B981] hover:text-[#2DD4BF] transition-colors"
           >
-            Compare Packages ↓
-          </a>
+            <span>Book This Service</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
         </div>
       </div>
 
-      {/* 2. Main 2-Column Fiverr Marketplace Layout — Aligned at the exact top edge */}
+      {/* 2. Main 2-Column Layout — Aligned at the exact top edge */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* LEFT COLUMN: Gallery Stage, Service Details, Package Comparison Table, Requirements & Inquiry */}
+        {/* LEFT COLUMN: Gallery Stage, Service Details, Requirements & Inquiry */}
         <div className="lg:col-span-7 xl:col-span-8 space-y-8">
           {/* Interactive Gallery Stage — Fixed height + w-full h-full object-contain so posters NEVER crop */}
           <div className="pe-card-interactive bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-3 sm:p-4 space-y-3 shadow-[0_1px_3px_rgba(0,0,0,0.35)]">
@@ -1998,138 +2104,13 @@ export const ServiceDetailPage: React.FC = () => {
                 </span>
               </div>
               <div className="pe-card-interactive p-3.5 bg-[#132A4A]/50 rounded-lg border border-[#1E3A5F]">
-                <span className="block text-[#94A3B8]">Starting Rate (INR)</span>
+                <span className="block text-[#94A3B8]">Service Rate (INR)</span>
                 <span className="font-mono font-semibold text-[#F8FAFC] mt-1 block tabular-nums">
                   {service.priceDisplay}
                 </span>
               </div>
             </div>
           </section>
-
-          {/* Fiverr-Style Compare Packages Section (Basic vs Standard vs Premium) */}
-          {!service.isCustomQuote && packages.length > 0 && (
-            <section
-              id="compare-packages"
-              className="pe-card-interactive scroll-mt-24 bg-[#0D1F38] border border-[#1E3A5F] rounded-lg overflow-hidden shadow-[0_1px_2px_rgba(0,0,0,0.35)]"
-            >
-              <div className="p-6 border-b border-[#1E3A5F]">
-                <h2 className="font-editorial text-xl font-semibold text-[#F8FAFC]">
-                  Compare Packages
-                </h2>
-                <p className="text-xs text-[#94A3B8] mt-1">
-                  Select a package tier based on your required deliverables, turnaround time, and revision rounds.
-                </p>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse min-w-[600px]">
-                  <thead>
-                    <tr className="border-b border-[#1E3A5F] bg-[#132A4A]/50">
-                      <th className="p-4 text-xs font-semibold text-[#94A3B8] w-1/4">
-                        Package Tier
-                      </th>
-                      {packages.map((pkg) => (
-                        <th
-                          key={pkg.tier}
-                          className={`p-4 w-1/4 border-l border-[#1E3A5F] ${
-                            selectedTier === pkg.tier ? 'bg-[#040D1A]/[0.03]' : ''
-                          }`}
-                        >
-                          <span className="text-xs font-bold uppercase tracking-wider text-[#10B981] block">
-                            {pkg.tier}
-                          </span>
-                          <span className="font-mono text-xl font-bold text-[#F8FAFC] mt-1 block tabular-nums">
-                            {pkg.priceDisplay}
-                          </span>
-                          <span className="text-xs font-semibold text-[#F8FAFC] mt-1 block">
-                            {pkg.name}
-                          </span>
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#1E3A5F] text-xs">
-                    <tr>
-                      <td className="p-4 font-semibold text-[#F8FAFC]">Scope Summary</td>
-                      {packages.map((pkg) => (
-                        <td
-                          key={`${pkg.tier}_desc`}
-                          className="p-4 text-[#94A3B8] border-l border-[#1E3A5F] leading-relaxed"
-                        >
-                          {pkg.description}
-                        </td>
-                      ))}
-                    </tr>
-                    <tr>
-                      <td className="p-4 font-semibold text-[#F8FAFC]">Delivery Time</td>
-                      {packages.map((pkg) => (
-                        <td
-                          key={`${pkg.tier}_deliv`}
-                          className="p-4 font-medium text-[#F8FAFC] border-l border-[#1E3A5F]"
-                        >
-                          {pkg.deliveryTime}
-                        </td>
-                      ))}
-                    </tr>
-                    <tr>
-                      <td className="p-4 font-semibold text-[#F8FAFC]">Revisions</td>
-                      {packages.map((pkg) => (
-                        <td
-                          key={`${pkg.tier}_rev`}
-                          className="p-4 font-medium text-[#F8FAFC] border-l border-[#1E3A5F]"
-                        >
-                          {pkg.revisions}
-                        </td>
-                      ))}
-                    </tr>
-                    <tr>
-                      <td className="p-4 font-semibold text-[#F8FAFC]">What’s Included</td>
-                      {packages.map((pkg) => (
-                        <td
-                          key={`${pkg.tier}_feat`}
-                          className="p-4 border-l border-[#1E3A5F] align-top"
-                        >
-                          <ul className="space-y-1.5">
-                            {pkg.features.map((feat, i) => (
-                              <li
-                                key={`${pkg.tier}_f_${i}`}
-                                className="flex items-start gap-1.5 text-[#F8FAFC]"
-                              >
-                                <CheckCircle2 className="w-3.5 h-3.5 text-[#16A34A] shrink-0 mt-0.5" />
-                                <span>{feat}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </td>
-                      ))}
-                    </tr>
-                    <tr className="bg-[#132A4A]/40">
-                      <td className="p-4 font-semibold text-[#F8FAFC]">Action</td>
-                      {packages.map((pkg) => (
-                        <td
-                          key={`${pkg.tier}_btn`}
-                          className="p-4 border-l border-[#1E3A5F]"
-                        >
-                          <a
-                            href="#service-inquiry"
-                            onClick={() => setSelectedTier(pkg.tier)}
-                            className={`w-full inline-flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-semibold rounded-lg transition-colors ${
-                              selectedTier === pkg.tier
-                                ? 'bg-[#132A4A] text-[#F8FAFC] hover:bg-[#132A4A]'
-                                : 'bg-[#0D1F38] text-[#F8FAFC] border border-[#1E3A5F] hover:border-[#10B981]'
-                            }`}
-                          >
-                            <span>Select {pkg.tier}</span>
-                            <ArrowRight className="w-3.5 h-3.5" />
-                          </a>
-                        </td>
-                      ))}
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          )}
 
           {/* Client Requirements Section */}
           <section className="pe-card-interactive bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 sm:p-8 space-y-5 shadow-[0_1px_2px_rgba(0,0,0,0.35)]">
@@ -2169,137 +2150,127 @@ export const ServiceDetailPage: React.FC = () => {
               </div>
             </div>
           </section>
-
-          {/* Direct Service Inquiry Form Section */}
-          <section id="service-inquiry" className="scroll-mt-24 space-y-4">
-            <div>
-              <p className="text-xs font-semibold text-[#94A3B8]">Start a Project Brief</p>
-              <h2 className="font-editorial text-2xl font-semibold text-[#F8FAFC] mt-1">
-                Inquire About {service.title}{' '}
-                {!service.isCustomQuote && `(${activePackage.tier} — ${activePackage.priceDisplay})`}
-              </h2>
-              <p className="text-sm text-[#94A3B8] mt-1">
-                Your inquiry is prefilled with{' '}
-                <span className="font-semibold text-[#F8FAFC]">{service.title}</span>. Submit your project details below to receive a confirmed scope and timeline.
-              </p>
-            </div>
-            <InquiryForm
-              key={prefilledServiceOption}
-              defaultService={prefilledServiceOption}
-              customBudgetRanges={custom.inquiryBudgetRanges}
-            />
-          </section>
         </div>
 
-        {/* RIGHT STICKY COLUMN: Fiverr-Style Interactive Package Tabs (Basic | Standard | Premium) */}
+        {/* RIGHT STICKY COLUMN: Single Service Pricing Card */}
         <aside className="lg:col-span-5 xl:col-span-4 lg:sticky lg:top-24 space-y-5">
           <div className="pe-card-interactive bg-[#0D1F38] border border-[#1E3A5F] rounded-lg overflow-hidden shadow-[0_6px_24px_rgba(23,35,51,0.06)]">
-            {/* Top Interactive Package Tier Tabs (Basic | Standard | Premium) */}
-            {!service.isCustomQuote && packages.length > 0 ? (
-              <div
-                role="tablist"
-                aria-label="Service packages"
-                className="grid grid-cols-3 border-b border-[#1E3A5F] bg-[#132A4A]"
-              >
-                {packages.map((pkg) => {
-                  const isAct = selectedTier === pkg.tier;
-                  return (
-                    <button
-                      key={pkg.tier}
-                      type="button"
-                      role="tab"
-                      aria-selected={isAct}
-                      onClick={() => setSelectedTier(pkg.tier)}
-                      className={`py-3.5 px-2 text-xs font-bold transition-all border-b-2 ${
-                        isAct
-                          ? 'bg-[#0D1F38] text-[#F8FAFC] border-[#10B981]'
-                          : 'text-[#94A3B8] border-transparent hover:text-[#F8FAFC]'
-                      }`}
-                    >
-                      {pkg.tier}
-                    </button>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="px-6 py-4 bg-[#132A4A] text-[#F8FAFC] flex items-center justify-between">
-                <span className="text-xs font-semibold tracking-wide">Custom Project Scope</span>
-                <span className="font-mono text-xs text-[#10B981]">INR PRICING</span>
-              </div>
-            )}
+            <div className="px-6 py-4 bg-[#132A4A] text-[#F8FAFC] border-b border-[#1E3A5F] flex items-center justify-between">
+              <span className="text-xs font-semibold tracking-wide">
+                {service.isCustomQuote ? 'Custom Project Scope' : 'Single Service Pricing'}
+              </span>
+              <span className="font-mono text-xs font-semibold text-[#10B981]">INR PRICING</span>
+            </div>
 
             <div className="p-6 space-y-5">
-              {/* Selected Package Header & Price */}
+              {/* Service Header & Single Price */}
               <div className="flex items-baseline justify-between gap-4 pb-4 border-b border-[#1E3A5F]">
                 <div>
                   <span className="text-[11px] font-bold uppercase tracking-wider text-[#10B981] block">
-                    {service.isCustomQuote ? 'Scoped Brief' : `${activePackage.tier} Package`}
+                    {service.isCustomQuote ? 'Scoped Brief' : 'Standard Rate'}
                   </span>
                   <h2 className="text-base font-semibold text-[#F8FAFC] mt-0.5">
-                    {service.isCustomQuote ? service.title : activePackage.name}
+                    {service.title}
                   </h2>
                 </div>
                 <span className="font-mono text-2xl font-bold text-[#F8FAFC] tabular-nums shrink-0">
-                  {service.isCustomQuote ? service.priceDisplay : activePackage.priceDisplay}
+                  {service.priceDisplay}
                 </span>
               </div>
 
-              {/* Package Description */}
+              {/* Service Summary */}
               <p className="text-xs text-[#94A3B8] leading-relaxed">
-                {service.isCustomQuote ? service.description : activePackage.description}
+                {service.description}
               </p>
 
-              {/* Delivery & Revisions Bar (Fiverr Style) */}
+              {/* Delivery & Revisions Bar */}
               <div className="flex items-center justify-between gap-4 py-3 px-3.5 bg-[#132A4A]/80 border border-[#1E3A5F] rounded-lg text-xs font-semibold text-[#F8FAFC]">
                 <span className="inline-flex items-center gap-1.5">
                   <Clock className="w-4 h-4 text-[#10B981]" />
                   <span>
                     {service.isCustomQuote
                       ? service.turnaroundTime || 'Scoped per brief'
-                      : `${activePackage.deliveryTime} Delivery`}
+                      : `${service.turnaroundTime || '24–48 hours'} Delivery`}
                   </span>
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <RefreshCw className="w-3.5 h-3.5 text-[#16A34A]" />
-                  <span>
-                    {service.isCustomQuote
-                      ? service.revisions || '2 Revisions'
-                      : activePackage.revisions}
-                  </span>
+                  <span>{service.revisions || '2 Revisions'}</span>
                 </span>
               </div>
 
-              {/* Included Features Checklist */}
+              {/* Included Deliverables Checklist */}
               <div className="space-y-2.5">
                 <p className="text-xs font-semibold text-[#F8FAFC]">What’s Included:</p>
-                <ul className="space-y-2">
-                  {(service.isCustomQuote ? deliverablesItems : activePackage.features).map(
-                    (item, idx) => (
+                {deliverablesItems.length > 0 ? (
+                  <ul className="space-y-2">
+                    {deliverablesItems.map((item, idx) => (
                       <li
-                        key={`pkg_feat_${idx}`}
+                        key={`single_feat_${idx}`}
                         className="flex items-start gap-2 text-xs text-[#F8FAFC]"
                       >
                         <CheckCircle2 className="w-4 h-4 text-[#16A34A] shrink-0 mt-0.5" />
                         <span>{item}</span>
                       </li>
-                    )
-                  )}
-                </ul>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-xs text-[#94A3B8]">
+                    {service.deliverablesSummary || 'High-resolution deliverables and commercial usage rights.'}
+                  </p>
+                )}
               </div>
 
-              {/* Primary & Secondary Action Buttons */}
+              {/* Customer Custom Price Range & Reference Link Inputs */}
+              <div className="p-3.5 bg-[#040D1A]/70 border border-[#1E3A5F] rounded-lg space-y-3">
+                <div>
+                  <label className="flex items-center gap-1.5 text-[11px] font-semibold text-[#F8FAFC] mb-1">
+                    <IndianRupee className="w-3.5 h-3.5 text-[#10B981]" />
+                    <span>Your Custom Price Range (INR)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={customPriceRange}
+                    onChange={(e) => setCustomPriceRange(e.target.value)}
+                    placeholder={`e.g. ${service.priceDisplay} or ₹2,000 – ₹5,000`}
+                    className="w-full px-3 py-2 text-xs bg-[#0D1F38] border border-[#1E3A5F] rounded-lg text-[#F8FAFC] placeholder-[#94A3B8]/60 focus:outline-none focus:border-[#10B981]"
+                  />
+                </div>
+
+                <div>
+                  <label className="flex items-center gap-1.5 text-[11px] font-semibold text-[#F8FAFC] mb-1">
+                    <Link2 className="w-3.5 h-3.5 text-[#0EA5E9]" />
+                    <span>Reference / Footage Link (Drive, YouTube, Figma)</span>
+                  </label>
+                  <input
+                    type="url"
+                    value={referenceLink}
+                    onChange={(e) => setReferenceLink(e.target.value)}
+                    placeholder="https://drive.google.com/... or reference URL"
+                    className="w-full px-3 py-2 text-xs bg-[#0D1F38] border border-[#1E3A5F] rounded-lg text-[#F8FAFC] placeholder-[#94A3B8]/60 focus:outline-none focus:border-[#10B981]"
+                  />
+                </div>
+              </div>
+
+              {/* Primary Book Now & Secondary Action Buttons */}
               <div className="pt-2 space-y-2.5">
-                <a
-                  href="#service-inquiry"
-                  className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-colors"
+                <button
+                  type="button"
+                  onClick={() => {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    navigate(bookingPageUrl, {
+                      state: {
+                        service,
+                        customPriceRange: customPriceRange.trim() || service.priceDisplay,
+                        referenceLink: referenceLink.trim(),
+                      },
+                    });
+                  }}
+                  className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-colors shadow-sm cursor-pointer"
                 >
-                  <span>
-                    {service.isCustomQuote
-                      ? 'Contact for a Project'
-                      : `Continue (${activePackage.priceDisplay})`}
-                  </span>
+                  <span>Book Now</span>
                   <ArrowRight className="w-3.5 h-3.5" />
-                </a>
+                </button>
 
                 <a
                   href={whatsappUrl}
@@ -2311,15 +2282,6 @@ export const ServiceDetailPage: React.FC = () => {
                   <MessageSquare className="w-3.5 h-3.5" />
                   <span>Discuss on WhatsApp</span>
                 </a>
-
-                {!service.isCustomQuote && (
-                  <a
-                    href="#compare-packages"
-                    className="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-semibold text-[#94A3B8] hover:text-[#F8FAFC] transition-colors"
-                  >
-                    <span>Compare All 3 Packages</span>
-                  </a>
-                )}
               </div>
             </div>
           </div>
@@ -2349,10 +2311,15 @@ export const ServiceDetailPage: React.FC = () => {
             <div className="pt-2 border-t border-[#1E3A5F] flex items-center justify-between text-[11px] text-[#94A3B8]">
               <span>Currency: INR (₹)</span>
               <Link
-                to={`/contact?service=${encodeURIComponent(service.title)}`}
+                to={bookingPageUrl}
+                state={{
+                  service,
+                  customPriceRange: customPriceRange.trim() || service.priceDisplay,
+                  referenceLink: referenceLink.trim(),
+                }}
                 className="font-semibold text-[#F8FAFC] hover:text-[#10B981]"
               >
-                Send Custom Brief →
+                Open Booking Page →
               </Link>
             </div>
           </div>
@@ -2395,6 +2362,303 @@ export const ServiceDetailPage: React.FC = () => {
       )}
 
       <MediaPreviewModal item={previewMedia} onClose={() => setPreviewMedia(null)} />
+    </div>
+  );
+};
+
+// ============================================================================
+// 2C. DEDICATED SERVICE BOOKING PAGE (/book & /book/:slug)
+// ============================================================================
+interface BookingLocationState {
+  service?: ServiceItem;
+  customPriceRange?: string;
+  referenceLink?: string;
+}
+
+export const ServiceBookingPage: React.FC = () => {
+  const { slug } = useParams<{ slug?: string }>();
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const { settings } = useOutletContext<OutletCtx>();
+  const custom = mergeSiteCustomization(settings.siteCustomization || DEFAULT_SITE_CUSTOMIZATION);
+
+  const navState = (location.state as BookingLocationState | null) || null;
+  const [services, setServices] = useState<ServiceItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [slug, searchParams]);
+
+  useEffect(() => {
+    let active = true;
+    fetchPublishedServices()
+      .then((list) => {
+        if (!active) return;
+        setServices(list);
+      })
+      .catch(() => {
+        if (!active) return;
+        setServices([]);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const matchedService = useMemo(() => {
+    if (navState?.service) return navState.service;
+    if (slug) {
+      const decoded = decodeURIComponent(slug).toLowerCase();
+      const bySlug = services.find(
+        (s) =>
+          (s.slug && s.slug.toLowerCase() === decoded) ||
+          s.id.toLowerCase() === decoded
+      );
+      if (bySlug) return bySlug;
+    }
+    const queryService = searchParams.get('service');
+    if (queryService) {
+      const clean = queryService.toLowerCase();
+      return (
+        services.find(
+          (s) =>
+            clean.includes(s.title.toLowerCase()) ||
+            s.title.toLowerCase().includes(clean)
+        ) || null
+      );
+    }
+    return null;
+  }, [navState?.service, slug, services, searchParams]);
+
+  const prefilledServiceLabel =
+    searchParams.get('service') ||
+    (matchedService
+      ? `${matchedService.title} (${
+          matchedService.isCustomQuote ? 'Custom quote' : matchedService.priceDisplay
+        })`
+      : undefined);
+
+  const prefilledCustomPrice =
+    searchParams.get('budget') ||
+    navState?.customPriceRange ||
+    matchedService?.priceDisplay ||
+    '';
+
+  const prefilledReferenceLink =
+    searchParams.get('link') || navState?.referenceLink || '';
+
+  const primaryBg = custom.primaryColor || '#040D1A';
+  const secondaryBg = custom.secondaryColor || '#132A4A';
+  const accentColor = custom.accentColor || '#10B981';
+  const creatorName = settings.ownerName || 'Shankar Baluragi';
+  const studioName = settings.businessName || 'Prithvi Editify';
+
+  const coverSrc = matchedService
+    ? matchedService.imageUrl && !matchedService.imageUrl.startsWith('data:image/svg+xml')
+      ? matchedService.imageUrl
+      : createStudioArtworkDataUri(
+          matchedService.title,
+          matchedService.category,
+          accentColor,
+          primaryBg,
+          secondaryBg
+        )
+    : null;
+
+  const deliverablesItems = matchedService
+    ? parseDeliverablesList(matchedService.deliverablesSummary)
+    : [];
+
+  const whatsappMessage = [
+    `Hello ${studioName}, I am booking "${
+      matchedService?.title || prefilledServiceLabel || 'a Creative Service'
+    }"${prefilledCustomPrice ? ` (Budget / Rate: ${prefilledCustomPrice})` : ''}.`,
+    prefilledReferenceLink ? `Reference Link: ${prefilledReferenceLink}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
+  const whatsappUrl = buildWhatsAppLink(
+    settings.whatsappNumber || '+916361902619',
+    whatsappMessage
+  );
+
+  return (
+    <div className="max-w-[1200px] mx-auto px-6 py-10 lg:py-14 space-y-8">
+      {/* Top Breadcrumb & Back Navigation */}
+      <div className="border-b border-[#1E3A5F] pb-6 space-y-3">
+        <nav
+          aria-label="Breadcrumb"
+          className="flex flex-wrap items-center justify-between gap-4 text-xs text-[#94A3B8]"
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            <Link to="/services" className="hover:text-[#F8FAFC] transition-colors font-medium">
+              Creative Services
+            </Link>
+            {matchedService && (
+              <>
+                <span aria-hidden="true">/</span>
+                <Link
+                  to={`/services/${encodeURIComponent(matchedService.slug || matchedService.id)}`}
+                  className="hover:text-[#F8FAFC] transition-colors"
+                >
+                  {matchedService.title}
+                </Link>
+              </>
+            )}
+            <span aria-hidden="true">/</span>
+            <span className="text-[#10B981] font-semibold">Service Booking Form</span>
+          </div>
+
+          <Link
+            to={
+              matchedService
+                ? `/services/${encodeURIComponent(matchedService.slug || matchedService.id)}`
+                : '/services'
+            }
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#F8FAFC] hover:text-[#10B981] transition-colors"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>{matchedService ? 'Back to Service Details' : 'Back to All Services'}</span>
+          </Link>
+        </nav>
+
+        <div className="space-y-1.5">
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#10B981]">
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Direct Studio Service Booking</span>
+          </span>
+          <h1 className="font-editorial text-2xl sm:text-3xl lg:text-4xl font-semibold text-[#F8FAFC] leading-tight">
+            {matchedService
+              ? `Book ${matchedService.title} (${matchedService.priceDisplay})`
+              : 'Book a Creative Service'}
+          </h1>
+          <p className="text-sm text-[#94A3B8] max-w-2xl">
+            Enter your service-related project details, custom price range, and reference/footage link below to book your creative project.
+          </p>
+        </div>
+      </div>
+
+      {/* Main 2-Column Booking Page Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Left Sticky Column: Selected Service Summary & Direct WhatsApp */}
+        <aside className="lg:col-span-4 lg:sticky lg:top-24 space-y-5">
+          {loading && !matchedService ? (
+            <div className="h-80 bg-[#0D1F38] border border-[#1E3A5F] rounded-xl animate-pulse" />
+          ) : matchedService ? (
+            <div className="pe-card-interactive bg-[#0D1F38] border border-[#1E3A5F] rounded-xl overflow-hidden shadow-[0_6px_24px_rgba(0,0,0,0.25)]">
+              {coverSrc && (
+                <div className="relative aspect-[16/10] w-full bg-[#040D1A] border-b border-[#1E3A5F] overflow-hidden flex items-center justify-center">
+                  <img
+                    src={coverSrc}
+                    alt={matchedService.title}
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-contain p-2"
+                  />
+                  <span className="absolute top-3 left-3 px-2.5 py-1 text-[11px] font-semibold text-white bg-[#040D1A]/90 border border-white/15 rounded-md">
+                    {formatServiceCategoryLabel(matchedService.category, matchedService.title)}
+                  </span>
+                </div>
+              )}
+
+              <div className="p-5 space-y-4">
+                <div className="flex items-baseline justify-between gap-3 pb-3 border-b border-[#1E3A5F]">
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#10B981] block">
+                      Selected Service
+                    </span>
+                    <h2 className="text-base font-semibold text-[#F8FAFC] mt-0.5">
+                      {matchedService.title}
+                    </h2>
+                  </div>
+                  <span className="font-mono text-xl font-bold text-[#2DD4BF] shrink-0">
+                    {matchedService.priceDisplay}
+                  </span>
+                </div>
+
+                <p className="text-xs text-[#94A3B8] leading-relaxed">
+                  {matchedService.description}
+                </p>
+
+                <div className="flex items-center justify-between gap-3 py-2.5 px-3 bg-[#132A4A]/80 border border-[#1E3A5F] rounded-lg text-xs font-medium text-[#F8FAFC]">
+                  <span className="inline-flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-[#10B981]" />
+                    <span>{matchedService.turnaroundTime || '24–48 hours'}</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <RefreshCw className="w-3.5 h-3.5 text-[#16A34A]" />
+                    <span>{matchedService.revisions || '2 Revisions'}</span>
+                  </span>
+                </div>
+
+                {deliverablesItems.length > 0 && (
+                  <div className="space-y-2 pt-1">
+                    <p className="text-xs font-semibold text-[#F8FAFC]">Included Deliverables:</p>
+                    <ul className="space-y-1.5">
+                      {deliverablesItems.map((item, idx) => (
+                        <li
+                          key={`book_deliv_${idx}`}
+                          className="flex items-start gap-2 text-xs text-[#94A3B8]"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5 text-[#16A34A] shrink-0 mt-0.5" />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                <div className="pt-2 border-t border-[#1E3A5F]">
+                  <a
+                    href={whatsappUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-semibold text-white rounded-lg hover:opacity-95 transition-opacity"
+                    style={{ backgroundColor: accentColor }}
+                  >
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    <span>Discuss on WhatsApp (+91 63619 02619)</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="pe-card-interactive bg-[#0D1F38] border border-[#1E3A5F] rounded-xl p-6 space-y-4">
+              <h2 className="text-base font-semibold text-[#F8FAFC]">
+                Single-Price Studio Booking
+              </h2>
+              <p className="text-xs text-[#94A3B8] leading-relaxed">
+                Choose your creative service in Step 1, enter your custom price range and reference link, and submit your project requirements directly to {creatorName}.
+              </p>
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-semibold text-white rounded-lg hover:opacity-95 transition-opacity"
+                style={{ backgroundColor: accentColor }}
+              >
+                <MessageSquare className="w-3.5 h-3.5" />
+                <span>Discuss on WhatsApp (+91 63619 02619)</span>
+              </a>
+            </div>
+          )}
+        </aside>
+
+        {/* Right Main Column: Service Booking Form */}
+        <div className="lg:col-span-8">
+          <InquiryForm
+            key={`${matchedService?.id || 'general'}_${prefilledServiceLabel || ''}_${prefilledCustomPrice}_${prefilledReferenceLink}`}
+            defaultService={prefilledServiceLabel}
+            defaultCustomPrice={prefilledCustomPrice}
+            defaultReferenceLink={prefilledReferenceLink}
+            customBudgetRanges={custom.inquiryBudgetRanges}
+            selectedServiceItem={matchedService}
+          />
+        </div>
+      </div>
     </div>
   );
 };

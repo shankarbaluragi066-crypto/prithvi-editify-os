@@ -61,6 +61,7 @@ import {
   archiveProjectAdmin,
   deleteProjectAdmin,
   duplicateProjectAdmin,
+  buildOrderNotificationLinks,
 } from '../services/crmService';
 import {
   fetchAllQuotationsAdmin,
@@ -998,6 +999,11 @@ export const AdminInquiriesPage: React.FC = () => {
 
   useEffect(() => {
     loadInquiries();
+    const handleLiveOrder = () => {
+      loadInquiries();
+    };
+    window.addEventListener('pe-new-order-booked', handleLiveOrder);
+    return () => window.removeEventListener('pe-new-order-booked', handleLiveOrder);
   }, [loadInquiries]);
 
   const filtered = inquiries.filter((i) => {
@@ -1154,10 +1160,23 @@ export const AdminInquiriesPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="font-editorial text-2xl font-semibold text-[#F8FAFC]">Leads & Inquiries</h1>
+          <h1 className="font-editorial text-2xl font-semibold text-[#F8FAFC]">
+            Service Orders, Leads & Inquiries
+          </h1>
           <p className="text-xs text-[#94A3B8] mt-1">
-            Review incoming briefs, qualify leads, and convert inquiries directly into clients and projects.
+            Review incoming service bookings, custom price ranges, and project briefs, or convert orders directly into clients and projects.
           </p>
+        </div>
+
+        {/* Active Email & WhatsApp Order Notification Routing Badge */}
+        <div className="bg-[#0D1F38] border border-[#10B981]/40 rounded-lg px-4 py-2.5 text-xs flex flex-wrap items-center gap-3">
+          <span className="inline-flex items-center gap-1.5 font-semibold text-[#10B981]">
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            <span>Order Alerts Active:</span>
+          </span>
+          <span className="font-mono text-[#F8FAFC]">shankarbaluragi066@gmail.com</span>
+          <span className="text-[#1E3A5F]">|</span>
+          <span className="font-mono text-[#2DD4BF]">WhatsApp +91 63619 02619</span>
         </div>
       </div>
 
@@ -1279,7 +1298,7 @@ export const AdminInquiriesPage: React.FC = () => {
                 </div>
                 {selected.referenceFileUrl && (
                   <p className="text-xs">
-                    <span className="font-semibold">Attachment:</span>{' '}
+                    <span className="font-semibold">Reference Link / Attachment:</span>{' '}
                     {selected.referenceFileUrl.startsWith('http') ? (
                       <a
                         href={selected.referenceFileUrl}
@@ -1287,13 +1306,77 @@ export const AdminInquiriesPage: React.FC = () => {
                         rel="noopener noreferrer"
                         className="underline text-[#10B981]"
                       >
-                        View Reference File
+                        {selected.referenceFileUrl}
                       </a>
                     ) : (
                       selected.referenceFileUrl
                     )}
                   </p>
                 )}
+
+                {/* 1-Click Customer & Studio Owner WhatsApp / Email Order Actions */}
+                {(() => {
+                  const ownerLinks = buildOrderNotificationLinks(selected);
+                  const cleanCustomerPhone = (selected.phone || '').replace(/[^0-9]/g, '');
+                  const customerWaDigits =
+                    cleanCustomerPhone.length === 10
+                      ? `91${cleanCustomerPhone}`
+                      : cleanCustomerPhone;
+                  const customerReplyWaUrl = customerWaDigits
+                    ? `https://wa.me/${customerWaDigits}?text=${encodeURIComponent(
+                        `Hello ${selected.fullName}, this is Shankar Baluragi from Prithvi Editify. I received your service booking for "${selected.serviceRequired}" (Custom Price Range: ${selected.budgetRange}). Let's confirm the timeline and get started!`
+                      )}`
+                    : '';
+                  const customerReplyEmailUrl = `mailto:${encodeURIComponent(
+                    selected.email
+                  )}?subject=${encodeURIComponent(
+                    `Order Confirmation: ${selected.serviceRequired} — Prithvi Editify`
+                  )}&body=${encodeURIComponent(
+                    `Hi ${selected.fullName},\n\nThank you for booking "${selected.serviceRequired}" with Prithvi Editify (Custom Price / Budget: ${selected.budgetRange}).\n\nI have reviewed your project brief and reference details. Please reply to this email or message me on WhatsApp (+91 63619 02619) to confirm the kickoff schedule.\n\nBest regards,\nShankar Baluragi\nFounder, Prithvi Editify\nEmail: shankarbaluragi066@gmail.com\nWhatsApp: +91 63619 02619`
+                  )}`;
+
+                  return (
+                    <div className="pt-2 border-t border-[#1E3A5F] space-y-2">
+                      <span className="block text-[11px] font-semibold text-[#2DD4BF]">
+                        Instant Order Update & Customer Reply Actions:
+                      </span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {customerReplyWaUrl && (
+                          <a
+                            href={customerReplyWaUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-white bg-[#10B981] hover:bg-[#059669] rounded-md transition-colors"
+                          >
+                            <MessageSquare className="w-3.5 h-3.5" />
+                            <span>Reply to Customer on WhatsApp</span>
+                          </a>
+                        )}
+                        <a
+                          href={customerReplyEmailUrl}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-[#F8FAFC] bg-[#132A4A] hover:bg-[#1E3A5F] border border-[#1E3A5F] rounded-md transition-colors"
+                        >
+                          <Send className="w-3 h-3 text-[#0EA5E9]" />
+                          <span>Email Customer ({selected.email})</span>
+                        </a>
+                        <a
+                          href={ownerLinks.whatsappUpdateUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-[#2DD4BF] bg-[#081629] hover:bg-[#132A4A] border border-[#10B981]/30 rounded-md transition-colors"
+                        >
+                          <span>Send Order Summary to My WhatsApp (+91 63619 02619)</span>
+                        </a>
+                        <a
+                          href={ownerLinks.mailtoFallbackUrl}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-[#94A3B8] hover:text-[#F8FAFC] bg-[#081629] hover:bg-[#132A4A] border border-[#1E3A5F] rounded-md transition-colors"
+                        >
+                          <span>Forward Order to shankarbaluragi066@gmail.com</span>
+                        </a>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               <div>
