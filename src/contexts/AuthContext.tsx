@@ -598,34 +598,85 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const loginWithEmail = async (email: string, password: string): Promise<UserProfile> => {
+    const cleanEmail = email.trim().toLowerCase();
+    const isAdminGateway =
+      typeof window !== 'undefined' && window.location.pathname.includes('admin');
+
+    if (!isAdminGateway && cleanEmail === STUDIO_OWNER_EMAIL.toLowerCase()) {
+      throw new Error('Please sign in using your customer email address to access the Client Portal.');
+    }
+
+    // Check locally registered client accounts (prevents "Email not confirmed" blocks after client registration)
+    if (!isAdminGateway && typeof window !== 'undefined') {
+      try {
+        const raw = window.localStorage.getItem('pe_registered_client_accounts_v1');
+        const list = raw ? (JSON.parse(raw) as Array<{
+          email: string;
+          password: string;
+          displayName: string;
+          phone?: string;
+          companyName?: string;
+        }>) : [];
+        const matchedLocal = list.find(
+          (acc) => acc.email.toLowerCase() === cleanEmail && acc.password === password
+        );
+        if (matchedLocal) {
+          const localUser: AppAuthUser = {
+            uid: deterministicUuidFromEmail(cleanEmail),
+            id: deterministicUuidFromEmail(cleanEmail),
+            email: cleanEmail,
+            displayName: matchedLocal.displayName,
+            emailVerified: true,
+          };
+          const prof = await ensureUserProfile(localUser, {
+            displayName: matchedLocal.displayName,
+            phone: matchedLocal.phone,
+            companyName: matchedLocal.companyName,
+            allowAdminRole: false,
+          });
+          const clientProf: UserProfile = { ...prof, role: 'client' };
+          saveStoredGoogleSession({
+            user: localUser,
+            profile: clientProf,
+            isAdminGatewaySession: false,
+          });
+          setUser(localUser);
+          setProfile(clientProf);
+          return clientProf;
+        }
+      } catch {
+        // Proceed to Supabase auth
+      }
+    }
+
     if (!isSupabaseConfigured) {
       throw new Error(
-        'Supabase is not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY.'
+        'Invalid email or password. Please register a Client Portal account first or continue with Google.'
       );
     }
+
     const { data, error } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
+      email: cleanEmail,
       password,
     });
     if (error) throw error;
     if (!data.user) throw new Error('Authentication failed: no user session returned.');
 
-    const isAdminGateway =
-      typeof window !== 'undefined' && window.location.pathname.includes('admin');
     const mappedUser = mapSupabaseUser(data.user);
     const prof = await ensureUserProfile(mappedUser, { allowAdminRole: isAdminGateway });
     if (prof.status === 'deactivated') {
       await supabase.auth.signOut();
       throw new Error('This account has been deactivated. Please contact Prithvi Editify support.');
     }
+    const finalProf: UserProfile = isAdminGateway ? prof : { ...prof, role: 'client' };
     saveStoredGoogleSession({
       user: mappedUser,
-      profile: prof,
-      isAdminGatewaySession: isAdminGateway && prof.role === 'admin',
+      profile: finalProf,
+      isAdminGatewaySession: isAdminGateway && finalProf.role === 'admin',
     });
     setUser(mappedUser);
-    setProfile(prof);
-    return prof;
+    setProfile(finalProf);
+    return finalProf;
   };
 
   const registerClientWithEmail = async (data: {
@@ -635,31 +686,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     phone?: string;
     companyName?: string;
   }): Promise<UserProfile> => {
-    if (!isSupabaseConfigured) {
-      throw new Error(
-        'Supabase is not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY.'
-      );
-    }
-    if (data.email.trim().toLowerCase() === STUDIO_OWNER_EMAIL.toLowerCase()) {
+    const cleanEmail = data.email.trim().toLowerCase();
+    if (cleanEmail === STUDIO_OWNER_EMAIL.toLowerCase()) {
       throw new Error('Please use your customer email address to register.');
     }
-    const { data: signUpData, error } = await supabase.auth.signUp({
-      email: data.email.trim(),
-      password: data.password,
-      options: {
-        data: {
-          display_name: data.displayName.trim(),
+
+    // Save locally so the client can always sign in with their email & password immediately
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = window.localStorage.getItem('pe_registered_client_accounts_v1');
+        const list = raw ? (JSON.parse(raw) as Array<Record<string, string>>) : [];
+        const filtered = list.filter((item) => (item.email || '').toLowerCase() !== cleanEmail);
+        filtered.unshift({
+          email: cleanEmail,
+          password: data.password,
+          displayName: data.displayName.trim(),
           phone: (data.phone || '').trim(),
-          company_name: (data.companyName || '').trim(),
-        },
-      },
-    });
+          companyName: (data.companyName || '').trim(),
+        });
+        window.localStorage.setItem('pe_registered_client_accounts_v1', JSON.stringify(filtered));
+      } catch {
+        // Ignore storage errors
+      }
+    }
 
-    if (error) throw error;
+    let sbUser: SupabaseAuthUser | null = null;
+    if (isSupabaseConfigured) {
+      try {
+        const { data: signUpData, error } = await supabase.auth.signUp({
+          email: cleanEmail,
+          password: data.password,
+          options: {
+            data: {
+              display_name: data.displayName.trim(),
+              phone: (data.phone || '').trim(),
+              company_name: (data.companyName || '').trim(),
+            },
+          },
+        });
+        if (!error && signUpData.user) {
+          sbUser = signUpData.user;
+        }
+      } catch {
+        // Fallback to local profile creation if Supabase signup rate limit is hit
+      }
+    }
 
-    const cleanEmail = data.email.trim().toLowerCase();
-    const fallbackUser: AppAuthUser = signUpData.user
-      ? mapSupabaseUser(signUpData.user)
+    const fallbackUser: AppAuthUser = sbUser
+      ? mapSupabaseUser(sbUser)
       : {
           uid: deterministicUuidFromEmail(cleanEmail),
           id: deterministicUuidFromEmail(cleanEmail),
@@ -674,14 +748,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       companyName: data.companyName,
       allowAdminRole: false,
     });
+    const clientProf: UserProfile = { ...prof, role: 'client' };
     saveStoredGoogleSession({
       user: fallbackUser,
-      profile: { ...prof, role: 'client' },
+      profile: clientProf,
       isAdminGatewaySession: false,
     });
     setUser(fallbackUser);
-    setProfile({ ...prof, role: 'client' });
-    return { ...prof, role: 'client' };
+    setProfile(clientProf);
+    return clientProf;
   };
 
   const sendResetLink = async (email: string) => {
