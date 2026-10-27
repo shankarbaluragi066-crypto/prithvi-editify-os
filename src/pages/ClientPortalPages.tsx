@@ -27,6 +27,7 @@ import {
 } from '../services/crmService';
 import { MediaPreviewModal, PreviewableMediaItem } from '../components/MediaPreviewModal';
 import { InquiryForm } from '../components/InquiryForm';
+import { ProjectStatusBadge, getProjectStatusBadgeConfig } from './AdminCorePages';
 import {
   ProjectRecord,
   TaskRecord,
@@ -176,16 +177,19 @@ export const ClientDashboardPage: React.FC = () => {
             <div className="divide-y divide-[#1E3A5F]">
               {projects.map((p) => (
                 <div key={p.id} className="py-3.5 space-y-1">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2">
                     <Link
                       to={`/portal/projects/${p.id}`}
-                      className="text-sm font-semibold text-[#F8FAFC] hover:text-[#10B981]"
+                      className="text-sm font-semibold text-[#F8FAFC] hover:text-[#10B981] truncate"
                     >
                       {p.title}
                     </Link>
-                    <span className="font-mono text-xs font-semibold tabular-nums">
-                      {p.progress}% · {p.status}
-                    </span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <ProjectStatusBadge status={p.status} />
+                      <span className="font-mono text-xs font-semibold tabular-nums text-[#F8FAFC]">
+                        {p.progress}%
+                      </span>
+                    </div>
                   </div>
                   <p className="text-xs text-[#94A3B8]">{p.latestUpdate}</p>
                   <p className="text-[11px] font-mono text-[#94A3B8]">Deadline: {p.deadline}</p>
@@ -284,12 +288,12 @@ export const ClientProjectsPage: React.FC = () => {
 
               <div className="space-y-3 pt-4 border-t border-[#1E3A5F]">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-medium text-[#F8FAFC]">Status: {p.status}</span>
+                  <ProjectStatusBadge status={p.status} />
                   <span className="font-mono font-semibold tabular-nums">{p.progress}%</span>
                 </div>
                 <div className="w-full h-2 bg-[#132A4A] rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-[#10B981]"
+                    className={`h-full transition-all ${getProjectStatusBadgeConfig(p.status).barClass}`}
                     style={{ width: `${Math.min(100, Math.max(0, p.progress))}%` }}
                   />
                 </div>
@@ -417,10 +421,12 @@ export const ClientProjectDetailsPage: React.FC = () => {
         <Link to="/portal/projects" className="text-xs text-[#94A3B8] hover:text-[#F8FAFC]">
           ← Back to My Projects
         </Link>
-        <h1 className="font-editorial text-2xl font-semibold text-[#F8FAFC] mt-1">{project.title}</h1>
-        <p className="text-xs text-[#94A3B8]">
-          Status: <span className="font-semibold text-[#F8FAFC]">{project.status}</span> · Progress:{' '}
-          <span className="font-mono">{project.progress}%</span> · Deadline: {project.deadline}
+        <div className="flex flex-wrap items-center gap-2.5 mt-1">
+          <h1 className="font-editorial text-2xl font-semibold text-[#F8FAFC]">{project.title}</h1>
+          <ProjectStatusBadge status={project.status} />
+        </div>
+        <p className="text-xs text-[#94A3B8] mt-1">
+          Progress: <span className="font-mono text-[#F8FAFC]">{project.progress}%</span> · Deadline: {project.deadline}
         </p>
       </div>
 

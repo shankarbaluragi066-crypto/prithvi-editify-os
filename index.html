@@ -79,6 +79,30 @@
           );
         }
       })(window.location);
+
+      // Purge legacy v2 service worker cache that could serve mismatched Vite React chunks
+      (function () {
+        try {
+          if ('caches' in window) {
+            caches.has('prithvi-editify-pwa-v2').then(function (hasOldCache) {
+              if (hasOldCache) {
+                caches.delete('prithvi-editify-pwa-v2');
+                if ('serviceWorker' in navigator) {
+                  navigator.serviceWorker.getRegistrations().then(function (regs) {
+                    regs.forEach(function (r) {
+                      r.unregister();
+                    });
+                    if (!sessionStorage.getItem('pe_sw_v2_purged')) {
+                      sessionStorage.setItem('pe_sw_v2_purged', '1');
+                      window.location.reload();
+                    }
+                  });
+                }
+              }
+            });
+          }
+        } catch (e) {}
+      })();
     </script>
   </head>
   <body class="bg-[#040D1A] text-[#F8FAFC] antialiased selection:bg-[#10B981]/30 selection:text-[#F8FAFC]">

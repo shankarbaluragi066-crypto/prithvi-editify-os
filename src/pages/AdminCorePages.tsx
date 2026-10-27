@@ -916,12 +916,15 @@ export const AdminDashboardPage: React.FC = () => {
                       {proj.title}
                     </Link>
                     <p className="text-xs text-[#94A3B8] truncate">
-                      {proj.clientName} · {proj.status} · Due {proj.deadline || 'TBD'}
+                      {proj.clientName} · Due {proj.deadline || 'TBD'}
                     </p>
                   </div>
-                  <span className="font-mono text-xs font-semibold text-[#F8FAFC] tabular-nums shrink-0">
-                    {proj.progress}%
-                  </span>
+                  <div className="flex items-center gap-2.5 shrink-0">
+                    <ProjectStatusBadge status={proj.status} />
+                    <span className="font-mono text-xs font-semibold text-[#F8FAFC] tabular-nums">
+                      {proj.progress}%
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
@@ -2250,17 +2253,20 @@ export const AdminClientsPage: React.FC = () => {
                         cProjects.map((p) => (
                           <div
                             key={p.id}
-                            className="flex items-center justify-between py-1.5 border-b border-[#1E3A5F] last:border-0"
+                            className="flex items-center justify-between gap-2 py-1.5 border-b border-[#1E3A5F] last:border-0"
                           >
                             <Link
                               to={`/admin/projects/${p.id}`}
-                              className="font-semibold text-[#F8FAFC] hover:text-[#10B981]"
+                              className="font-semibold text-[#F8FAFC] hover:text-[#10B981] truncate"
                             >
                               {p.title}
                             </Link>
-                            <span className="text-[#94A3B8]">
-                              {p.status} · {formatINR(p.budget)}
-                            </span>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <ProjectStatusBadge status={p.status} />
+                              <span className="text-[#94A3B8] font-mono tabular-nums">
+                                {formatINR(p.budget)}
+                              </span>
+                            </div>
                           </div>
                         ))
                       )}
@@ -2699,14 +2705,17 @@ export const AdminClientDetailsPage: React.FC = () => {
             projects.map((p) => (
               <div
                 key={p.id}
-                className="py-2 border-b border-[#1E3A5F] last:border-0 flex justify-between text-xs"
+                className="py-2 border-b border-[#1E3A5F] last:border-0 flex items-center justify-between gap-2 text-xs"
               >
-                <Link to={`/admin/projects/${p.id}`} className="font-semibold hover:text-[#10B981]">
+                <Link to={`/admin/projects/${p.id}`} className="font-semibold hover:text-[#10B981] truncate">
                   {p.title}
                 </Link>
-                <span className="text-[#94A3B8] font-mono tabular-nums">
-                  {p.status} · {formatINR(p.budget)}
-                </span>
+                <div className="flex items-center gap-2 shrink-0">
+                  <ProjectStatusBadge status={p.status} />
+                  <span className="text-[#94A3B8] font-mono tabular-nums">
+                    {formatINR(p.budget)}
+                  </span>
+                </div>
               </div>
             ))
           )}
@@ -2903,6 +2912,70 @@ const PROJECT_STATUSES: ProjectStatus[] = [
   'On Hold',
   'Cancelled',
 ];
+
+export const getProjectStatusBadgeConfig = (
+  status: ProjectStatus
+): { containerClass: string; dotClass: string; barClass: string } => {
+  switch (status) {
+    case 'Completed':
+      return {
+        containerClass: 'bg-[#16A34A]/15 text-[#4ADE80] border-[#16A34A]/40',
+        dotClass: 'bg-[#4ADE80]',
+        barClass: 'bg-[#16A34A]',
+      };
+    case 'In Progress':
+    case 'In Review':
+    case 'Waiting for Client':
+      return {
+        containerClass: 'bg-[#F59E0B]/15 text-[#FBBF24] border-[#F59E0B]/40',
+        dotClass: 'bg-[#FBBF24]',
+        barClass: 'bg-[#F59E0B]',
+      };
+    case 'Planned':
+    case 'Inquiry':
+      return {
+        containerClass: 'bg-[#0EA5E9]/15 text-[#38BDF8] border-[#0EA5E9]/40',
+        dotClass: 'bg-[#38BDF8]',
+        barClass: 'bg-[#0EA5E9]',
+      };
+    case 'Revision Requested':
+      return {
+        containerClass: 'bg-[#EA580C]/15 text-[#FB923C] border-[#EA580C]/40',
+        dotClass: 'bg-[#FB923C]',
+        barClass: 'bg-[#EA580C]',
+      };
+    case 'On Hold':
+      return {
+        containerClass: 'bg-[#64748B]/20 text-[#CBD5E1] border-[#64748B]/40',
+        dotClass: 'bg-[#94A3B8]',
+        barClass: 'bg-[#64748B]',
+      };
+    case 'Cancelled':
+      return {
+        containerClass: 'bg-[#DC2626]/15 text-[#F87171] border-[#DC2626]/40',
+        dotClass: 'bg-[#F87171]',
+        barClass: 'bg-[#DC2626]',
+      };
+    default:
+      return {
+        containerClass: 'bg-[#0EA5E9]/15 text-[#38BDF8] border-[#0EA5E9]/40',
+        dotClass: 'bg-[#38BDF8]',
+        barClass: 'bg-[#0EA5E9]',
+      };
+  }
+};
+
+export const ProjectStatusBadge: React.FC<{ status: ProjectStatus }> = ({ status }) => {
+  const { containerClass, dotClass } = getProjectStatusBadgeConfig(status);
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold rounded-md border whitespace-nowrap ${containerClass}`}
+    >
+      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotClass}`} />
+      <span>{status}</span>
+    </span>
+  );
+};
 
 export const AdminProjectsPage: React.FC = () => {
   const { showToast } = useToast();
@@ -3559,21 +3632,19 @@ export const AdminProjectsPage: React.FC = () => {
                       </td>
                       <td className="py-3.5 px-4 text-[#94A3B8]">{p.clientName}</td>
                       <td className="py-3.5 px-4">
-                        <span
-                          className={`font-semibold ${
-                            p.status === 'Completed'
-                              ? 'text-[#16A34A]'
-                              : p.status === 'Cancelled'
-                              ? 'text-[#DC2626]'
-                              : p.status === 'Revision Requested' || p.status === 'On Hold'
-                              ? 'text-[#D97706]'
-                              : 'text-[#F8FAFC]'
-                          }`}
-                        >
-                          {p.status}
-                        </span>
+                        <ProjectStatusBadge status={p.status} />
                       </td>
-                      <td className="py-3.5 px-4 font-mono tabular-nums">{p.progress}%</td>
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-16 h-1.5 bg-[#132A4A] rounded-full overflow-hidden shrink-0">
+                            <div
+                              className={`h-full transition-all ${getProjectStatusBadgeConfig(p.status).barClass}`}
+                              style={{ width: `${Math.min(100, Math.max(0, p.progress))}%` }}
+                            />
+                          </div>
+                          <span className="font-mono tabular-nums text-[#F8FAFC]">{p.progress}%</span>
+                        </div>
+                      </td>
                       <td className="py-3.5 px-4 font-mono text-[#94A3B8]">{p.deadline || '—'}</td>
                       <td className="py-3.5 px-4 text-right font-mono tabular-nums">
                         {formatINR(p.budget)}
@@ -3734,10 +3805,13 @@ export const AdminProjectsPage: React.FC = () => {
                 <h2 className="font-editorial text-xl font-semibold text-[#F8FAFC] mt-0.5">
                   {viewingProject.title}
                 </h2>
-                <p className="text-xs text-[#94A3B8]">
-                  Client: {viewingProject.clientName} ({viewingProject.clientEmail}) · Status:{' '}
-                  <strong>{viewingProject.status}</strong> ({viewingProject.progress}%)
-                </p>
+                <div className="flex flex-wrap items-center gap-2 text-xs text-[#94A3B8] mt-1">
+                  <span>
+                    Client: {viewingProject.clientName} ({viewingProject.clientEmail}) ·
+                  </span>
+                  <ProjectStatusBadge status={viewingProject.status} />
+                  <span className="font-mono text-[#F8FAFC]">({viewingProject.progress}%)</span>
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -3987,10 +4061,13 @@ export const AdminProjectDetailsPage: React.FC = () => {
           <Link to="/admin/projects" className="text-xs text-[#94A3B8] hover:text-[#F8FAFC]">
             ← Back to Projects
           </Link>
-          <h1 className="font-editorial text-2xl font-semibold text-[#F8FAFC] mt-1">
-            {project.title}
-          </h1>
-          <p className="text-xs text-[#94A3B8]">
+          <div className="flex flex-wrap items-center gap-2.5 mt-1">
+            <h1 className="font-editorial text-2xl font-semibold text-[#F8FAFC]">
+              {project.title}
+            </h1>
+            <ProjectStatusBadge status={project.status} />
+          </div>
+          <p className="text-xs text-[#94A3B8] mt-1">
             Client: {project.clientName} ({project.clientEmail}) · Service: {project.serviceType}
           </p>
         </div>

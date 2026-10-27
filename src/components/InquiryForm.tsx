@@ -164,18 +164,20 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({
     fetchPublishedServices()
       .then((list) => {
         if (list.length > 0) {
-          const mapped = [
-            ...list.map(
-              (s) => `${s.title} (${s.isCustomQuote ? 'Custom quote' : s.priceDisplay})`
-            ),
-            'Custom Creative Project',
-          ];
-          setServiceOptions((prev) => {
+          const mapped = Array.from(
+            new Set([
+              ...list.map(
+                (s) => `${s.title} (${s.isCustomQuote ? 'Custom quote' : s.priceDisplay})`
+              ),
+              'Custom Creative Project',
+            ])
+          );
+          setServiceOptions(() => {
             const combined = [...mapped];
             if (defaultService && !combined.includes(defaultService)) {
               combined.unshift(defaultService);
             }
-            return combined;
+            return Array.from(new Set(combined));
           });
           if (!defaultService && !searchParams.get('service')) {
             setValue('serviceRequired', mapped[0]);
@@ -204,7 +206,7 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({
         setValue('serviceRequired', matched);
       } else {
         setServiceOptions((prev) =>
-          prev.includes(targetService) ? prev : [targetService, ...prev]
+          Array.from(new Set(prev.includes(targetService) ? prev : [targetService, ...prev]))
         );
         setValue('serviceRequired', targetService);
       }
@@ -239,7 +241,7 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({
       const { serviceRequired, budgetRange, description, referenceLink: evLink } = customEvent.detail;
       if (serviceRequired) {
         setServiceOptions((prev) =>
-          prev.includes(serviceRequired) ? prev : [serviceRequired, ...prev]
+          Array.from(new Set(prev.includes(serviceRequired) ? prev : [serviceRequired, ...prev]))
         );
         setValue('serviceRequired', serviceRequired);
       }
@@ -491,8 +493,8 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({
               {...register('serviceRequired')}
               className="w-full px-3.5 py-2.5 text-sm bg-[#132A4A]/70 border border-[#1E3A5F] rounded-lg focus:outline-none focus:border-[#10B981] text-[#F8FAFC] transition-colors"
             >
-              {serviceOptions.map((opt) => (
-                <option key={opt} value={opt}>
+              {serviceOptions.map((opt, idx) => (
+                <option key={`${opt}_${idx}`} value={opt}>
                   {opt}
                 </option>
               ))}
@@ -529,9 +531,9 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({
             </div>
             {/* Quick Preset Range Pills */}
             <div className="flex flex-wrap gap-1.5 mt-2">
-              {activeBudgetRanges.slice(0, 4).map((range) => (
+              {activeBudgetRanges.slice(0, 4).map((range, idx) => (
                 <button
-                  key={range}
+                  key={`${range}_${idx}`}
                   type="button"
                   onClick={() => {
                     setCustomPriceInput(range);
