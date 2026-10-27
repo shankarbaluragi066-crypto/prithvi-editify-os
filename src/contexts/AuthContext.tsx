@@ -595,7 +595,63 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       );
     }
 
-    // 1. Check locally registered accounts first
+    // 1. Try Supabase Auth FIRST if configured so an authenticated JWT session is established for RLS
+    if (isSupabaseConfigured) {
+      try {
+        let { data, error } = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password,
+        });
+
+        // If the account does not exist in Supabase auth.users yet, attempt signUp to provision a real JWT session
+        if (error && error.message.toLowerCase().includes('invalid login credentials')) {
+          const signUpRes = await supabase.auth.signUp({
+            email: cleanEmail,
+            password,
+            options: {
+              data: {
+                display_name: cleanEmail.split('@')[0],
+                role: isAdminGateway && isAuthorizedAdminEmail(cleanEmail) ? 'admin' : 'client',
+              },
+            },
+          });
+          if (!signUpRes.error && signUpRes.data?.session && signUpRes.data?.user) {
+            data = {
+              user: signUpRes.data.user,
+              session: signUpRes.data.session,
+            };
+            error = null;
+          }
+        }
+
+        if (!error && data?.user) {
+          const allowAdmin = isAdminGateway && isAuthorizedAdminEmail(cleanEmail);
+          const mappedUser = mapSupabaseUser(data.user);
+          const prof = await ensureUserProfile(mappedUser, { allowAdminRole: allowAdmin });
+          if (prof.status === 'deactivated') {
+            await supabase.auth.signOut();
+            throw new Error('This account has been deactivated. Please contact Prithvi Editify support.');
+          }
+          const finalProf: UserProfile = allowAdmin
+            ? { ...prof, role: 'admin' }
+            : { ...prof, role: 'client' };
+          saveStoredGoogleSession({
+            user: mappedUser,
+            profile: finalProf,
+            isAdminGatewaySession: allowAdmin,
+          });
+          setUser(mappedUser);
+          setProfile(finalProf);
+          return finalProf;
+        }
+      } catch (err) {
+        if (err instanceof Error && err.message.includes('deactivated')) {
+          throw err;
+        }
+      }
+    }
+
+    // 2. Check locally registered accounts if Supabase session is unavailable or email confirmation is pending
     if (typeof window !== 'undefined') {
       try {
         const raw = window.localStorage.getItem('pe_registered_client_accounts_v1');
@@ -641,40 +697,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } catch (err) {
         if (err instanceof Error && err.message.includes('Incorrect password')) {
-          throw err;
-        }
-      }
-    }
-
-    // 2. Try Supabase Auth if configured
-    if (isSupabaseConfigured) {
-      try {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: cleanEmail,
-          password,
-        });
-        if (!error && data?.user) {
-          const allowAdmin = isAdminGateway && isAuthorizedAdminEmail(cleanEmail);
-          const mappedUser = mapSupabaseUser(data.user);
-          const prof = await ensureUserProfile(mappedUser, { allowAdminRole: allowAdmin });
-          if (prof.status === 'deactivated') {
-            await supabase.auth.signOut();
-            throw new Error('This account has been deactivated. Please contact Prithvi Editify support.');
-          }
-          const finalProf: UserProfile = allowAdmin
-            ? { ...prof, role: 'admin' }
-            : { ...prof, role: 'client' };
-          saveStoredGoogleSession({
-            user: mappedUser,
-            profile: finalProf,
-            isAdminGatewaySession: allowAdmin,
-          });
-          setUser(mappedUser);
-          setProfile(finalProf);
-          return finalProf;
-        }
-      } catch (err) {
-        if (err instanceof Error && err.message.includes('deactivated')) {
           throw err;
         }
       }
