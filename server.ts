@@ -1,5 +1,7 @@
 import 'dotenv/config';
 import express, { Request, Response, NextFunction } from 'express';
+import fs from 'fs';
+import crypto from 'crypto';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
@@ -7,6 +9,179 @@ import { GoogleGenAI, Type } from '@google/genai';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// ============================================================================
+// PERSISTENT SHARED STUDIO CRM STORE (SYNCS BOTH ADMINS + CLIENTS + BOOKINGS)
+// ============================================================================
+interface SharedCrmStoreData {
+  tables: Record<string, Record<string, any>[]>;
+  deletedIds: Record<string, string[]>;
+  updatedAt: string;
+}
+
+const SHARED_CRM_STORE_DIR = path.resolve(__dirname, '.data');
+const SHARED_CRM_STORE_FILE = path.join(SHARED_CRM_STORE_DIR, 'crm_shared_store.json');
+
+let sharedCrmStoreCache: SharedCrmStoreData | null = null;
+
+function loadSharedCrmStore(): SharedCrmStoreData {
+  if (sharedCrmStoreCache) return sharedCrmStoreCache;
+  try {
+    if (fs.existsSync(SHARED_CRM_STORE_FILE)) {
+      const raw = fs.readFileSync(SHARED_CRM_STORE_FILE, 'utf-8');
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        sharedCrmStoreCache = {
+          tables: parsed.tables && typeof parsed.tables === 'object' ? parsed.tables : {},
+          deletedIds:
+            parsed.deletedIds && typeof parsed.deletedIds === 'object' ? parsed.deletedIds : {},
+          updatedAt: parsed.updatedAt || new Date().toISOString(),
+        };
+        return sharedCrmStoreCache;
+      }
+    }
+  } catch {
+    // Fallback to fresh store
+  }
+  sharedCrmStoreCache = {
+    tables: {},
+    deletedIds: {},
+    updatedAt: new Date().toISOString(),
+  };
+  return sharedCrmStoreCache;
+}
+
+function persistSharedCrmStore(store: SharedCrmStoreData): void {
+  store.updatedAt = new Date().toISOString();
+  sharedCrmStoreCache = store;
+  try {
+    if (!fs.existsSync(SHARED_CRM_STORE_DIR)) {
+      fs.mkdirSync(SHARED_CRM_STORE_DIR, { recursive: true });
+    }
+    fs.writeFileSync(SHARED_CRM_STORE_FILE, JSON.stringify(store, null, 2), 'utf-8');
+  } catch {
+    // Non-fatal if filesystem is read-only
+  }
+}
+
+function upsertRowInSharedStore(table: string, row: Record<string, any>): Record<string, any> {
+  const store = loadSharedCrmStore();
+  const nowIso = new Date().toISOString();
+  const id = String(row.id || crypto.randomUUID());
+  const deletedSet = new Set<string>(store.deletedIds[table] || []);
+  if (deletedSet.has(id)) {
+    deletedSet.delete(id);
+    store.deletedIds[table] = Array.from(deletedSet);
+  }
+
+  const existingList = Array.isArray(store.tables[table]) ? store.tables[table] : [];
+  const prev = existingList.find((r) => String(r.id) === id);
+  const mergedRow: Record<string, any> = {
+    ...(prev || {}),
+    ...row,
+    id,
+    created_at: row.created_at || row.createdAt || prev?.created_at || prev?.createdAt || nowIso,
+    updated_at: row.updated_at || row.updatedAt || nowIso,
+  };
+  store.tables[table] = [mergedRow, ...existingList.filter((r) => String(r.id) !== id)];
+  persistSharedCrmStore(store);
+  return mergedRow;
+}
+
+function deleteRowInSharedStore(table: string, id: string): void {
+  const cleanId = String(id || '').trim();
+  if (!cleanId) return;
+  const store = loadSharedCrmStore();
+  const existingList = Array.isArray(store.tables[table]) ? store.tables[table] : [];
+  store.tables[table] = existingList.filter((r) => String(r.id) !== cleanId);
+  const deletedSet = new Set<string>(store.deletedIds[table] || []);
+  deletedSet.add(cleanId);
+  store.deletedIds[table] = Array.from(deletedSet);
+  persistSharedCrmStore(store);
+}
+
+function mergeIncomingTablesIntoSharedStore(
+  incomingTables?: Record<string, Record<string, any>[]>,
+  incomingDeletedIds?: Record<string, string[]>
+): SharedCrmStoreData {
+  const store = loadSharedCrmStore();
+  let modified = false;
+
+  if (incomingDeletedIds && typeof incomingDeletedIds === 'object') {
+    for (const [table, ids] of Object.entries(incomingDeletedIds)) {
+      if (!Array.isArray(ids)) continue;
+      const set = new Set<string>(store.deletedIds[table] || []);
+      let tableDeletedChanged = false;
+      for (const rawId of ids) {
+        const cleanId = String(rawId || '').trim();
+        if (cleanId && !set.has(cleanId)) {
+          set.add(cleanId);
+          tableDeletedChanged = true;
+          modified = true;
+        }
+      }
+      if (tableDeletedChanged) {
+        store.deletedIds[table] = Array.from(set);
+        if (Array.isArray(store.tables[table])) {
+          store.tables[table] = store.tables[table].filter((r) => !set.has(String(r.id)));
+        }
+      }
+    }
+  }
+
+  if (incomingTables && typeof incomingTables === 'object') {
+    for (const [table, rows] of Object.entries(incomingTables)) {
+      if (!Array.isArray(rows)) continue;
+      const deletedSet = new Set<string>(store.deletedIds[table] || []);
+      const currentRows = Array.isArray(store.tables[table]) ? store.tables[table] : [];
+      const byId = new Map<string, Record<string, any>>();
+      for (const r of currentRows) {
+        const rid = String(r?.id || '');
+        if (rid && !deletedSet.has(rid)) {
+          byId.set(rid, r);
+        }
+      }
+
+      for (const inc of rows) {
+        if (!inc || typeof inc !== 'object') continue;
+        const incId = String(inc.id || '');
+        if (!incId || deletedSet.has(incId)) continue;
+        if (
+          table === 'inquiries' &&
+          String(inc.email || '').trim().toLowerCase() === 'sync-check@example.com'
+        ) {
+          continue;
+        }
+        const existing = byId.get(incId);
+        if (!existing) {
+          byId.set(incId, inc);
+          modified = true;
+        } else {
+          const exTime = new Date(
+            existing.updated_at || existing.updatedAt || existing.created_at || existing.createdAt || 0
+          ).getTime();
+          const incTime = new Date(
+            inc.updated_at || inc.updatedAt || inc.created_at || inc.createdAt || 0
+          ).getTime();
+          if (incTime > exTime) {
+            byId.set(incId, { ...existing, ...inc });
+            modified = true;
+          } else if (Object.keys(inc).length > Object.keys(existing).length) {
+            byId.set(incId, { ...inc, ...existing });
+            modified = true;
+          }
+        }
+      }
+
+      store.tables[table] = Array.from(byId.values());
+    }
+  }
+
+  if (modified) {
+    persistSharedCrmStore(store);
+  }
+  return store;
+}
 
 const PORT = Number(process.env.PORT) || 3000;
 const STUDIO_ADMIN_EMAIL = (
@@ -889,11 +1064,11 @@ async function startServer() {
   );
 
   // --------------------------------------------------------------------------
-  // 5. POST /api/orders/notify — Background Admin Email Alert Function
+  // 5. POST /api/orders/notify — Background Admin Email Alert & Shared CRM Sync
   // --------------------------------------------------------------------------
   const handleBackgroundOrderNotify = (req: Request, res: Response) => {
     const body = req.body || {};
-    const orderId = sanitizeInputText(body.id, 120) || 'NEW';
+    const orderId = sanitizeInputText(body.id, 120) || crypto.randomUUID();
     const shortOrderId = orderId.slice(0, 8).toUpperCase();
     const fullName = sanitizeInputText(body.fullName, 120) || 'Customer';
     const email = sanitizeInputText(body.email, 254);
@@ -904,8 +1079,85 @@ async function startServer() {
     const preferredDeadline = sanitizeInputText(body.preferredDeadline, 80) || 'Flexible';
     const referenceFileUrl = sanitizeInputText(body.referenceFileUrl, 1000);
     const description = sanitizeInputText(body.description, 3000);
+    const clientUserId = sanitizeInputText(body.clientUserId, 120);
 
-    const ownerEmail = STUDIO_ADMIN_EMAIL || 'shankarbaluragi066@gmail.com';
+    const nowIso = new Date().toISOString();
+
+    // Immediately persist customer booking into the shared server CRM store so BOTH admins and the client see it
+    try {
+      upsertRowInSharedStore('inquiries', {
+        id: orderId,
+        full_name: fullName,
+        email: email.toLowerCase(),
+        phone,
+        company_name: companyName,
+        service_required: serviceRequired,
+        budget_range: budgetRange,
+        preferred_deadline: preferredDeadline,
+        description,
+        reference_file_url: referenceFileUrl,
+        privacy_consent: true,
+        status: 'New',
+        lead_source: 'Website Service Booking',
+        internal_notes: referenceFileUrl ? `Reference Link: ${referenceFileUrl}` : '',
+        created_at: nowIso,
+        updated_at: nowIso,
+      });
+
+      const store = loadSharedCrmStore();
+      const existingClients = Array.isArray(store.tables.clients) ? store.tables.clients : [];
+      const matchedClient = existingClients.find(
+        (c) => String(c.email || '').trim().toLowerCase() === email.toLowerCase()
+      );
+      const clientId = matchedClient?.id ? String(matchedClient.id) : crypto.randomUUID();
+      if (!matchedClient) {
+        upsertRowInSharedStore('clients', {
+          id: clientId,
+          user_id: clientUserId || null,
+          full_name: fullName,
+          email: email.toLowerCase(),
+          phone,
+          company_name: companyName || fullName,
+          country: 'India',
+          preferred_contact: 'WhatsApp',
+          account_status: 'active',
+          admin_notes: `Auto-created from Service Booking #${shortOrderId} (${budgetRange})`,
+          created_at: nowIso,
+          updated_at: nowIso,
+        });
+      }
+
+      const existingProjects = Array.isArray(store.tables.projects) ? store.tables.projects : [];
+      const alreadyHasProject = existingProjects.some((p) => String(p.id) === orderId);
+      if (!alreadyHasProject) {
+        const numericMatches = budgetRange.replace(/,/g, '').match(/\d+/g);
+        const parsedBudget =
+          numericMatches && numericMatches.length > 0 ? Number(numericMatches[0]) || 500 : 500;
+        upsertRowInSharedStore('projects', {
+          id: orderId,
+          client_id: clientId,
+          client_user_id: clientUserId || matchedClient?.user_id || null,
+          client_name: fullName,
+          client_email: email.toLowerCase(),
+          title: `${serviceRequired} — ${companyName || fullName}`.slice(0, 160),
+          description,
+          service_type: serviceRequired,
+          brief: description,
+          budget: parsedBudget,
+          start_date: nowIso.split('T')[0],
+          deadline: preferredDeadline || 'Flexible / Standard Turnaround',
+          priority: 'Medium',
+          status: 'Planned',
+          progress: 10,
+          latest_update: `Order #${shortOrderId} booked (${budgetRange}). Service brief received by Prithvi Editify — Shankar Baluragi is reviewing your requirements and timeline.`,
+          created_at: nowIso,
+          updated_at: nowIso,
+        });
+      }
+    } catch {
+      // Non-fatal store update
+    }
+
     const ownerWhatsApp = process.env.STUDIO_ADMIN_WHATSAPP || '+916361902619';
 
     // Immediately acknowledge so the portal/website submission never blocks
@@ -916,7 +1168,7 @@ async function startServer() {
       emailDispatched: true,
     });
 
-    // Execute admin email alert & notification strictly in the background
+    // Execute admin email alert & notification to BOTH authorized admins strictly in the background
     setImmediate(async () => {
       try {
         // 1. Resend API (if RESEND_API_KEY is configured)
@@ -930,7 +1182,7 @@ async function startServer() {
             },
             body: JSON.stringify({
               from: process.env.RESEND_FROM_EMAIL || 'Prithvi Editify Portal <onboarding@resend.dev>',
-              to: [ownerEmail],
+              to: AUTHORIZED_ADMIN_EMAILS,
               reply_to: email || undefined,
               subject: `New Portal Booking (#${shortOrderId}): ${serviceRequired} from ${fullName}`,
               text: [
@@ -952,32 +1204,34 @@ async function startServer() {
           }).catch(() => {});
         }
 
-        // 2. FormSubmit AJAX Relay to shankarbaluragi066@gmail.com
-        await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(ownerEmail)}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-            Origin: 'https://prithvieditify.netlify.app',
-            Referer: 'https://prithvieditify.netlify.app/',
-          },
-          body: JSON.stringify({
-            _subject: `New Order Booked (#${shortOrderId}): ${serviceRequired} from ${fullName}`,
-            _template: 'table',
-            _captcha: 'false',
-            Order_ID: `#${shortOrderId} (${orderId})`,
-            Service_Booked: serviceRequired,
-            Custom_Price_Range_INR: budgetRange,
-            Preferred_Deadline: preferredDeadline,
-            Reference_Link: referenceFileUrl || 'None',
-            Customer_Name: fullName,
-            Customer_Phone_WhatsApp: phone,
-            Customer_Email: email,
-            Brand_or_Channel: companyName || 'N/A',
-            Service_Requirements_and_Brief: description,
-            Owner_WhatsApp_Target: ownerWhatsApp,
-          }),
-        }).catch(() => {});
+        // 2. FormSubmit AJAX Relay to BOTH shankarbaluragi066@gmail.com and prithvieditify.official@gmail.com
+        for (const adminRecipient of AUTHORIZED_ADMIN_EMAILS) {
+          await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(adminRecipient)}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+              Origin: 'https://prithvieditify.netlify.app',
+              Referer: 'https://prithvieditify.netlify.app/',
+            },
+            body: JSON.stringify({
+              _subject: `New Order Booked (#${shortOrderId}): ${serviceRequired} from ${fullName}`,
+              _template: 'table',
+              _captcha: 'false',
+              Order_ID: `#${shortOrderId} (${orderId})`,
+              Service_Booked: serviceRequired,
+              Custom_Price_Range_INR: budgetRange,
+              Preferred_Deadline: preferredDeadline,
+              Reference_Link: referenceFileUrl || 'None',
+              Customer_Name: fullName,
+              Customer_Phone_WhatsApp: phone,
+              Customer_Email: email,
+              Brand_or_Channel: companyName || 'N/A',
+              Service_Requirements_and_Brief: description,
+              Owner_WhatsApp_Target: ownerWhatsApp,
+            }),
+          }).catch(() => {});
+        }
 
         // 3. Optional WhatsApp Webhook (if WHATSAPP_WEBHOOK_URL is configured)
         const whatsappWebhookUrl = (process.env.WHATSAPP_WEBHOOK_URL || '').trim();
@@ -1006,6 +1260,57 @@ async function startServer() {
 
   app.post('/api/orders/notify', handleBackgroundOrderNotify);
   app.post('/api/inquiries/notify-admin', handleBackgroundOrderNotify);
+
+  // --------------------------------------------------------------------------
+  // 5B. SHARED STUDIO CRM SYNCHRONIZATION ENDPOINTS (/api/crm/*)
+  // Ensures shankarbaluragi066@gmail.com, prithvieditify.official@gmail.com,
+  // and all customer sessions always see the exact same inquiries, projects,
+  // clients, tasks, files, invoices, payments, messages, and quotations.
+  // --------------------------------------------------------------------------
+  app.get('/api/crm/store', (_req: Request, res: Response) => {
+    const store = loadSharedCrmStore();
+    res.json(store);
+  });
+
+  app.post('/api/crm/sync', (req: Request, res: Response) => {
+    try {
+      const body = req.body || {};
+      const store = mergeIncomingTablesIntoSharedStore(body.tables, body.deletedIds);
+      res.json(store);
+    } catch {
+      res.json(loadSharedCrmStore());
+    }
+  });
+
+  app.post('/api/crm/upsert', (req: Request, res: Response) => {
+    try {
+      const table = sanitizeInputText(req.body?.table, 80);
+      const row = req.body?.row;
+      if (!table || !row || typeof row !== 'object') {
+        res.status(400).json({ error: 'Valid table and row required' });
+        return;
+      }
+      const saved = upsertRowInSharedStore(table, row);
+      res.json({ ok: true, id: saved.id, row: saved });
+    } catch {
+      res.status(200).json({ ok: false });
+    }
+  });
+
+  app.post('/api/crm/delete', (req: Request, res: Response) => {
+    try {
+      const table = sanitizeInputText(req.body?.table, 80);
+      const id = sanitizeInputText(req.body?.id, 120);
+      if (!table || !id) {
+        res.status(400).json({ error: 'Valid table and id required' });
+        return;
+      }
+      deleteRowInSharedStore(table, id);
+      res.json({ ok: true });
+    } catch {
+      res.status(200).json({ ok: false });
+    }
+  });
 
   // --------------------------------------------------------------------------
   // 6. AUTHENTICATION EMAIL AUTOMATION & ADMIN SECURITY NOTIFICATIONS

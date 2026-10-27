@@ -599,6 +599,14 @@ function normalizeQuotationRecord(raw: Partial<QuotationRecord> & Record<string,
 }
 
 async function syncQuotationsRegistryToSupabase(list: QuotationRecord[]): Promise<void> {
+  if (typeof window !== 'undefined') {
+    fetch('/api/crm/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tables: { quotations: list } }),
+    }).catch(() => {});
+  }
+
   if (!isSupabaseConfigured) return;
   try {
     const serialized = JSON.stringify(list);
@@ -645,8 +653,55 @@ export async function fetchAllQuotationsAdmin(): Promise<QuotationRecord[]> {
   const mergedMap = new Map<string, QuotationRecord>();
 
   for (const item of localList) {
-    const normalized = normalizeQuotationRecord(item);
-    mergedMap.set(normalized.id, normalized);
+    if (item && item.id) {
+      const normalized = normalizeQuotationRecord(item);
+      mergedMap.set(normalized.id, normalized);
+    }
+  }
+
+  // Merge with shared CRM server store so both admin accounts see identical quotations
+  if (typeof window !== 'undefined') {
+    try {
+      const syncRes = await fetch('/api/crm/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tables: { quotations: Array.from(mergedMap.values()) } }),
+      });
+      if (syncRes.ok) {
+        const syncJson = (await syncRes.json().catch(() => null)) as {
+          tables?: { quotations?: Record<string, any>[] };
+          deletedIds?: { quotations?: string[] };
+        } | null;
+        const deletedSet = new Set(
+          Array.isArray(syncJson?.deletedIds?.quotations)
+            ? syncJson!.deletedIds!.quotations!.map(String)
+            : []
+        );
+        for (const id of deletedSet) {
+          mergedMap.delete(id);
+        }
+        const serverQuotes = syncJson?.tables?.quotations;
+        if (Array.isArray(serverQuotes)) {
+          for (const rawItem of serverQuotes) {
+            if (rawItem && typeof rawItem === 'object' && rawItem.id) {
+              const sid = String(rawItem.id);
+              if (deletedSet.has(sid)) continue;
+              const serverItem = normalizeQuotationRecord(rawItem);
+              const existingLocal = mergedMap.get(serverItem.id);
+              if (
+                !existingLocal ||
+                new Date(serverItem.updatedAt || 0).getTime() >=
+                  new Date(existingLocal.updatedAt || 0).getTime()
+              ) {
+                mergedMap.set(serverItem.id, serverItem);
+              }
+            }
+          }
+        }
+      }
+    } catch {
+      // Non-blocking if backend server is offline
+    }
   }
 
   if (isSupabaseConfigured) {
@@ -673,7 +728,6 @@ export async function fetchAllQuotationsAdmin(): Promise<QuotationRecord[]> {
               }
             }
           }
-          setLocalQuotations(Array.from(mergedMap.values()));
         }
       }
     } catch {
@@ -681,9 +735,11 @@ export async function fetchAllQuotationsAdmin(): Promise<QuotationRecord[]> {
     }
   }
 
-  return Array.from(mergedMap.values()).sort(
+  const finalQuotes = Array.from(mergedMap.values()).sort(
     (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
   );
+  setLocalQuotations(finalQuotes);
+  return finalQuotes;
 }
 
 export async function fetchClientQuotations(
@@ -804,6 +860,14 @@ export async function deleteQuotationAdmin(id: string): Promise<void> {
     if (!check.canHardDelete) {
       throw new Error(check.reason);
     }
+  }
+
+  if (typeof window !== 'undefined') {
+    fetch('/api/crm/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ table: 'quotations', id }),
+    }).catch(() => {});
   }
 
   const nextList = list.filter((q) => q.id !== id);
