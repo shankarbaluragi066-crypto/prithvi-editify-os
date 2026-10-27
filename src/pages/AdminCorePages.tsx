@@ -989,6 +989,7 @@ export const AdminInquiriesPage: React.FC = () => {
   const [sourceDraft, setSourceDraft] = useState('');
   const [loading, setLoading] = useState(true);
   const [aiDraftingId, setAiDraftingId] = useState<string | null>(null);
+  const [convertingId, setConvertingId] = useState<string | null>(null);
 
   const loadInquiries = useCallback(async () => {
     setLoading(true);
@@ -1054,6 +1055,8 @@ export const AdminInquiriesPage: React.FC = () => {
   };
 
   const handleConvertInquiry = async (inq: InquiryRecord) => {
+    if (convertingId) return;
+    setConvertingId(inq.id);
     try {
       const [allClients, allProjects, servicesList] = await Promise.all([
         fetchAllClientsAdmin().catch(() => []),
@@ -1095,7 +1098,13 @@ export const AdminInquiriesPage: React.FC = () => {
       const projectTitle =
         aiDraftedQuote.projectTitle || `${inq.serviceRequired} — ${inq.companyName || inq.fullName}`;
 
-      const existingProject = allProjects.find((p) => p.id === inq.id);
+      const existingProject = allProjects.find(
+        (p) =>
+          p.id === inq.id ||
+          (cleanEmail &&
+            p.clientEmail.trim().toLowerCase() === cleanEmail &&
+            p.serviceType.toLowerCase() === inq.serviceRequired.toLowerCase())
+      );
 
       const projectId = await saveProjectAdmin(
         {
@@ -1174,6 +1183,8 @@ export const AdminInquiriesPage: React.FC = () => {
       navigate(`/admin/projects/${projectId}`);
     } catch (err) {
       showToast('error', 'Conversion Failed', err instanceof Error ? err.message : '');
+    } finally {
+      setConvertingId(null);
     }
   };
 
@@ -1195,7 +1206,9 @@ export const AdminInquiriesPage: React.FC = () => {
             <CheckCircle2 className="w-3.5 h-3.5" />
             <span>Order Alerts Active:</span>
           </span>
-          <span className="font-mono text-[#F8FAFC]">shankarbaluragi066@gmail.com</span>
+          <span className="font-mono text-[#F8FAFC]">
+            shankarbaluragi066@gmail.com · prithvieditify.official@gmail.com
+          </span>
           <span className="text-[#1E3A5F]">|</span>
           <span className="font-mono text-[#2DD4BF]">WhatsApp +91 63619 02619</span>
         </div>
@@ -1494,10 +1507,13 @@ export const AdminInquiriesPage: React.FC = () => {
                 </button>
                 <button
                   type="button"
+                  disabled={convertingId === selected.id}
                   onClick={() => handleConvertInquiry(selected)}
-                  className="px-3.5 py-2 text-xs font-bold text-[#040D1A] bg-gradient-to-r from-[#10B981] via-[#2DD4BF] to-[#0EA5E9] hover:opacity-95 rounded-lg transition-all shadow-sm"
+                  className="px-3.5 py-2 text-xs font-bold text-[#040D1A] bg-gradient-to-r from-[#10B981] via-[#2DD4BF] to-[#0EA5E9] hover:opacity-95 rounded-lg transition-all shadow-sm disabled:opacity-50"
                 >
-                  ⚡ 1-Click Convert to Client + Project + Quote →
+                  {convertingId === selected.id
+                    ? '⚡ Converting to Client + Project + Quote...'
+                    : '⚡ 1-Click Convert to Client + Project + Quote →'}
                 </button>
               </div>
             </div>

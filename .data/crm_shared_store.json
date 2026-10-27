@@ -1,0 +1,180 @@
+{
+  "updatedAt": "2026-10-27T13:23:11.215Z",
+  "tables": {
+    "inquiries": [
+      {
+        "id": "331810c9-a7b3-4a9f-8031-32ad6b5a2f84",
+        "full_name": "shankarbaluragi",
+        "email": "shankarbaluragi066@gmail.com",
+        "phone": "+91 63619 02619",
+        "company_name": "prithvi editify",
+        "service_required": "YouTube Video Editing (Custom quote)",
+        "budget_range": "₹500",
+        "preferred_deadline": "3–7 business days",
+        "description": "Custom YouTube Video Editing (Custom quote) production tailored for prithvi editify. Scope based on brief: \"[Service Booking Details]\n• Quantity / Deliverables: 1\n• Target Platform / Format: YouTube Thumbnail / Video (16:9)\n• Custom Price / Budget: ₹500\n• Headline / Style / Creative Deta\"",
+        "reference_file_url": "",
+        "privacy_consent": true,
+        "status": "Converted",
+        "lead_source": "Website Service Booking",
+        "internal_notes": "Auto-converted from website inquiry (₹500).",
+        "created_at": "2026-10-27T11:31:14.445Z",
+        "updated_at": "2026-10-27T11:31:14.445Z"
+      },
+      {
+        "id": "232afe3e-5b2b-4732-b0b5-194303a91cf6",
+        "full_name": "shankar baluragi",
+        "email": "shankarbaluragi066@gmail.com",
+        "phone": "+91 63619 02619",
+        "company_name": "as",
+        "service_required": "Social Media Post Design (₹500/design)",
+        "budget_range": "₹500",
+        "preferred_deadline": "24–48 hours",
+        "description": "Custom Social Media Post Design (₹500/design) production tailored for as. Scope based on brief: \"[Service Booking Details]\n• Quantity / Deliverables: 1\n• Target Platform / Format: YouTube Thumbnail / Video (16:9)\n• Custom Price / Budget: ₹500/design\n•Headline / Style / Creativ\"",
+        "reference_file_url": "",
+        "privacy_consent": true,
+        "status": "Converted",
+        "lead_source": "Website Service Booking",
+        "internal_notes": "Auto-converted from website inquiry (₹500/design).",
+        "created_at": "2026-10-26T07:00:01.846Z",
+        "updated_at": "2026-10-26T07:00:01.846Z"
+      }
+    ],
+    "clients": [
+      {
+        "id": "592fc9d4-ddcb-46e3-a8ec-392359b45296",
+        "user_id": null,
+        "full_name": "shankarbaluragi",
+        "email": "shankarbaluragi066@gmail.com",
+        "phone": "+91 63619 02619",
+        "company_name": "prithvi editify",
+        "country": "India",
+        "preferred_contact": "WhatsApp",
+        "account_status": "active",
+        "admin_notes": "Synced client profile (₹500)",
+        "created_at": "2026-10-27T11:31:14.445Z",
+        "updated_at": "2026-10-27T11:31:14.445Z"
+      }
+    ],
+    "projects": [
+      {
+        "id": "c54610f3-1b91-4524-9f42-279d5efcd52f",
+        "client_id": "592fc9d4-ddcb-46e3-a8ec-392359b45296",
+        "client_user_id": null,
+        "client_name": "shankarbaluragi",
+        "client_email": "shankarbaluragi066@gmail.com",
+        "title": "YouTube Video Editing (Custom quote) — prithvi editify",
+        "description": "Custom YouTube Video Editing (Custom quote) production tailored for prithvi editify. Scope based on brief: \"[Service Booking Details]\n• Quantity / Deliverables: 1\n• Target Platform / Format: YouTube Thumbnail / Video (16:9)\n• Custom Price / Budget: ₹500\n• Headline / Style / Creative Deta\"",
+        "service_type": "YouTube Video Editing (Custom quote)",
+        "brief": "4K/1080p H.264 master render, clean audio mix, lower thirds, and revision review link.",
+        "budget": 500,
+        "start_date": "2026-10-27",
+        "deadline": "2026-11-10",
+        "priority": "Medium",
+        "status": "In Progress",
+        "progress": 40,
+        "latest_update": "Converted from inquiry with INR Quotation PE-QTN-2026-710 (₹500) & scheduled production milestones.",
+        "created_at": "2026-10-27T11:31:14.445Z",
+        "updated_at": "2026-10-27T11:31:14.445Z"
+      },
+      {
+        "id": "aabd8274-02ba-4c2f-b295-55ab1f261f78",
+        "client_id": "592fc9d4-ddcb-46e3-a8ec-392359b45296",
+        "client_user_id": null,
+        "client_name": "shankar baluragi",
+        "client_email": "shankarbaluragi066@gmail.com",
+        "title": "Social Media Post Design (₹500/design) — as",
+        "description": "Custom Social Media Post Design (₹500/design) production tailored for as. Scope based on brief: \"[Service Booking Details]\n• Quantity / Deliverables: 1\n• Target Platform / Format: YouTube Thumbnail / Video (16:9)\n• Custom Price / Budget: ₹500/design\n•Headline / Style / Creativ\"",
+        "service_type": "Social Media Post Design (₹500/design)",
+        "brief": "Print-ready & web-optimized PNG/JPG, platform aspect ratios, 2 revision rounds.",
+        "budget": 500,
+        "start_date": "2026-10-26",
+        "deadline": "2026-11-09",
+        "priority": "Medium",
+        "status": "In Progress",
+        "progress": 40,
+        "latest_update": "Converted from inquiry with INR Quotation PE-QTN-2026-907 (₹500) & scheduled production milestones.",
+        "created_at": "2026-10-26T07:00:01.846Z",
+        "updated_at": "2026-10-26T07:00:01.846Z"
+      }
+    ],
+    "quotations": [
+      {
+        "id": "quo_1793100674445_bz11i",
+        "quotationNumber": "PE-QTN-2026-710",
+        "documentType": "Quotation",
+        "version": 1,
+        "inquiryId": "331810c9-a7b3-4a9f-8031-32ad6b5a2f84",
+        "clientId": "592fc9d4-ddcb-46e3-a8ec-392359b45296",
+        "clientUserId": "",
+        "clientName": "shankarbaluragi",
+        "clientEmail": "shankarbaluragi066@gmail.com",
+        "projectTitle": "YouTube Video Editing (Custom quote) — prithvi editify",
+        "serviceCategory": "YouTube Video Editing (Custom quote)",
+        "scopeSummary": "Custom YouTube Video Editing (Custom quote) production tailored for prithvi editify. Scope based on brief: \"[Service Booking Details]\n• Quantity / Deliverables: 1\n• Target Platform / Format: YouTube Thumbnail / Video (16:9)\n• Custom Price / Budget: ₹500\n• Headline / Style / Creative Deta\"",
+        "deliverables": "4K/1080p H.264 master render, clean audio mix, lower thirds, and revision review link.",
+        "estimatedTimeline": "3–7 business days",
+        "issueDate": "2026-10-27",
+        "expiryDate": "2026-11-10",
+        "lineItems": [
+          {
+            "description": "YouTube Video Editing (Custom quote) — Core Deliverable Package",
+            "quantity": 1,
+            "unitPrice": 500,
+            "amount": 500
+          }
+        ],
+        "subtotal": 500,
+        "discount": 0,
+        "taxRate": 0,
+        "taxAmount": 0,
+        "total": 500,
+        "currency": "INR",
+        "status": "Draft",
+        "termsAndConditions": "50% advance via UPI/NEFT to initiate production. Remaining 50% balance payable upon final preview approval in Client Portal.",
+        "notes": "Auto-converted from website inquiry (₹500).",
+        "convertedProjectId": "c54610f3-1b91-4524-9f42-279d5efcd52f",
+        "createdAt": "2026-10-27T11:31:14.445Z",
+        "updatedAt": "2026-10-27T11:31:14.445Z"
+      },
+      {
+        "quotationNumber": "PE-QTN-2026-907",
+        "documentType": "Quotation",
+        "version": 1,
+        "inquiryId": "232afe3e-5b2b-4732-b0b5-194303a91cf6",
+        "clientId": "dae58d30-7911-4d34-a70f-ffb55b02c75c",
+        "clientUserId": "",
+        "clientName": "shankar baluragi",
+        "clientEmail": "shankarbaluragi066@gmail.com",
+        "projectTitle": "Social Media Post Design (₹500/design) — as",
+        "serviceCategory": "Social Media Post Design (₹500/design)",
+        "scopeSummary": "Custom Social Media Post Design (₹500/design) production tailored for as. Scope based on brief: \"[Service Booking Details]\n• Quantity / Deliverables: 1\n• Target Platform / Format: YouTube Thumbnail / Video (16:9)\n• Custom Price / Budget: ₹500/design\n•Headline / Style / Creativ\"",
+        "deliverables": "Print-ready & web-optimized PNG/JPG, platform aspect ratios, 2 revision rounds.",
+        "estimatedTimeline": "24–48 hours",
+        "issueDate": "2026-10-26",
+        "expiryDate": "2026-11-09",
+        "lineItems": [
+          {
+            "description": "Social Media Post Design (₹500/design) — Core Deliverable Package",
+            "quantity": 1,
+            "unitPrice": 500,
+            "amount": 500
+          }
+        ],
+        "subtotal": 500,
+        "discount": 0,
+        "taxRate": 0,
+        "taxAmount": 0,
+        "total": 500,
+        "currency": "INR",
+        "status": "Draft",
+        "termsAndConditions": "50% advance via UPI/NEFT to initiate production. Remaining 50% balance payable upon final preview approval in Client Portal.",
+        "notes": "Auto-converted from website inquiry (₹500/design).",
+        "convertedProjectId": "aabd8274-02ba-4c2f-b295-55ab1f261f78",
+        "id": "quo_1792998001846_fzo2i",
+        "createdAt": "2026-10-26T07:00:01.846Z",
+        "updatedAt": "2026-10-26T07:00:01.846Z"
+      }
+    ]
+  },
+  "deletedIds": {}
+}

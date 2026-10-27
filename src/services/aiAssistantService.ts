@@ -1,5 +1,10 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
-import { uploadMediaAssetAdmin, logAdminActivity } from './crmService';
+import {
+  uploadMediaAssetAdmin,
+  logAdminActivity,
+  syncSharedCrmStoreWithServer,
+  scheduleCloudCrmSnapshotUpload,
+} from './crmService';
 import {
   AIBrandProfile,
   AIUsageHistoryEntry,
@@ -511,7 +516,10 @@ export function generateDocumentNumber(docType: QuotationDocumentType, version =
 
 function getLocalQuotations(): QuotationRecord[] {
   try {
-    const raw = localStorage.getItem(QUOTATIONS_STORAGE_KEY);
+    const raw =
+      localStorage.getItem(QUOTATIONS_STORAGE_KEY) ||
+      localStorage.getItem('pe_crm_table_rows_v1_quotations') ||
+      localStorage.getItem('pe_admin_quotations_v1');
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
@@ -522,7 +530,10 @@ function getLocalQuotations(): QuotationRecord[] {
 
 function setLocalQuotations(list: QuotationRecord[]): void {
   try {
-    localStorage.setItem(QUOTATIONS_STORAGE_KEY, JSON.stringify(list));
+    const serialized = JSON.stringify(list);
+    localStorage.setItem(QUOTATIONS_STORAGE_KEY, serialized);
+    localStorage.setItem('pe_crm_table_rows_v1_quotations', serialized);
+    localStorage.setItem('pe_admin_quotations_v1', serialized);
   } catch {
     // Ignore quota errors
   }
@@ -600,21 +611,25 @@ function normalizeQuotationRecord(raw: Partial<QuotationRecord> & Record<string,
 
 async function syncQuotationsRegistryToSupabase(list: QuotationRecord[]): Promise<void> {
   if (typeof window !== 'undefined') {
+    setLocalQuotations(list);
     fetch('/api/crm/sync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ tables: { quotations: list } }),
     }).catch(() => {});
+    scheduleCloudCrmSnapshotUpload();
   }
 
   if (!isSupabaseConfigured) return;
   try {
     const serialized = JSON.stringify(list);
-    const { data: existingRow } = await supabase
+    const { data: existingRows } = await supabase
       .from('media_assets')
       .select('id')
       .eq('original_filename', QUOTATIONS_REGISTRY_FILENAME)
-      .maybeSingle();
+      .order('updated_at', { ascending: false })
+      .limit(1);
+    const existingRow = Array.isArray(existingRows) ? existingRows[0] : null;
 
     if (existingRow?.id) {
       await supabase
@@ -649,6 +664,8 @@ async function syncQuotationsRegistryToSupabase(list: QuotationRecord[]): Promis
 }
 
 export async function fetchAllQuotationsAdmin(): Promise<QuotationRecord[]> {
+  await syncSharedCrmStoreWithServer();
+
   const localList = getLocalQuotations();
   const mergedMap = new Map<string, QuotationRecord>();
 
@@ -659,74 +676,64 @@ export async function fetchAllQuotationsAdmin(): Promise<QuotationRecord[]> {
     }
   }
 
-  // Merge with shared CRM server store so both admin accounts see identical quotations
+  // Also check pe_crm_table_rows_v1_quotations synced from Supabase Storage / Express server
   if (typeof window !== 'undefined') {
     try {
-      const syncRes = await fetch('/api/crm/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tables: { quotations: Array.from(mergedMap.values()) } }),
-      });
-      if (syncRes.ok) {
-        const syncJson = (await syncRes.json().catch(() => null)) as {
-          tables?: { quotations?: Record<string, any>[] };
-          deletedIds?: { quotations?: string[] };
-        } | null;
-        const deletedSet = new Set(
-          Array.isArray(syncJson?.deletedIds?.quotations)
-            ? syncJson!.deletedIds!.quotations!.map(String)
-            : []
-        );
-        for (const id of deletedSet) {
-          mergedMap.delete(id);
-        }
-        const serverQuotes = syncJson?.tables?.quotations;
-        if (Array.isArray(serverQuotes)) {
-          for (const rawItem of serverQuotes) {
+      const rawSynced = window.localStorage.getItem('pe_crm_table_rows_v1_quotations');
+      if (rawSynced) {
+        const parsedSynced = JSON.parse(rawSynced);
+        if (Array.isArray(parsedSynced)) {
+          for (const rawItem of parsedSynced) {
             if (rawItem && typeof rawItem === 'object' && rawItem.id) {
-              const sid = String(rawItem.id);
-              if (deletedSet.has(sid)) continue;
-              const serverItem = normalizeQuotationRecord(rawItem);
-              const existingLocal = mergedMap.get(serverItem.id);
+              const syncedItem = normalizeQuotationRecord(rawItem);
+              const existingLocal = mergedMap.get(syncedItem.id);
               if (
                 !existingLocal ||
-                new Date(serverItem.updatedAt || 0).getTime() >=
+                new Date(syncedItem.updatedAt || 0).getTime() >=
                   new Date(existingLocal.updatedAt || 0).getTime()
               ) {
-                mergedMap.set(serverItem.id, serverItem);
+                mergedMap.set(syncedItem.id, syncedItem);
               }
             }
           }
         }
       }
     } catch {
-      // Non-blocking if backend server is offline
+      // Ignore parse error
     }
   }
 
   if (isSupabaseConfigured) {
     try {
-      const { data, error } = await supabase
+      const { data: rows, error } = await supabase
         .from('media_assets')
         .select('description, updated_at')
         .eq('original_filename', QUOTATIONS_REGISTRY_FILENAME)
-        .maybeSingle();
+        .order('updated_at', { ascending: false })
+        .limit(25);
 
-      if (!error && data?.description) {
-        const parsed = JSON.parse(data.description);
-        if (Array.isArray(parsed)) {
-          for (const rawItem of parsed) {
-            if (rawItem && typeof rawItem === 'object' && rawItem.id) {
-              const cloudItem = normalizeQuotationRecord(rawItem);
-              const existingLocal = mergedMap.get(cloudItem.id);
-              if (
-                !existingLocal ||
-                new Date(cloudItem.updatedAt || 0).getTime() >=
-                  new Date(existingLocal.updatedAt || 0).getTime()
-              ) {
-                mergedMap.set(cloudItem.id, cloudItem);
+      if (!error && Array.isArray(rows)) {
+        for (const row of rows) {
+          if (!row?.description) continue;
+          try {
+            const parsed = JSON.parse(row.description);
+            if (Array.isArray(parsed)) {
+              for (const rawItem of parsed) {
+                if (rawItem && typeof rawItem === 'object' && rawItem.id) {
+                  const cloudItem = normalizeQuotationRecord(rawItem);
+                  const existingLocal = mergedMap.get(cloudItem.id);
+                  if (
+                    !existingLocal ||
+                    new Date(cloudItem.updatedAt || 0).getTime() >=
+                      new Date(existingLocal.updatedAt || 0).getTime()
+                  ) {
+                    mergedMap.set(cloudItem.id, cloudItem);
+                  }
+                }
               }
             }
+          } catch {
+            // Ignore malformed description row
           }
         }
       }
@@ -735,7 +742,36 @@ export async function fetchAllQuotationsAdmin(): Promise<QuotationRecord[]> {
     }
   }
 
-  const finalQuotes = Array.from(mergedMap.values()).sort(
+  // Deduplicate accidental rapid-click duplicate quotations for the same inquiryId + projectTitle + total
+  const dedupedBySignature = new Map<string, QuotationRecord>();
+  const standaloneQuotes: QuotationRecord[] = [];
+
+  for (const q of mergedMap.values()) {
+    if (q.inquiryId) {
+      const sig = `${q.inquiryId}|${(q.projectTitle || '').trim().toLowerCase()}|${q.total}|${q.documentType}`;
+      const prev = dedupedBySignature.get(sig);
+      if (!prev) {
+        dedupedBySignature.set(sig, q);
+      } else {
+        // Prefer Sent/Accepted over Draft, and newer updatedAt
+        const prevIsSent = prev.status !== 'Draft';
+        const currIsSent = q.status !== 'Draft';
+        if (!prevIsSent && currIsSent) {
+          dedupedBySignature.set(sig, q);
+        } else if (prevIsSent === currIsSent) {
+          const prevTime = new Date(prev.updatedAt || prev.createdAt || 0).getTime();
+          const currTime = new Date(q.updatedAt || q.createdAt || 0).getTime();
+          if (currTime > prevTime) {
+            dedupedBySignature.set(sig, q);
+          }
+        }
+      }
+    } else {
+      standaloneQuotes.push(q);
+    }
+  }
+
+  const finalQuotes = [...Array.from(dedupedBySignature.values()), ...standaloneQuotes].sort(
     (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
   );
   setLocalQuotations(finalQuotes);
