@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import {
   fetchClientProjects,
+  fetchClientInquiries,
   fetchClientVisibleTasks,
   fetchClientFiles,
   fetchClientInvoices,
@@ -30,6 +31,7 @@ import { InquiryForm } from '../components/InquiryForm';
 import { ProjectStatusBadge, getProjectStatusBadgeConfig } from './AdminCorePages';
 import {
   ProjectRecord,
+  InquiryRecord,
   TaskRecord,
   DeliverableFile,
   InvoiceRecord,
@@ -72,28 +74,33 @@ import { useToast } from '../contexts/ToastContext';
 export const ClientDashboardPage: React.FC = () => {
   const { user, profile } = useAuth();
   const [projects, setProjects] = useState<ProjectRecord[]>([]);
+  const [inquiries, setInquiries] = useState<InquiryRecord[]>([]);
   const [files, setFiles] = useState<DeliverableFile[]>([]);
   const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
   const [quotations, setQuotations] = useState<QuotationRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const clientEmail = profile?.email || user?.email || undefined;
+
   useEffect(() => {
     if (!user) return;
     Promise.all([
-      fetchClientProjects(user.uid),
-      fetchClientFiles(user.uid),
-      fetchClientInvoices(user.uid),
-      fetchClientQuotations(user.uid, profile?.email || user.email || undefined).catch(() => []),
+      fetchClientProjects(user.uid, clientEmail),
+      fetchClientInquiries(user.uid, clientEmail).catch(() => []),
+      fetchClientFiles(user.uid, clientEmail),
+      fetchClientInvoices(user.uid, clientEmail),
+      fetchClientQuotations(user.uid, clientEmail).catch(() => []),
     ])
-      .then(([p, f, inv, q]) => {
+      .then(([p, inq, f, inv, q]) => {
         setProjects(p);
+        setInquiries(inq);
         setFiles(f);
         setInvoices(inv);
         setQuotations(q);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [user, profile?.email]);
+  }, [user, clientEmail]);
 
   const activeProjects = projects.filter((p) => !['Completed', 'Cancelled'].includes(p.status));
   const pendingQuotations = quotations.filter((q) => q.status === 'Sent');
@@ -351,6 +358,50 @@ export const ClientDashboardPage: React.FC = () => {
           )}
         </div>
       </div>
+      {inquiries.length > 0 && (
+        <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-semibold text-[#F8FAFC]">
+                Booked Service Orders ({inquiries.length})
+              </h2>
+              <p className="text-xs text-[#94A3B8]">
+                Service bookings submitted under {clientEmail || 'your account'} are automatically synced to your project workspace.
+              </p>
+            </div>
+            <Link
+              to="/portal/book"
+              className="text-xs font-semibold text-[#10B981] hover:underline"
+            >
+              + Book Another Service
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+            {inquiries.slice(0, 4).map((inq) => (
+              <div
+                key={inq.id}
+                className="p-3.5 bg-[#132A4A]/70 border border-[#1E3A5F] rounded-lg flex items-center justify-between gap-3"
+              >
+                <div className="min-w-0">
+                  <p className="font-semibold text-[#F8FAFC] truncate">{inq.serviceRequired}</p>
+                  <p className="text-[#94A3B8] mt-0.5">
+                    Budget: <span className="font-mono text-[#2DD4BF]">{inq.budgetRange || 'Scoped per brief'}</span> · Target: {inq.preferredDeadline || 'Flexible'}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <CrmStatusBadge status={inq.status} />
+                  <Link
+                    to={`/portal/projects/${inq.id}`}
+                    className="font-semibold text-[#F8FAFC] hover:text-[#10B981]"
+                  >
+                    Open →
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -359,21 +410,30 @@ export const ClientDashboardPage: React.FC = () => {
 // 2. CLIENT MY PROJECTS & PROJECT DETAILS PAGES
 // ============================================================================
 export const ClientProjectsPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [projects, setProjects] = useState<ProjectRecord[]>([]);
+  const clientEmail = profile?.email || user?.email || undefined;
 
   useEffect(() => {
     if (!user) return;
-    fetchClientProjects(user.uid).then(setProjects).catch(() => {});
-  }, [user]);
+    fetchClientProjects(user.uid, clientEmail).then(setProjects).catch(() => {});
+  }, [user, clientEmail]);
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-editorial text-2xl font-semibold text-[#F8FAFC]">My Projects</h1>
-        <p className="text-xs text-[#94A3B8] mt-1">
-          View project progress, deadlines, deliverables, and leave revision feedback.
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="font-editorial text-2xl font-semibold text-[#F8FAFC]">My Projects & Booked Orders</h1>
+          <p className="text-xs text-[#94A3B8] mt-1">
+            View project progress, studio updates, deadlines, deliverables, and leave revision feedback.
+          </p>
+        </div>
+        <Link
+          to="/portal/book"
+          className="px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg"
+        >
+          + Book New Service
+        </Link>
       </div>
 
       {projects.length === 0 ? (
@@ -444,14 +504,15 @@ export const ClientProjectDetailsPage: React.FC = () => {
   const [testimonialFeedback, setTestimonialFeedback] = useState<string>('');
   const [testimonialSubmitted, setTestimonialSubmitted] = useState<boolean>(false);
 
+  const clientEmail = profile?.email || user?.email || undefined;
 
   const loadAll = useCallback(async () => {
     if (!user || !projectId) return;
     const [projs, tsks, fls, invs, msgs] = await Promise.all([
-      fetchClientProjects(user.uid),
-      fetchClientVisibleTasks(user.uid),
-      fetchClientFiles(user.uid),
-      fetchClientInvoices(user.uid).catch(() => []),
+      fetchClientProjects(user.uid, clientEmail),
+      fetchClientVisibleTasks(user.uid, clientEmail),
+      fetchClientFiles(user.uid, clientEmail),
+      fetchClientInvoices(user.uid, clientEmail).catch(() => []),
       fetchProjectMessages(projectId, false, user.uid),
     ]);
     setProject(projs.find((p) => p.id === projectId) || null);
@@ -460,7 +521,7 @@ export const ClientProjectDetailsPage: React.FC = () => {
     setInvoices(invs);
     setMessages(msgs);
     setSignOffRecord(getMilestoneApprovalSignOff(projectId));
-  }, [user, projectId]);
+  }, [user, projectId, clientEmail]);
 
   useEffect(() => {
     loadAll();
@@ -1045,13 +1106,14 @@ export const ClientProjectDetailsPage: React.FC = () => {
 // 3. CLIENT TIMELINE, FILES, INVOICES, PAYMENT GUIDE & MESSAGES PAGES
 // ============================================================================
 export const ClientTimelinePage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [tasks, setTasks] = useState<TaskRecord[]>([]);
+  const clientEmail = profile?.email || user?.email || undefined;
 
   useEffect(() => {
     if (!user) return;
-    fetchClientVisibleTasks(user.uid).then(setTasks).catch(() => {});
-  }, [user]);
+    fetchClientVisibleTasks(user.uid, clientEmail).then(setTasks).catch(() => {});
+  }, [user, clientEmail]);
 
   return (
     <div className="space-y-6">
@@ -1079,14 +1141,15 @@ export const ClientTimelinePage: React.FC = () => {
 
 
 export const ClientFilesPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [files, setFiles] = useState<DeliverableFile[]>([]);
   const [previewItem, setPreviewItem] = useState<PreviewableMediaItem | null>(null);
+  const clientEmail = profile?.email || user?.email || undefined;
 
   useEffect(() => {
     if (!user) return;
-    fetchClientFiles(user.uid).then(setFiles).catch(() => {});
-  }, [user]);
+    fetchClientFiles(user.uid, clientEmail).then(setFiles).catch(() => {});
+  }, [user, clientEmail]);
 
   const previewGalleryItems: PreviewableMediaItem[] = files.map((f) => ({
     id: f.id,
@@ -1199,9 +1262,10 @@ export const ClientInvoicesPage: React.FC = () => {
 
   const loadClientBilling = useCallback(async () => {
     if (!user) return;
+    const clientEmail = profile?.email || user.email || undefined;
     const [invList, quoteList] = await Promise.all([
-      fetchClientInvoices(user.uid).catch(() => []),
-      fetchClientQuotations(user.uid, profile?.email || user.email || undefined).catch(() => []),
+      fetchClientInvoices(user.uid, clientEmail).catch(() => []),
+      fetchClientQuotations(user.uid, clientEmail).catch(() => []),
     ]);
     setInvoices(invList);
     setQuotations(quoteList);
@@ -1752,13 +1816,14 @@ export const ClientPaymentInstructionsPage: React.FC = () => (
 );
 
 export const ClientMessagesPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [projects, setProjects] = useState<ProjectRecord[]>([]);
+  const clientEmail = profile?.email || user?.email || undefined;
 
   useEffect(() => {
     if (!user) return;
-    fetchClientProjects(user.uid).then(setProjects).catch(() => {});
-  }, [user]);
+    fetchClientProjects(user.uid, clientEmail).then(setProjects).catch(() => {});
+  }, [user, clientEmail]);
 
   return (
     <div className="space-y-6">

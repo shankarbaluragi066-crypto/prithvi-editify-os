@@ -316,6 +316,7 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({
         budgetRange: finalBudget.slice(0, 100),
         description: structuredServiceMeta.slice(0, 3000),
         referenceFileUrl,
+        clientUserId: user?.uid,
       });
 
       const confirmationPayload: SubmittedOrderConfirmation = {
@@ -367,7 +368,7 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({
 
         <p className="text-sm text-[#94A3B8] leading-relaxed">
           Thank you, <span className="font-semibold text-[#F8FAFC]">{submittedOrder.fullName}</span>! Your booking for{' '}
-          <span className="font-semibold text-[#F8FAFC]">{submittedOrder.serviceRequired}</span> has been received by Prithvi Editify. We will review your project brief and reach out shortly with your confirmed timeline.
+          <span className="font-semibold text-[#F8FAFC]">{submittedOrder.serviceRequired}</span> has been received by Prithvi Editify and added to your Client Portal workspace.
         </p>
 
         {/* Booked Order Summary Receipt */}
@@ -404,10 +405,17 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({
         </div>
 
         <div className="pt-2 flex flex-wrap items-center gap-3">
+          <Link
+            to={user ? `/portal/projects/${submittedOrder.id}` : '/portal/projects'}
+            className="px-4 py-2.5 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-colors whitespace-nowrap shrink-0"
+          >
+            Track Order in Client Portal →
+          </Link>
+
           <button
             type="button"
             onClick={() => setSubmittedOrder(null)}
-            className="px-4 py-2.5 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+            className="px-4 py-2.5 text-xs font-semibold text-[#F8FAFC] bg-[#132A4A] hover:bg-[#1E3A5F] border border-[#1E3A5F] rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
           >
             Book Another Service
           </button>

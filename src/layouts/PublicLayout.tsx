@@ -53,8 +53,8 @@ export const PublicLayout: React.FC = () => {
     }
   }, [custom.seoTitle, custom.seoDescription]);
 
-  const portalDestination = user ? '/portal' : '/login';
-  const portalLabel = custom.navPortalButtonLabel || 'Client Portal';
+  const portalDestination = user ? (isAdmin ? '/admin' : '/portal') : '/login';
+  const portalLabel = user && isAdmin ? 'Admin Portal' : custom.navPortalButtonLabel || 'Client Portal';
   const whatsappUrl = buildWhatsAppLink(settings.whatsappNumber, settings.whatsappDefaultMessage);
 
   const primaryBg = custom.primaryColor || '#040D1A';
@@ -239,6 +239,13 @@ export const PublicLayout: React.FC = () => {
                   {custom.navContactLabel || 'Contact'}
                 </Link>
               )}
+              <Link
+                to={portalDestination}
+                onClick={() => setMobileOpen(false)}
+                className="py-1.5 font-semibold text-[#2DD4BF] hover:text-[#10B981]"
+              >
+                {portalLabel} →
+              </Link>
               <div className="pt-2 border-t border-[#1E3A5F]">
                 <PWAInstallButton compact />
               </div>

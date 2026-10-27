@@ -1055,19 +1055,32 @@ export const AdminInquiriesPage: React.FC = () => {
 
   const handleConvertInquiry = async (inq: InquiryRecord) => {
     try {
-      const clientId = await saveClientAdmin({
-        userId: '',
-        fullName: inq.fullName,
-        email: inq.email,
-        phone: inq.phone,
-        companyName: inq.companyName || inq.fullName,
-        country: 'India',
-        preferredContact: 'WhatsApp',
-        accountStatus: 'active',
-        adminNotes: `Converted from inquiry (${inq.id}). Budget range: ${inq.budgetRange}`,
-      });
+      const [allClients, allProjects, servicesList] = await Promise.all([
+        fetchAllClientsAdmin().catch(() => []),
+        fetchAllProjectsAdmin().catch(() => []),
+        fetchAllServicesAdmin().catch(() => []),
+      ]);
 
-      const servicesList = await fetchAllServicesAdmin().catch(() => []);
+      const cleanEmail = (inq.email || '').trim().toLowerCase();
+      const existingClient = allClients.find(
+        (c) => (c.email || '').trim().toLowerCase() === cleanEmail
+      );
+
+      const clientId = await saveClientAdmin(
+        {
+          userId: existingClient?.userId || '',
+          fullName: inq.fullName,
+          email: inq.email,
+          phone: inq.phone,
+          companyName: inq.companyName || inq.fullName,
+          country: 'India',
+          preferredContact: 'WhatsApp',
+          accountStatus: 'active',
+          adminNotes: `Converted from inquiry (${inq.id}). Budget range: ${inq.budgetRange}`,
+        },
+        existingClient
+      );
+
       const aiDraftedQuote = await generateAIDraftedQuotationFromInquiry(inq, servicesList);
 
       const today = new Date().toISOString().split('T')[0];
@@ -1082,10 +1095,12 @@ export const AdminInquiriesPage: React.FC = () => {
       const projectTitle =
         aiDraftedQuote.projectTitle || `${inq.serviceRequired} — ${inq.companyName || inq.fullName}`;
 
+      const existingProject = allProjects.find((p) => p.id === inq.id);
+
       const projectId = await saveProjectAdmin(
         {
           clientId,
-          clientUserId: '',
+          clientUserId: existingClient?.userId || existingProject?.clientUserId || '',
           clientName: inq.fullName,
           clientEmail: inq.email,
           title: projectTitle,
@@ -1097,10 +1112,11 @@ export const AdminInquiriesPage: React.FC = () => {
           deadline: inq.preferredDeadline || today,
           priority: 'Medium',
           status: 'Planned',
-          progress: 10,
-          latestUpdate: 'Converted from inquiry with auto-drafted INR Quotation & milestones.',
+          progress: 15,
+          latestUpdate: 'Converted from inquiry with INR Quotation & scheduled production milestones.',
         },
-        `Converted from inquiry ID ${inq.id}. Internal notes: ${inq.internalNotes || 'None'}`
+        `Converted from inquiry ID ${inq.id}. Internal notes: ${inq.internalNotes || 'None'}`,
+        existingProject
       );
 
       // Initialize default production milestones for the new project
@@ -1111,21 +1127,21 @@ export const AdminInquiriesPage: React.FC = () => {
           ? 'tpl-yt-video'
           : 'tpl-social-ads',
         projectId,
-        '',
+        existingClient?.userId || existingProject?.clientUserId || '',
         today
       );
       for (const taskItem of defaultTasks) {
         await saveTaskAdmin(taskItem).catch(() => {});
       }
 
-      // Save the draft INR Quotation linked to the new Client & Project
+      // Save the INR Quotation linked to the Client & Project so it appears in the Client Portal
       const savedQuote = await saveQuotationAdmin({
         quotationNumber: quoteNumber,
         documentType: 'Quotation',
         version: 1,
         inquiryId: inq.id,
         clientId,
-        clientUserId: '',
+        clientUserId: existingClient?.userId || existingProject?.clientUserId || '',
         clientName: inq.fullName,
         clientEmail: inq.email,
         projectTitle,
@@ -1142,7 +1158,7 @@ export const AdminInquiriesPage: React.FC = () => {
         taxAmount: 0,
         total: quoteSubtotal,
         currency: 'INR',
-        status: 'Draft',
+        status: 'Sent',
         termsAndConditions:
           '50% advance via UPI/NEFT to initiate production. Remaining 50% balance payable upon final preview approval in Client Portal.',
         notes: `Auto-converted from website inquiry (${inq.budgetRange}).`,
@@ -1152,8 +1168,8 @@ export const AdminInquiriesPage: React.FC = () => {
       await updateInquiryAdmin(inq, { status: 'Converted' });
       showToast(
         'success',
-        '1-Click Converted: Client + Project + Draft INR Quote!',
-        `Created Client, Project (${defaultTasks.length} milestones), and Quote ${savedQuote.quotationNumber} (${formatINR(savedQuote.total)}).`
+        '1-Click Converted: Client + Project + INR Quote!',
+        `Synced Client, Project (${defaultTasks.length} milestones), and Quote ${savedQuote.quotationNumber} (${formatINR(savedQuote.total)}).`
       );
       navigate(`/admin/projects/${projectId}`);
     } catch (err) {

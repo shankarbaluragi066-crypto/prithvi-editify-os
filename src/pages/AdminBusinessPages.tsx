@@ -4072,19 +4072,19 @@ export const AdminSettingsPage: React.FC = () => {
 };
 
 export const SharedNotificationsPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [items, setItems] = useState<
     { id: string; title: string; message: string; type: string; read: boolean }[]
   >([]);
 
   useEffect(() => {
     if (!user) return;
-    fetchUserNotifications(user.uid)
+    fetchUserNotifications(user.uid, profile?.email || user.email || undefined)
       .then((notifs) => {
         setItems(notifs);
       })
       .catch(() => {});
-  }, [user]);
+  }, [user, profile?.email]);
 
   return (
     <div className="space-y-6">

@@ -97,10 +97,15 @@ export function isRlsOrPermissionError(error: unknown): boolean {
   const msg = String((error as { message?: unknown }).message || '').toLowerCase();
   return (
     code === '42501' ||
+    code === '23503' ||
+    code === '22P02' ||
     msg.includes('row-level security') ||
     msg.includes('violates row-level security policy') ||
     msg.includes('permission denied') ||
     msg.includes('new row violates') ||
+    msg.includes('foreign key constraint') ||
+    msg.includes('is not present in table') ||
+    msg.includes('invalid input syntax for type uuid') ||
     msg.includes('jwt')
   );
 }
@@ -968,64 +973,186 @@ export async function fetchActivityLogs(): Promise<ActivityLog[]> {
 }
 
 // ============================================================================
+// CLIENT IDENTITY & BUDGET RESOLUTION HELPERS
+// ============================================================================
+function parseInrBudgetEstimate(budgetRange: string | undefined | null): number {
+  const raw = String(budgetRange || '').replace(/,/g, '');
+  const numbers = raw.match(/\d+/g)?.map((n) => Number(n)).filter((n) => !Number.isNaN(n) && n > 0) || [];
+  if (numbers.length === 0) return 1500;
+  if (numbers.length === 1) return numbers[0];
+  return Math.round((numbers[0] + numbers[1]) / 2);
+}
+
+async function resolveClientIdentity(
+  clientUserId?: string,
+  clientEmail?: string
+): Promise<{ uid: string; email: string; clientIds: Set<string>; userIds: Set<string> }> {
+  let uid = String(clientUserId || '').trim();
+  let email = String(clientEmail || '').trim().toLowerCase();
+
+  if (!uid || !email) {
+    const currentUser = await getCurrentUser();
+    if (!uid && currentUser?.id) {
+      uid = String(currentUser.id).trim();
+    }
+    if (!email && currentUser?.email) {
+      email = String(currentUser.email).trim().toLowerCase();
+    }
+  }
+
+  if (typeof window !== 'undefined' && (!uid || !email)) {
+    try {
+      const raw = window.localStorage.getItem(LOCAL_GOOGLE_SESSION_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as {
+          user?: { uid?: string; id?: string; email?: string | null };
+          profile?: { uid?: string; email?: string | null };
+        };
+        if (!uid) {
+          uid = String(parsed?.user?.uid || parsed?.user?.id || parsed?.profile?.uid || '').trim();
+        }
+        if (!email) {
+          email = String(parsed?.profile?.email || parsed?.user?.email || '').trim().toLowerCase();
+        }
+      }
+    } catch {
+      // Ignore storage parse error
+    }
+  }
+
+  const clientIds = new Set<string>();
+  const userIds = new Set<string>();
+  if (uid) userIds.add(uid);
+
+  const localClients = mergeRemoteAndLocalRows('clients', [], mapClientRow);
+  for (const c of localClients) {
+    const cEmail = (c.email || '').trim().toLowerCase();
+    const cUid = (c.userId || '').trim();
+    if ((email && cEmail === email) || (uid && cUid === uid)) {
+      if (c.id) clientIds.add(c.id);
+      if (cUid) userIds.add(cUid);
+      if (!email && cEmail) email = cEmail;
+    }
+  }
+
+  return { uid, email, clientIds, userIds };
+}
+
+// ============================================================================
 // NOTIFICATIONS & USER PROFILE
 // ============================================================================
+function mapNotificationRow(row: Record<string, any>): NotificationRecord {
+  return {
+    id: String(row.id),
+    recipientUserId: String(row.recipient_user_id_raw || row.recipient_user_id || ''),
+    type: (row.type || 'Project status updated') as NotificationType,
+    title: String(row.title || ''),
+    message: String(row.message || ''),
+    link: String(row.link || ''),
+    read: Boolean(row.read),
+    createdAt: row.created_at || new Date().toISOString(),
+  };
+}
+
 export async function createNotification(params: {
-  recipientUserId: string;
+  recipientUserId?: string;
+  recipientEmail?: string;
   type: NotificationType;
   title: string;
   message: string;
   link: string;
 }): Promise<void> {
-  const recipientUuid = toNullableUuid(params.recipientUserId);
+  const cleanRecipientUid = String(params.recipientUserId || '').trim();
+  const cleanRecipientEmail = String(params.recipientEmail || '').trim().toLowerCase();
+  if (!cleanRecipientUid && !cleanRecipientEmail) return;
+
+  const nowIso = new Date().toISOString();
+  const notifId = crypto.randomUUID();
+  const localRow = {
+    id: notifId,
+    recipient_user_id: toNullableUuid(cleanRecipientUid) || cleanRecipientUid,
+    recipient_user_id_raw: cleanRecipientUid,
+    recipient_email: cleanRecipientEmail,
+    type: params.type,
+    title: truncate(params.title, 160),
+    message: truncate(params.message, 500),
+    link: truncate(params.link, 200),
+    read: false,
+    created_at: nowIso,
+    updated_at: nowIso,
+  };
+
+  upsertLocalTableRow('notifications', localRow);
+
+  const recipientUuid = toNullableUuid(cleanRecipientUid);
   if (!isSupabaseConfigured || !recipientUuid) return;
   try {
     await supabase.from('notifications').insert({
+      id: notifId,
       recipient_user_id: recipientUuid,
       type: params.type,
-      title: truncate(params.title, 160),
-      message: truncate(params.message, 500),
-      link: truncate(params.link, 200),
+      title: localRow.title,
+      message: localRow.message,
+      link: localRow.link,
       read: false,
     });
   } catch {
-    // Best-effort notification
+    // Best-effort notification — already persisted in local store
   }
 }
 
-export async function fetchUserNotifications(userId: string): Promise<NotificationRecord[]> {
-  const validUuid = toNullableUuid(userId);
-  if (!isSupabaseConfigured || !validUuid) return [];
-  const { data, error } = await supabase
-    .from('notifications')
-    .select('*')
-    .eq('recipient_user_id', validUuid)
-    .order('created_at', { ascending: false });
+export async function fetchUserNotifications(
+  userId: string,
+  userEmail?: string
+): Promise<NotificationRecord[]> {
+  const { uid, email, userIds } = await resolveClientIdentity(userId, userEmail);
+  const validUuid = toNullableUuid(uid);
 
-  if (error) {
-    if (isMissingSchemaError(error)) return [];
-    handleSupabaseError(error, 'fetchUserNotifications');
+  let remoteData: Record<string, any>[] = [];
+  if (isSupabaseConfigured && validUuid) {
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('recipient_user_id', validUuid)
+      .order('created_at', { ascending: false });
+
+    if (!error && Array.isArray(data)) {
+      remoteData = data;
+    }
   }
-  return (data || []).map((row) => ({
-    id: String(row.id),
-    recipientUserId: String(row.recipient_user_id || ''),
-    type: row.type as NotificationType,
-    title: String(row.title || ''),
-    message: String(row.message || ''),
-    link: String(row.link || ''),
-    read: Boolean(row.read),
-    createdAt: row.created_at,
-  }));
+
+  const allRawRows = mergeRemoteAndLocalRows('notifications', remoteData);
+  const matched = allRawRows.filter((row) => {
+    const rowUid = String(row.recipient_user_id_raw || row.recipient_user_id || '').trim();
+    const rowEmail = String(row.recipient_email || '').trim().toLowerCase();
+    return (
+      (rowUid && (rowUid === uid || userIds.has(rowUid))) ||
+      (email && rowEmail && rowEmail === email)
+    );
+  });
+
+  return matched
+    .map(mapNotificationRow)
+    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
 }
 
 export async function markNotificationRead(notificationId: string): Promise<void> {
+  const existingLocal = readLocalTableRows('notifications').find(
+    (r) => String(r.id) === String(notificationId)
+  );
+  if (existingLocal) {
+    upsertLocalTableRow('notifications', { ...existingLocal, read: true });
+  } else {
+    upsertLocalTableRow('notifications', { id: notificationId, read: true });
+  }
+
   if (!isSupabaseConfigured) return;
   const { error } = await supabase
     .from('notifications')
     .update({ read: true })
     .eq('id', notificationId);
 
-  if (error && !isMissingSchemaError(error)) {
+  if (error && !isMissingSchemaError(error) && !isRlsOrPermissionError(error)) {
     handleSupabaseError(error, 'markNotificationRead');
   }
 }
@@ -1835,15 +1962,19 @@ export async function submitInquiryRecord(input: {
   description: string;
   referenceFileUrl?: string;
   privacyConsent: boolean;
+  clientUserId?: string;
 }): Promise<string> {
   const referenceId = crypto.randomUUID();
   const cleanName = truncate(input.fullName, 120) || 'Client Inquiry';
+  const cleanEmail = truncate(input.email.toLowerCase(), 254);
   const nowIso = new Date().toISOString();
+  const currentUser = await getCurrentUser();
+  const effectiveUserId = String(input.clientUserId || currentUser?.id || '').trim();
 
   const localRecord: InquiryRecord = {
     id: referenceId,
     fullName: cleanName,
-    email: truncate(input.email.toLowerCase(), 254),
+    email: cleanEmail,
     phone: truncate(input.phone, 40),
     companyName: truncate(input.companyName || '', 150),
     serviceRequired: truncate(input.serviceRequired, 120),
@@ -1911,6 +2042,96 @@ export async function submitInquiryRecord(input: {
     }
   }
 
+  // Ensure a matching ClientRecord & tracked ProjectRecord exist so the customer immediately sees their booked order in Client Portal
+  try {
+    const existingClients = mergeRemoteAndLocalRows('clients', [], mapClientRow);
+    const matchedClient = existingClients.find(
+      (c) =>
+        (cleanEmail && c.email.trim().toLowerCase() === cleanEmail) ||
+        (effectiveUserId && c.userId === effectiveUserId)
+    );
+    let clientId = matchedClient?.id || '';
+    if (!clientId) {
+      clientId = crypto.randomUUID();
+      const clientRow: Record<string, any> = {
+        id: clientId,
+        user_id: toNullableUuid(effectiveUserId) || effectiveUserId || null,
+        full_name: localRecord.fullName,
+        email: localRecord.email,
+        phone: localRecord.phone,
+        company_name: localRecord.companyName || localRecord.fullName,
+        country: 'India',
+        preferred_contact: 'WhatsApp',
+        account_status: 'active',
+        admin_notes: `Auto-created from Service Booking #${referenceId.slice(0, 8).toUpperCase()} (${localRecord.budgetRange})`,
+        created_at: nowIso,
+        updated_at: nowIso,
+      };
+      upsertLocalTableRow('clients', clientRow);
+      if (isSupabaseConfigured) {
+        adaptiveInsertRow(
+          'clients',
+          { ...clientRow, user_id: toNullableUuid(effectiveUserId) },
+          { name: localRecord.fullName, status: 'active' },
+          'submitInquiryRecord (auto-client)'
+        ).catch(() => {});
+      }
+    }
+
+    const shortOrderRef = referenceId.slice(0, 8).toUpperCase();
+    const projectTitle = truncate(
+      `${localRecord.serviceRequired} — ${localRecord.companyName || localRecord.fullName}`,
+      160
+    );
+    const initialUpdateText = `Order #${shortOrderRef} booked (${localRecord.budgetRange}). Service brief received by Prithvi Editify — Shankar Baluragi is reviewing your requirements and timeline.`;
+    const projectRow: Record<string, any> = {
+      id: referenceId,
+      client_id: toNullableUuid(clientId) || clientId || null,
+      client_user_id: toNullableUuid(effectiveUserId) || effectiveUserId || null,
+      client_name: localRecord.fullName,
+      client_email: localRecord.email,
+      title: projectTitle,
+      description: localRecord.description,
+      service_type: localRecord.serviceRequired,
+      brief: localRecord.description,
+      budget: parseInrBudgetEstimate(localRecord.budgetRange),
+      start_date: nowIso.split('T')[0],
+      deadline: localRecord.preferredDeadline || 'Flexible / Standard Turnaround',
+      priority: 'Medium',
+      status: 'Planned',
+      progress: 10,
+      latest_update: initialUpdateText,
+      created_at: nowIso,
+      updated_at: nowIso,
+    };
+
+    upsertLocalTableRow('projects', projectRow);
+
+    if (isSupabaseConfigured) {
+      adaptiveInsertRow(
+        'projects',
+        {
+          ...projectRow,
+          client_id: toNullableUuid(clientId),
+          client_user_id: toNullableUuid(effectiveUserId),
+        },
+        { name: projectTitle, project_name: projectTitle },
+        'submitInquiryRecord (auto-project)'
+      ).catch(() => {});
+    }
+
+    await createNotification({
+      recipientUserId: effectiveUserId,
+      recipientEmail: localRecord.email,
+      type: 'New project assigned',
+      title: `Order Booked (#${shortOrderRef}): ${localRecord.serviceRequired}`,
+      message: initialUpdateText,
+      link: `/portal/projects/${referenceId}`,
+    });
+  } catch {
+    // Non-blocking project sync
+  }
+
   return referenceId;
 }
 
@@ -1934,10 +2155,23 @@ export async function fetchAllInquiriesAdmin(): Promise<InquiryRecord[]> {
   );
 }
 
+export async function fetchClientInquiries(
+  clientUserId?: string,
+  clientEmail?: string
+): Promise<InquiryRecord[]> {
+  const { email } = await resolveClientIdentity(clientUserId, clientEmail);
+  if (!email) return [];
+  const allInquiries = await fetchAllInquiriesAdmin().catch(() => readLocalInquiriesBackup());
+  return allInquiries.filter((inq) => (inq.email || '').trim().toLowerCase() === email);
+}
+
 export async function updateInquiryAdmin(
   existing: InquiryRecord,
   updates: Partial<Pick<InquiryRecord, 'status' | 'internalNotes' | 'leadSource'>>
 ): Promise<void> {
+  const nextStatus = updates.status ?? existing.status;
+  const nowIso = new Date().toISOString();
+
   if (typeof window !== 'undefined') {
     try {
       const localList = readLocalInquiriesBackup();
@@ -1945,10 +2179,10 @@ export async function updateInquiryAdmin(
         item.id === existing.id
           ? {
               ...item,
-              status: updates.status ?? existing.status,
+              status: nextStatus,
               leadSource: truncate(updates.leadSource ?? existing.leadSource, 80),
               internalNotes: truncate(updates.internalNotes ?? existing.internalNotes, 2000),
-              updatedAt: new Date().toISOString(),
+              updatedAt: nowIso,
             }
           : item
       );
@@ -1962,10 +2196,10 @@ export async function updateInquiryAdmin(
     const { error } = await supabase
       .from('inquiries')
       .update({
-        status: updates.status ?? existing.status,
+        status: nextStatus,
         lead_source: truncate(updates.leadSource ?? existing.leadSource, 80),
         internal_notes: truncate(updates.internalNotes ?? existing.internalNotes, 2000),
-        updated_at: new Date().toISOString(),
+        updated_at: nowIso,
       })
       .eq('id', existing.id);
 
@@ -1974,8 +2208,86 @@ export async function updateInquiryAdmin(
     }
   }
 
+  // Sync inquiry status update to the customer's linked project in Client Portal
+  try {
+    const allProjects = await fetchAllProjectsAdmin().catch(() => []);
+    const linkedProject = allProjects.find(
+      (p) =>
+        p.id === existing.id ||
+        (p.clientEmail.trim().toLowerCase() === existing.email.trim().toLowerCase() &&
+          p.serviceType.toLowerCase() === existing.serviceRequired.toLowerCase())
+    );
+    if (linkedProject && updates.status && updates.status !== existing.status) {
+      const statusMap: Record<
+        InquiryStatus,
+        { status: ProjectRecord['status']; progress: number; message: string }
+      > = {
+        New: {
+          status: 'Planned',
+          progress: 10,
+          message: `Order status: New — Brief queued for review by Shankar Baluragi.`,
+        },
+        Contacted: {
+          status: 'Planned',
+          progress: 20,
+          message: `Studio Update: Shankar Baluragi has reviewed your brief and reached out.`,
+        },
+        Qualified: {
+          status: 'In Progress',
+          progress: 25,
+          message: `Studio Update: Your project brief is qualified and scheduled for production.`,
+        },
+        'Proposal Sent': {
+          status: 'Planned',
+          progress: 30,
+          message: `Studio Update: Official INR Quotation prepared for your review in the Client Portal.`,
+        },
+        Converted: {
+          status: 'In Progress',
+          progress: 40,
+          message: `Studio Update: Your booking has been converted into an active studio production project!`,
+        },
+        Closed: {
+          status: 'Completed',
+          progress: 100,
+          message: `Studio Update: Booking marked as completed / closed.`,
+        },
+        Spam: {
+          status: 'Cancelled',
+          progress: 0,
+          message: `Booking cancelled.`,
+        },
+      };
+      const mapped = statusMap[nextStatus];
+      if (mapped) {
+        await adaptiveUpdateRow(
+          'projects',
+          linkedProject.id,
+          {
+            status: mapped.status,
+            progress: Math.max(linkedProject.progress, mapped.progress),
+            latest_update: mapped.message,
+            updated_at: nowIso,
+          },
+          {},
+          'updateInquiryAdmin (sync project)'
+        );
+        await createNotification({
+          recipientUserId: linkedProject.clientUserId,
+          recipientEmail: existing.email,
+          type: 'Project status updated',
+          title: `Booking Update: ${linkedProject.title}`,
+          message: mapped.message,
+          link: `/portal/projects/${linkedProject.id}`,
+        });
+      }
+    }
+  } catch {
+    // Non-fatal sync
+  }
+
   await logAdminActivity(
-    `Updated Inquiry Status (${updates.status || existing.status})`,
+    `Updated Inquiry Status (${nextStatus})`,
     'inquiry',
     existing.id,
     existing.fullName
@@ -2243,29 +2555,96 @@ export async function fetchAllProjectsAdmin(): Promise<ProjectRecord[]> {
   return mergeRemoteAndLocalRows('projects', data || [], mapProjectRow);
 }
 
-export async function fetchClientProjects(clientUserId: string): Promise<ProjectRecord[]> {
-  const validUuid = toNullableUuid(clientUserId);
-  if (!isSupabaseConfigured || !validUuid) {
-    return mergeRemoteAndLocalRows('projects', [], mapProjectRow).filter(
-      (p) => p.clientUserId === clientUserId
-    );
-  }
-  const { data, error } = await supabase
-    .from('projects')
-    .select('*')
-    .eq('client_user_id', validUuid)
-    .order('created_at', { ascending: false });
+export async function fetchClientProjects(
+  clientUserId: string,
+  clientEmail?: string
+): Promise<ProjectRecord[]> {
+  const { uid, email, clientIds, userIds } = await resolveClientIdentity(clientUserId, clientEmail);
+  const validUuid = toNullableUuid(uid);
 
-  if (error) {
-    if (isMissingSchemaError(error) || isRlsOrPermissionError(error)) {
-      return mergeRemoteAndLocalRows('projects', [], mapProjectRow).filter(
-        (p) => p.clientUserId === clientUserId
-      );
+  let remoteRows: Record<string, any>[] = [];
+  if (isSupabaseConfigured) {
+    const { data, error } = await supabase
+      .from('projects')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (!error && Array.isArray(data)) {
+      remoteRows = data;
+    } else if (validUuid) {
+      const fallback = await supabase
+        .from('projects')
+        .select('*')
+        .eq('client_user_id', validUuid)
+        .order('created_at', { ascending: false });
+      if (!fallback.error && Array.isArray(fallback.data)) {
+        remoteRows = fallback.data;
+      }
     }
-    handleSupabaseError(error, 'fetchClientProjects');
   }
-  return mergeRemoteAndLocalRows('projects', data || [], mapProjectRow).filter(
-    (p) => !validUuid || p.clientUserId === validUuid || (data || []).some((r: any) => String(r.id) === p.id)
+
+  let allProjects = mergeRemoteAndLocalRows('projects', remoteRows, mapProjectRow);
+
+  // Ensure any service bookings/inquiries submitted by this customer's email are materialized as tracked projects
+  if (email) {
+    const clientInquiries = await fetchClientInquiries(uid, email).catch(() => []);
+    let addedFromInquiry = false;
+    for (const inq of clientInquiries) {
+      const alreadyExists = allProjects.some(
+        (p) =>
+          p.id === inq.id ||
+          (p.clientEmail.trim().toLowerCase() === email &&
+            p.serviceType.toLowerCase() === inq.serviceRequired.toLowerCase() &&
+            p.brief === inq.description)
+      );
+      if (!alreadyExists) {
+        const shortRef = inq.id.slice(0, 8).toUpperCase();
+        const nowIso = inq.createdAt || new Date().toISOString();
+        const synthesizedRow: Record<string, any> = {
+          id: inq.id,
+          client_id: null,
+          client_user_id: toNullableUuid(uid) || uid || null,
+          client_name: inq.fullName,
+          client_email: inq.email.toLowerCase(),
+          title: `${inq.serviceRequired} — ${inq.companyName || inq.fullName}`,
+          description: inq.description,
+          service_type: inq.serviceRequired,
+          brief: inq.description,
+          budget: parseInrBudgetEstimate(inq.budgetRange),
+          start_date: nowIso.split('T')[0],
+          deadline: inq.preferredDeadline || 'Flexible / Standard Turnaround',
+          priority: 'Medium',
+          status:
+            inq.status === 'Qualified' || inq.status === 'Converted' ? 'In Progress' : 'Planned',
+          progress: inq.status === 'Converted' ? 35 : inq.status === 'Qualified' || inq.status === 'Proposal Sent' ? 20 : 10,
+          latest_update: `Order #${shortRef} booked (${inq.budgetRange}). Status: ${inq.status} — Shankar Baluragi is managing your project.`,
+          created_at: nowIso,
+          updated_at: inq.updatedAt || nowIso,
+        };
+        upsertLocalTableRow('projects', synthesizedRow);
+        addedFromInquiry = true;
+      }
+    }
+    if (addedFromInquiry) {
+      allProjects = mergeRemoteAndLocalRows('projects', remoteRows, mapProjectRow);
+    }
+  }
+
+  const matched = allProjects.filter((p) => {
+    const pUid = (p.clientUserId || '').trim();
+    const pClientId = (p.clientId || '').trim();
+    const pEmail = (p.clientEmail || '').trim().toLowerCase();
+    return (
+      (pUid && (pUid === uid || userIds.has(pUid))) ||
+      (pClientId && clientIds.has(pClientId)) ||
+      (email && pEmail && pEmail === email)
+    );
+  });
+
+  return matched.sort(
+    (a, b) =>
+      new Date(b.updatedAt || b.createdAt || 0).getTime() -
+      new Date(a.updatedAt || a.createdAt || 0).getTime()
   );
 }
 
@@ -2274,14 +2653,32 @@ export async function saveProjectAdmin(
   internalNotes: string,
   existingProject?: ProjectRecord
 ): Promise<string> {
-  if (!isSupabaseConfigured) throw new Error('Supabase is not configured.');
   const user = await getCurrentUser();
   const cleanTitle = truncate(data.title, 160) || 'Studio Project';
+  const cleanEmail = truncate(data.clientEmail.toLowerCase(), 254);
+
+  // Automatically resolve clientId & clientUserId from existing client records if not provided
+  let resolvedClientId = data.clientId;
+  let resolvedClientUserId = data.clientUserId;
+  if ((!resolvedClientId || !resolvedClientUserId) && cleanEmail) {
+    const existingClients = mergeRemoteAndLocalRows('clients', [], mapClientRow);
+    const matchedClient = existingClients.find(
+      (c) =>
+        c.email.trim().toLowerCase() === cleanEmail ||
+        (resolvedClientId && c.id === resolvedClientId)
+    );
+    if (matchedClient) {
+      if (!resolvedClientId) resolvedClientId = matchedClient.id;
+      if (!resolvedClientUserId && matchedClient.userId) resolvedClientUserId = matchedClient.userId;
+    }
+  }
+
+  const nowIso = new Date().toISOString();
   const payload: Record<string, any> = {
-    client_id: toNullableUuid(data.clientId),
-    client_user_id: toNullableUuid(data.clientUserId),
+    client_id: toNullableUuid(resolvedClientId),
+    client_user_id: toNullableUuid(resolvedClientUserId),
     client_name: truncate(data.clientName, 120),
-    client_email: truncate(data.clientEmail, 254),
+    client_email: cleanEmail,
     title: cleanTitle,
     description: truncate(data.description, 2500),
     service_type: truncate(data.serviceType, 120),
@@ -2293,7 +2690,7 @@ export async function saveProjectAdmin(
     status: data.status,
     progress: Math.min(100, Math.max(0, Number(data.progress) || 0)),
     latest_update: truncate(data.latestUpdate, 1500),
-    updated_at: new Date().toISOString(),
+    updated_at: nowIso,
   };
 
   const legacyFallbacks: Record<string, any> = {
@@ -2311,6 +2708,14 @@ export async function saveProjectAdmin(
       legacyFallbacks,
       'saveProjectAdmin (update)'
     );
+    if (resolvedClientUserId || resolvedClientId) {
+      upsertLocalTableRow('projects', {
+        ...payload,
+        id: existingProject.id,
+        client_id: resolvedClientId || payload.client_id,
+        client_user_id: resolvedClientUserId || payload.client_user_id,
+      });
+    }
     await logAdminActivity(`Updated Project (${payload.status})`, 'project', projectId, cleanTitle);
   } else {
     projectId = await adaptiveInsertRow(
@@ -2319,30 +2724,72 @@ export async function saveProjectAdmin(
       legacyFallbacks,
       'saveProjectAdmin (insert)'
     );
+    if (resolvedClientUserId || resolvedClientId) {
+      upsertLocalTableRow('projects', {
+        ...payload,
+        id: projectId,
+        client_id: resolvedClientId || payload.client_id,
+        client_user_id: resolvedClientUserId || payload.client_user_id,
+      });
+    }
     await logAdminActivity('Created Project', 'project', projectId, cleanTitle);
   }
 
-  if (user && projectId) {
+  if (user && projectId && isSupabaseConfigured) {
     try {
       await supabase.from('project_internal_notes').upsert({
         project_id: projectId,
         notes: truncate(internalNotes, 5000),
         updated_by: toNullableUuid(user.id),
-        updated_at: new Date().toISOString(),
+        updated_at: nowIso,
       });
     } catch {
       // Non-fatal
     }
   }
 
-  if (payload.client_user_id) {
+  // Send notification to client (matched by UID or Email)
+  if (resolvedClientUserId || cleanEmail) {
     await createNotification({
-      recipientUserId: payload.client_user_id,
+      recipientUserId: resolvedClientUserId,
+      recipientEmail: cleanEmail,
       type: existingProject ? 'Project status updated' : 'New project assigned',
       title: existingProject ? `Project Updated: ${payload.title}` : `New Project: ${payload.title}`,
       message: `${payload.status} (${payload.progress}% complete) — ${payload.latest_update}`,
       link: `/portal/projects/${projectId}`,
     });
+  }
+
+  // Also post a client-visible update entry into the Project Discussion Thread when status, progress, or latestUpdate changes
+  const updateChanged =
+    !existingProject ||
+    existingProject.latestUpdate !== payload.latest_update ||
+    existingProject.status !== payload.status ||
+    existingProject.progress !== payload.progress;
+
+  if (projectId && payload.latest_update && updateChanged) {
+    try {
+      const updateMsgContent = `📢 Studio Update (${payload.status} · ${payload.progress}%): ${payload.latest_update}`;
+      await adaptiveInsertRow(
+        'project_messages',
+        {
+          project_id: projectId,
+          client_user_id: toNullableUuid(resolvedClientUserId) || resolvedClientUserId || null,
+          sender_id: toNullableUuid(user?.id),
+          sender_name: 'Shankar Baluragi (Studio Update)',
+          sender_role: 'admin',
+          content: truncate(updateMsgContent, 2000),
+          visibility: 'client',
+          read_by_admin: true,
+          read_by_client: false,
+          created_at: nowIso,
+        },
+        {},
+        'saveProjectAdmin (auto-message)'
+      );
+    } catch {
+      // Non-fatal
+    }
   }
 
   return projectId;
@@ -2370,19 +2817,19 @@ export async function clientRequestRevisionOrApprove(
   newStatus: 'Revision Requested' | 'Completed',
   feedbackNote: string
 ): Promise<void> {
-  if (!isSupabaseConfigured) throw new Error('Supabase is not configured.');
-  const { error } = await supabase
-    .from('projects')
-    .update({
+  const nextProgress = newStatus === 'Completed' ? 100 : project.progress;
+  await adaptiveUpdateRow(
+    'projects',
+    project.id,
+    {
       status: newStatus,
+      progress: nextProgress,
       latest_update: truncate(feedbackNote, 1500),
       updated_at: new Date().toISOString(),
-    })
-    .eq('id', project.id);
-
-  if (error && !isRlsOrPermissionError(error)) {
-    handleSupabaseError(error, 'clientRequestRevisionOrApprove');
-  }
+    },
+    {},
+    'clientRequestRevisionOrApprove'
+  );
 }
 
 export async function checkProjectDependenciesAdmin(
@@ -2548,29 +2995,33 @@ export async function fetchAllTasksAdmin(): Promise<TaskRecord[]> {
   return mergeRemoteAndLocalRows('tasks', data || [], mapTaskRow);
 }
 
-export async function fetchClientVisibleTasks(clientUserId: string): Promise<TaskRecord[]> {
-  const validUuid = toNullableUuid(clientUserId);
-  if (!isSupabaseConfigured || !validUuid) {
-    return mergeRemoteAndLocalRows('tasks', [], mapTaskRow).filter(
-      (t) => t.clientUserId === clientUserId && t.visibility === 'client'
-    );
-  }
-  const { data, error } = await supabase
-    .from('tasks')
-    .select('*')
-    .eq('client_user_id', validUuid)
-    .eq('visibility', 'client')
-    .order('created_at', { ascending: false });
+export async function fetchClientVisibleTasks(
+  clientUserId: string,
+  clientEmail?: string
+): Promise<TaskRecord[]> {
+  const { uid, email, userIds } = await resolveClientIdentity(clientUserId, clientEmail);
+  const clientProjects = await fetchClientProjects(uid, email).catch(() => []);
+  const clientProjectIds = new Set(clientProjects.map((p) => p.id));
 
-  if (error) {
-    if (isMissingSchemaError(error) || isRlsOrPermissionError(error)) {
-      return mergeRemoteAndLocalRows('tasks', [], mapTaskRow).filter(
-        (t) => t.clientUserId === clientUserId && t.visibility === 'client'
-      );
+  let remoteRows: Record<string, any>[] = [];
+  if (isSupabaseConfigured) {
+    const { data, error } = await supabase
+      .from('tasks')
+      .select('*')
+      .eq('visibility', 'client')
+      .order('created_at', { ascending: false });
+
+    if (!error && Array.isArray(data)) {
+      remoteRows = data;
     }
-    handleSupabaseError(error, 'fetchClientVisibleTasks');
   }
-  return (data || []).map(mapTaskRow);
+
+  return mergeRemoteAndLocalRows('tasks', remoteRows, mapTaskRow).filter(
+    (t) =>
+      t.visibility === 'client' &&
+      ((t.clientUserId && (t.clientUserId === uid || userIds.has(t.clientUserId))) ||
+        (t.projectId && clientProjectIds.has(t.projectId)))
+  );
 }
 
 export async function saveTaskAdmin(
@@ -2578,9 +3029,22 @@ export async function saveTaskAdmin(
   existingTask?: TaskRecord
 ): Promise<string> {
   const user = await getCurrentUser();
+  let resolvedClientUserId = data.clientUserId;
+  let resolvedClientEmail = '';
+  if (data.projectId) {
+    const allProjs = mergeRemoteAndLocalRows('projects', [], mapProjectRow);
+    const matchedProj = allProjs.find((p) => p.id === data.projectId);
+    if (matchedProj) {
+      if (!resolvedClientUserId && matchedProj.clientUserId) {
+        resolvedClientUserId = matchedProj.clientUserId;
+      }
+      resolvedClientEmail = matchedProj.clientEmail || '';
+    }
+  }
+
   const payload: Record<string, any> = {
     project_id: data.projectId,
-    client_user_id: toNullableUuid(data.clientUserId),
+    client_user_id: toNullableUuid(resolvedClientUserId),
     title: truncate(data.title, 160),
     description: truncate(data.description, 1000),
     status: data.status,
@@ -2591,12 +3055,34 @@ export async function saveTaskAdmin(
     updated_at: new Date().toISOString(),
   };
 
+  let taskId = '';
   if (existingTask?.id) {
     await adaptiveUpdateRow('tasks', existingTask.id, payload, {}, 'saveTaskAdmin (update)');
-    return existingTask.id;
+    taskId = existingTask.id;
   } else {
-    return await adaptiveInsertRow('tasks', payload, {}, 'saveTaskAdmin (insert)');
+    taskId = await adaptiveInsertRow('tasks', payload, {}, 'saveTaskAdmin (insert)');
   }
+
+  if (resolvedClientUserId) {
+    upsertLocalTableRow('tasks', {
+      ...payload,
+      id: taskId,
+      client_user_id: resolvedClientUserId,
+    });
+  }
+
+  if (data.visibility === 'client' && (resolvedClientUserId || resolvedClientEmail)) {
+    await createNotification({
+      recipientUserId: resolvedClientUserId,
+      recipientEmail: resolvedClientEmail,
+      type: 'Project status updated',
+      title: existingTask ? `Milestone Updated: ${payload.title}` : `New Milestone: ${payload.title}`,
+      message: `Status: ${payload.status} · Due: ${payload.due_date || 'Scheduled'}`,
+      link: data.projectId ? `/portal/projects/${data.projectId}` : '/portal/timeline',
+    });
+  }
+
+  return taskId;
 }
 
 export async function deleteTaskAdmin(id: string): Promise<void> {
@@ -2658,6 +3144,19 @@ export async function uploadFileWithMetadata(params: {
   const user = await getCurrentUser();
   if (!user) throw new Error('Authentication required');
 
+  let resolvedClientUserId = params.clientUserId;
+  let resolvedClientEmail = '';
+  if (params.projectId) {
+    const allProjs = mergeRemoteAndLocalRows('projects', [], mapProjectRow);
+    const matchedProj = allProjs.find((p) => p.id === params.projectId);
+    if (matchedProj) {
+      if (!resolvedClientUserId && matchedProj.clientUserId) {
+        resolvedClientUserId = matchedProj.clientUserId;
+      }
+      resolvedClientEmail = matchedProj.clientEmail || '';
+    }
+  }
+
   let downloadUrl = params.externalUrl || '';
   let storagePath = '';
   let storageBucket: MediaBucket = 'private-project-files';
@@ -2715,7 +3214,7 @@ export async function uploadFileWithMetadata(params: {
 
   const basePayload: Record<string, any> = {
     project_id: params.projectId,
-    client_user_id: toNullableUuid(params.clientUserId),
+    client_user_id: toNullableUuid(resolvedClientUserId),
     file_name: truncate(params.fileName || params.file?.name || 'Deliverable Asset', 200),
     file_type: truncate(fileType, 100),
     file_size: fileSize,
@@ -2754,6 +3253,7 @@ export async function uploadFileWithMetadata(params: {
       const nowIso = new Date().toISOString();
       upsertLocalTableRow('files', {
         ...extendedPayload,
+        client_user_id: resolvedClientUserId || basePayload.client_user_id,
         id: newId,
         created_at: nowIso,
         updated_at: nowIso,
@@ -2765,6 +3265,7 @@ export async function uploadFileWithMetadata(params: {
     newId = String(inserted.id);
     upsertLocalTableRow('files', {
       ...extendedPayload,
+      client_user_id: resolvedClientUserId || basePayload.client_user_id,
       id: newId,
       created_at: new Date().toISOString(),
     });
@@ -2791,7 +3292,7 @@ export async function uploadFileWithMetadata(params: {
         tags: Array.isArray(params.tags) ? params.tags : [params.category.toLowerCase()],
         is_public: false,
         project_id: toNullableUuid(params.projectId),
-        client_user_id: toNullableUuid(params.clientUserId),
+        client_user_id: toNullableUuid(resolvedClientUserId),
         uploaded_by: toNullableUuid(user.id),
         uploader_name: truncate(params.uploaderName, 120),
       });
@@ -2800,13 +3301,14 @@ export async function uploadFileWithMetadata(params: {
     }
   }
 
-  if (params.visibility === 'client' && basePayload.client_user_id) {
+  if (params.visibility === 'client' && (resolvedClientUserId || resolvedClientEmail)) {
     await createNotification({
-      recipientUserId: basePayload.client_user_id,
+      recipientUserId: resolvedClientUserId,
+      recipientEmail: resolvedClientEmail,
       type: 'New deliverable uploaded',
       title: `New ${params.category}: ${basePayload.file_name}`,
       message: `Version ${basePayload.version_label} is ready in your client portal.`,
-      link: `/portal/files`,
+      link: params.projectId ? `/portal/projects/${params.projectId}` : `/portal/files`,
     });
   }
 
@@ -2831,29 +3333,33 @@ export async function fetchAllFilesAdmin(): Promise<DeliverableFile[]> {
   return mergeRemoteAndLocalRows('files', data || [], mapFileRow);
 }
 
-export async function fetchClientFiles(clientUserId: string): Promise<DeliverableFile[]> {
-  const validUuid = toNullableUuid(clientUserId);
-  if (!isSupabaseConfigured || !validUuid) {
-    return mergeRemoteAndLocalRows('files', [], mapFileRow).filter(
-      (f) => f.clientUserId === clientUserId && f.visibility === 'client'
-    );
-  }
-  const { data, error } = await supabase
-    .from('files')
-    .select('*')
-    .eq('client_user_id', validUuid)
-    .eq('visibility', 'client')
-    .order('created_at', { ascending: false });
+export async function fetchClientFiles(
+  clientUserId: string,
+  clientEmail?: string
+): Promise<DeliverableFile[]> {
+  const { uid, email, userIds } = await resolveClientIdentity(clientUserId, clientEmail);
+  const clientProjects = await fetchClientProjects(uid, email).catch(() => []);
+  const clientProjectIds = new Set(clientProjects.map((p) => p.id));
 
-  if (error) {
-    if (isMissingSchemaError(error) || isRlsOrPermissionError(error)) {
-      return mergeRemoteAndLocalRows('files', [], mapFileRow).filter(
-        (f) => f.clientUserId === clientUserId && f.visibility === 'client'
-      );
+  let remoteRows: Record<string, any>[] = [];
+  if (isSupabaseConfigured) {
+    const { data, error } = await supabase
+      .from('files')
+      .select('*')
+      .eq('visibility', 'client')
+      .order('created_at', { ascending: false });
+
+    if (!error && Array.isArray(data)) {
+      remoteRows = data;
     }
-    handleSupabaseError(error, 'fetchClientFiles');
   }
-  return (data || []).map(mapFileRow);
+
+  return mergeRemoteAndLocalRows('files', remoteRows, mapFileRow).filter(
+    (f) =>
+      f.visibility === 'client' &&
+      ((f.clientUserId && (f.clientUserId === uid || userIds.has(f.clientUserId))) ||
+        (f.projectId && clientProjectIds.has(f.projectId)))
+  );
 }
 
 export async function deleteFileAdmin(file: DeliverableFile): Promise<void> {
@@ -3208,29 +3714,48 @@ export async function fetchAllInvoicesAdmin(): Promise<InvoiceRecord[]> {
   return mergeRemoteAndLocalRows('invoices', data || [], mapInvoiceRow);
 }
 
-export async function fetchClientInvoices(clientUserId: string): Promise<InvoiceRecord[]> {
-  const validUuid = toNullableUuid(clientUserId);
-  if (!isSupabaseConfigured || !validUuid) {
-    return mergeRemoteAndLocalRows('invoices', [], mapInvoiceRow).filter(
-      (i) => i.clientUserId === clientUserId && i.status !== 'Draft'
-    );
+export async function fetchClientInvoices(
+  clientUserId: string,
+  clientEmail?: string
+): Promise<InvoiceRecord[]> {
+  const { uid, email, clientIds } = await resolveClientIdentity(clientUserId, clientEmail);
+  const clientProjects = await fetchClientProjects(clientUserId, email || undefined).catch(() => []);
+  const clientProjectIds = new Set(clientProjects.map((p) => p.id));
+
+  const matchesInvoice = (inv: InvoiceRecord): boolean => {
+    if (inv.status === 'Draft') return false;
+    if (clientUserId && inv.clientUserId === clientUserId) return true;
+    if (uid && inv.clientUserId === uid) return true;
+    if (inv.clientId && clientIds.has(inv.clientId)) return true;
+    if (email && inv.clientEmail && inv.clientEmail.trim().toLowerCase() === email) return true;
+    if (inv.projectId && clientProjectIds.has(inv.projectId)) return true;
+    return false;
+  };
+
+  if (!isSupabaseConfigured) {
+    return mergeRemoteAndLocalRows('invoices', [], mapInvoiceRow).filter(matchesInvoice);
   }
+
+  let remoteRows: Record<string, any>[] = [];
   const { data, error } = await supabase
     .from('invoices')
     .select('*')
-    .eq('client_user_id', validUuid)
     .neq('status', 'Draft')
     .order('created_at', { ascending: false });
 
-  if (error) {
-    if (isMissingSchemaError(error) || isRlsOrPermissionError(error)) {
-      return mergeRemoteAndLocalRows('invoices', [], mapInvoiceRow).filter(
-        (i) => i.clientUserId === clientUserId && i.status !== 'Draft'
-      );
-    }
-    handleSupabaseError(error, 'fetchClientInvoices');
+  if (!error && data) {
+    remoteRows = data;
+  } else if (uid) {
+    const { data: fallbackData } = await supabase
+      .from('invoices')
+      .select('*')
+      .eq('client_user_id', uid)
+      .neq('status', 'Draft')
+      .order('created_at', { ascending: false });
+    remoteRows = fallbackData || [];
   }
-  return (data || []).map(mapInvoiceRow);
+
+  return mergeRemoteAndLocalRows('invoices', remoteRows, mapInvoiceRow).filter(matchesInvoice);
 }
 
 export async function fetchInvoiceLineItems(
@@ -3319,10 +3844,27 @@ export async function saveInvoiceWithLineItemsAdmin(
     }
   }
 
+  let resolvedClientUserId = toNullableUuid(invoiceData.clientUserId);
+  let resolvedClientId = toNullableUuid(invoiceData.clientId) || invoiceData.clientId || '';
+  const cleanEmail = (invoiceData.clientEmail || '').trim().toLowerCase();
+
+  if (cleanEmail && (!resolvedClientUserId || !resolvedClientId)) {
+    const allClients = await fetchAllClientsAdmin().catch(() => []);
+    const matchedClient = allClients.find(
+      (c) => (c.email || '').trim().toLowerCase() === cleanEmail
+    );
+    if (matchedClient) {
+      if (!resolvedClientId) resolvedClientId = matchedClient.id;
+      if (!resolvedClientUserId && matchedClient.userId) {
+        resolvedClientUserId = toNullableUuid(matchedClient.userId);
+      }
+    }
+  }
+
   const payload: Record<string, any> = {
     invoice_number: truncate(invoiceData.invoiceNumber, 60),
-    client_id: toNullableUuid(invoiceData.clientId),
-    client_user_id: toNullableUuid(invoiceData.clientUserId),
+    client_id: toNullableUuid(resolvedClientId),
+    client_user_id: resolvedClientUserId,
     client_name: truncate(invoiceData.clientName, 120),
     client_email: truncate(invoiceData.clientEmail, 254),
     project_id: toNullableUuid(invoiceData.projectId),
@@ -3396,9 +3938,14 @@ export async function saveInvoiceWithLineItemsAdmin(
     `${payload.invoice_number} (${resolvedStatus}) — ₹${payload.total.toLocaleString('en-IN')}`
   );
 
-  if (payload.client_user_id && payload.status !== 'Draft' && payload.status !== 'Void') {
+  if (
+    (payload.client_user_id || cleanEmail) &&
+    payload.status !== 'Draft' &&
+    payload.status !== 'Void'
+  ) {
     await createNotification({
-      recipientUserId: payload.client_user_id,
+      recipientUserId: payload.client_user_id || cleanEmail,
+      recipientEmail: cleanEmail || undefined,
       type: 'Invoice created',
       title: `Invoice ${payload.invoice_number} (${payload.status})`,
       message: `Total: ₹${payload.total.toLocaleString('en-IN')} · Balance Due: ₹${payload.balance_due.toLocaleString('en-IN')} · Due: ${payload.due_date}`,
@@ -3620,9 +4167,11 @@ export async function recordPaymentAdmin(params: {
     `${params.invoice.invoiceNumber} — ₹${paidAmt} via ${params.method}`
   );
 
-  if (params.invoice.clientUserId) {
+  const cleanEmail = (params.invoice.clientEmail || '').trim().toLowerCase();
+  if (params.invoice.clientUserId || cleanEmail) {
     await createNotification({
-      recipientUserId: params.invoice.clientUserId,
+      recipientUserId: params.invoice.clientUserId || cleanEmail,
+      recipientEmail: cleanEmail || undefined,
       type: 'Payment recorded',
       title: `Payment Recorded for ${params.invoice.invoiceNumber}`,
       message: `₹${paidAmt.toLocaleString('en-IN')} recorded via ${params.method}. Remaining balance: ₹${newBalanceDue.toLocaleString('en-IN')}.`,
@@ -3651,28 +4200,35 @@ export async function fetchAllPaymentsAdmin(): Promise<PaymentRecord[]> {
   return mergeRemoteAndLocalRows('payments', data || [], mapPaymentRow);
 }
 
-export async function fetchClientPayments(clientUserId: string): Promise<PaymentRecord[]> {
-  const validUuid = toNullableUuid(clientUserId);
-  if (!isSupabaseConfigured || !validUuid) {
-    return mergeRemoteAndLocalRows('payments', [], mapPaymentRow).filter(
-      (p) => p.clientUserId === clientUserId
-    );
-  }
-  const { data, error } = await supabase
-    .from('payments')
-    .select('*')
-    .eq('client_user_id', validUuid)
-    .order('created_at', { ascending: false });
+export async function fetchClientPayments(
+  clientUserId: string,
+  clientEmail?: string
+): Promise<PaymentRecord[]> {
+  const { uid, clientIds } = await resolveClientIdentity(clientUserId, clientEmail);
+  const matchesPayment = (p: PaymentRecord): boolean => {
+    if (clientUserId && p.clientUserId === clientUserId) return true;
+    if (uid && p.clientUserId === uid) return true;
+    if (p.clientId && clientIds.has(p.clientId)) return true;
+    return false;
+  };
 
-  if (error) {
-    if (isMissingSchemaError(error) || isRlsOrPermissionError(error)) {
-      return mergeRemoteAndLocalRows('payments', [], mapPaymentRow).filter(
-        (p) => p.clientUserId === clientUserId
-      );
-    }
-    handleSupabaseError(error, 'fetchClientPayments');
+  if (!isSupabaseConfigured) {
+    return mergeRemoteAndLocalRows('payments', [], mapPaymentRow).filter(matchesPayment);
   }
-  return (data || []).map(mapPaymentRow);
+
+  let remoteRows: Record<string, any>[] = [];
+  if (uid) {
+    const { data, error } = await supabase
+      .from('payments')
+      .select('*')
+      .eq('client_user_id', uid)
+      .order('created_at', { ascending: false });
+    if (!error && data) {
+      remoteRows = data;
+    }
+  }
+
+  return mergeRemoteAndLocalRows('payments', remoteRows, mapPaymentRow).filter(matchesPayment);
 }
 
 // ============================================================================
@@ -3684,10 +4240,19 @@ export async function fetchProjectMessages(
   clientUserId?: string
 ): Promise<ProjectMessage[]> {
   const validProjId = toNullableUuid(projectId);
+  const matchesMessage = (m: ProjectMessage): boolean => {
+    if (m.projectId !== projectId) return false;
+    if (!isAdminUser && m.visibility !== 'client') return false;
+    return true;
+  };
+
   if (!isSupabaseConfigured || !validProjId) {
-    return mergeRemoteAndLocalRows('project_messages', [], mapMessageRow).filter(
-      (m) => m.projectId === projectId
-    );
+    return mergeRemoteAndLocalRows('project_messages', [], mapMessageRow)
+      .filter(matchesMessage)
+      .sort(
+        (a, b) =>
+          new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()
+      );
   }
 
   let q = supabase
@@ -3697,23 +4262,27 @@ export async function fetchProjectMessages(
     .order('created_at', { ascending: true });
 
   if (!isAdminUser) {
-    const validClientUuid = toNullableUuid(clientUserId);
-    if (!validClientUuid) return [];
-    q = q.eq('client_user_id', validClientUuid).eq('visibility', 'client');
+    q = q.eq('visibility', 'client');
   }
 
   const { data, error } = await q;
   if (error) {
     if (isMissingSchemaError(error) || isRlsOrPermissionError(error)) {
-      return mergeRemoteAndLocalRows('project_messages', [], mapMessageRow).filter(
-        (m) => m.projectId === projectId
-      );
+      return mergeRemoteAndLocalRows('project_messages', [], mapMessageRow)
+        .filter(matchesMessage)
+        .sort(
+          (a, b) =>
+            new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()
+        );
     }
     handleSupabaseError(error, 'fetchProjectMessages');
   }
-  return mergeRemoteAndLocalRows('project_messages', data || [], mapMessageRow).filter(
-    (m) => m.projectId === projectId
-  );
+  return mergeRemoteAndLocalRows('project_messages', data || [], mapMessageRow)
+    .filter(matchesMessage)
+    .sort(
+      (a, b) =>
+        new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()
+    );
 }
 
 export async function postProjectMessage(params: {
@@ -3727,9 +4296,21 @@ export async function postProjectMessage(params: {
   const user = await getCurrentUser();
   if (!user) throw new Error('Authentication required');
 
+  let resolvedClientUserId = toNullableUuid(params.clientUserId);
+  let resolvedClientEmail = '';
+
+  const allProjects = await fetchAllProjectsAdmin().catch(() => []);
+  const targetProject = allProjects.find((p) => p.id === params.projectId);
+  if (targetProject) {
+    resolvedClientEmail = (targetProject.clientEmail || '').trim().toLowerCase();
+    if (!resolvedClientUserId && targetProject.clientUserId) {
+      resolvedClientUserId = toNullableUuid(targetProject.clientUserId);
+    }
+  }
+
   const payload: Record<string, any> = {
     project_id: params.projectId,
-    client_user_id: toNullableUuid(params.clientUserId),
+    client_user_id: resolvedClientUserId,
     sender_id: toNullableUuid(user.id),
     sender_name: truncate(params.senderName, 120),
     sender_role: params.senderRole,
@@ -3739,11 +4320,21 @@ export async function postProjectMessage(params: {
     read_by_client: params.senderRole === 'client',
   };
 
-  const msgId = await adaptiveInsertRow('project_messages', payload, {}, 'postProjectMessage');
+  const msgId = await adaptiveInsertRow(
+    'project_messages',
+    payload,
+    { project_id: params.projectId },
+    'postProjectMessage'
+  );
 
-  if (params.senderRole === 'admin' && params.visibility === 'client' && payload.client_user_id) {
+  if (
+    params.senderRole === 'admin' &&
+    params.visibility === 'client' &&
+    (resolvedClientUserId || resolvedClientEmail)
+  ) {
     await createNotification({
-      recipientUserId: payload.client_user_id,
+      recipientUserId: resolvedClientUserId || resolvedClientEmail,
+      recipientEmail: resolvedClientEmail || undefined,
       type: 'New project comment',
       title: `New Studio Message from ${params.senderName}`,
       message: truncate(params.content, 160),

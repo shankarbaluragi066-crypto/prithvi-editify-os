@@ -36,7 +36,7 @@ const CLIENT_NAV_ITEMS = [
 const CLIENT_GROUPS = ['Workspace', 'Billing & Support', 'Account'];
 
 export const ClientLayout: React.FC = () => {
-  const { profile, logout } = useAuth();
+  const { profile, logout, isAdmin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -226,6 +226,14 @@ export const ClientLayout: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2.5 shrink-0">
+            {isAdmin && (
+              <Link
+                to="/admin"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-[#040D1A] bg-[#2DD4BF] hover:bg-[#10B981] rounded-lg transition-all whitespace-nowrap shrink-0"
+              >
+                <span>Admin Portal →</span>
+              </Link>
+            )}
             <Link
               to="/portal/book"
               className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-all whitespace-nowrap shrink-0"
