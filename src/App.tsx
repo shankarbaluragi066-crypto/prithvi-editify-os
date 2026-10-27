@@ -62,7 +62,10 @@ import {
   AdminAICreativeAssistantPage,
   AdminQuotationsPage,
 } from './pages/AdminAICreativeAssistantPage';
-import { PublicQuotationApprovalPage } from './components/StudioEnhancements';
+import {
+  PublicQuotationApprovalPage,
+  PublicProjectTrackerPage,
+} from './components/StudioEnhancements';
 
 import {
   ClientDashboardPage,
@@ -239,6 +242,7 @@ export default function App() {
                 <Route path="/forgot-password" element={<ForgotPasswordPage />} />
                 <Route path="/reset-password" element={<ResetPasswordPage />} />
                 <Route path="/quote/:quoteId" element={<PublicQuotationApprovalPage />} />
+                <Route path="/track/:projectId" element={<PublicProjectTrackerPage />} />
                 <Route path="/privacy" element={<PrivacyPolicyPage />} />
                 <Route path="/terms" element={<TermsPage />} />
                 <Route path="*" element={<NotFoundPage />} />

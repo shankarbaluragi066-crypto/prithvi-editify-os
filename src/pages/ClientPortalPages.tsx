@@ -51,11 +51,20 @@ import {
   submitClientPaymentProof,
   getClientPaymentProofs,
   ClientPaymentProofSubmission,
+  getClientRetainerPlan,
+  getProjectTestimonials,
+  submitProjectTestimonial,
+  buildPublicProjectTrackerUrl,
 } from '../services/workflowEnhancementsService';
-import { UpiQrCodeCard } from '../components/StudioEnhancements';
+import {
+  UpiQrCodeCard,
+  CrmStatusBadge,
+  ProjectLifecycleStepper,
+} from '../components/StudioEnhancements';
 import { formatINR, formatDate, formatFileSize } from '../utils/formatters';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
+
 
 // ============================================================================
 // 1. CLIENT DASHBOARD PAGE
@@ -140,24 +149,128 @@ export const ClientDashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {pendingQuotations.length > 0 && (
-        <div className="bg-[#0D1F38] border border-[#10B981]/40 rounded-lg p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold text-[#D97706]">
-              Action Required · {pendingQuotations.length} Quotation / Estimate Awaiting Approval
-            </p>
-            <p className="text-xs text-[#94A3B8] mt-0.5">
-              Review scope, line items, and approve your project estimate or quotation in the billing portal.
-            </p>
+      {/* Unified Action Required Priority Banner */}
+      {(pendingApprovals.length > 0 || pendingQuotations.length > 0 || unpaidInvoices.length > 0) && (
+        <div className="bg-gradient-to-r from-[#0D1F38] via-[#132A4A] to-[#0D1F38] border border-[#10B981]/50 rounded-xl p-5 space-y-3 shadow-lg">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#F59E0B] animate-pulse" />
+              <p className="text-xs font-bold uppercase tracking-wider text-[#FBBF24]">
+                Unified Action Required · {pendingApprovals.length + pendingQuotations.length + unpaidInvoices.length} Pending Studio Items
+              </p>
+            </div>
+            <span className="text-[11px] font-mono text-[#94A3B8]">
+              Complete actions below to keep production moving on schedule
+            </span>
           </div>
-          <Link
-            to="/portal/invoices"
-            className="px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg whitespace-nowrap shrink-0"
-          >
-            Review Quotations & Estimates →
-          </Link>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+            {pendingApprovals.length > 0 && (
+              <div className="p-3.5 rounded-lg bg-[#040D1A]/75 border border-purple-500/35 flex flex-col justify-between gap-2">
+                <div>
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-purple-300 font-bold">
+                    Draft Deliverable Review
+                  </span>
+                  <p className="font-semibold text-[#F8FAFC] mt-0.5">
+                    {pendingApprovals.length} {pendingApprovals.length === 1 ? 'project draft' : 'project drafts'} awaiting your approval or timestamped revision notes
+                  </p>
+                </div>
+                <Link
+                  to={`/portal/projects/${pendingApprovals[0].id}`}
+                  className="inline-flex items-center gap-1 text-[11px] font-bold text-[#2DD4BF] hover:underline"
+                >
+                  <span>Review & Approve Draft →</span>
+                </Link>
+              </div>
+            )}
+
+            {pendingQuotations.length > 0 && (
+              <div className="p-3.5 rounded-lg bg-[#040D1A]/75 border border-amber-500/35 flex flex-col justify-between gap-2">
+                <div>
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-amber-300 font-bold">
+                    Quotation Sign-Off
+                  </span>
+                  <p className="font-semibold text-[#F8FAFC] mt-0.5">
+                    Quotation {pendingQuotations[0].quotationNumber} ({formatINR(pendingQuotations[0].total)}) awaiting your sign-off
+                  </p>
+                </div>
+                <Link
+                  to="/portal/invoices"
+                  className="inline-flex items-center gap-1 text-[11px] font-bold text-[#FBBF24] hover:underline"
+                >
+                  <span>Review & Accept Quotation →</span>
+                </Link>
+              </div>
+            )}
+
+            {unpaidInvoices.length > 0 && (
+              <div className="p-3.5 rounded-lg bg-[#040D1A]/75 border border-rose-500/35 flex flex-col justify-between gap-2">
+                <div>
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-rose-300 font-bold">
+                    Master File Unlock Balance
+                  </span>
+                  <p className="font-semibold text-[#F8FAFC] mt-0.5">
+                    Invoice {unpaidInvoices[0].invoiceNumber} has {formatINR(unpaidInvoices[0].balanceDue)} balance due to unlock unwatermarked master files
+                  </p>
+                </div>
+                <Link
+                  to="/portal/invoices"
+                  className="inline-flex items-center gap-1 text-[11px] font-bold text-[#38BDF8] hover:underline"
+                >
+                  <span>Scan UPI QR / Submit UTR →</span>
+                </Link>
+              </div>
+            )}
+          </div>
         </div>
       )}
+
+      {/* Monthly Creative Retainer & Deliverable Quota Tracker */}
+      {(() => {
+        const retainer = getClientRetainerPlan(
+          profile?.email || user?.email || user?.uid || 'client',
+          Math.max(1, projects.length)
+        );
+        if (!retainer) return null;
+        const totalQuota = Math.max(1, retainer.monthlyDeliverableQuota);
+        const totalUsed = Math.min(totalQuota, retainer.usedDeliverablesCount);
+        const usagePercent = Math.min(100, Math.round((totalUsed / totalQuota) * 100));
+
+        return (
+          <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-xl p-5 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-[#10B981]/15 text-[#2DD4BF] border border-[#10B981]/30">
+                    Renews {retainer.renewalDate} · Quota Meter
+                  </span>
+                  <h2 className="text-sm font-semibold text-[#F8FAFC]">{retainer.planName}</h2>
+                </div>
+                <p className="text-xs text-[#94A3B8] mt-0.5">
+                  {retainer.includedServicesSummary}
+                </p>
+              </div>
+              <div className="text-right">
+                <span className="text-xs font-mono font-bold text-[#F8FAFC]">
+                  {totalUsed} / {totalQuota} Deliverables Used ({usagePercent}%)
+                </span>
+                <p className="text-[11px] text-[#94A3B8]">
+                  Plan Rate: {formatINR(retainer.monthlyRateInr)}/mo
+                </p>
+              </div>
+            </div>
+
+            <div className="w-full h-2 bg-[#040D1A] rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-[#0EA5E9] to-[#10B981] rounded-full transition-all"
+                style={{ width: `${usagePercent}%` }}
+              />
+            </div>
+          </div>
+        );
+      })()}
+
+
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6">
@@ -327,6 +440,10 @@ export const ClientProjectDetailsPage: React.FC = () => {
   const [revisionNote, setRevisionNote] = useState('');
   const [previewItem, setPreviewItem] = useState<PreviewableMediaItem | null>(null);
   const [signOffRecord, setSignOffRecord] = useState<MilestoneApprovalSignOffRecord | null>(null);
+  const [testimonialRating, setTestimonialRating] = useState<number>(5);
+  const [testimonialFeedback, setTestimonialFeedback] = useState<string>('');
+  const [testimonialSubmitted, setTestimonialSubmitted] = useState<boolean>(false);
+
 
   const loadAll = useCallback(async () => {
     if (!user || !projectId) return;
@@ -417,20 +534,49 @@ export const ClientProjectDetailsPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <Link to="/portal/projects" className="text-xs text-[#94A3B8] hover:text-[#F8FAFC]">
-          ← Back to My Projects
-        </Link>
-        <div className="flex flex-wrap items-center gap-2.5 mt-1">
-          <h1 className="font-editorial text-2xl font-semibold text-[#F8FAFC]">{project.title}</h1>
-          <ProjectStatusBadge status={project.status} />
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <Link to="/portal/projects" className="text-xs text-[#94A3B8] hover:text-[#F8FAFC]">
+            ← Back to My Projects
+          </Link>
+          <div className="flex flex-wrap items-center gap-2.5 mt-1">
+            <h1 className="font-editorial text-2xl font-semibold text-[#F8FAFC]">{project.title}</h1>
+            <ProjectStatusBadge status={project.status} />
+          </div>
+          <p className="text-xs text-[#94A3B8] mt-1">
+            Progress: <span className="font-mono text-[#F8FAFC]">{project.progress}%</span> · Deadline: {project.deadline}
+          </p>
         </div>
-        <p className="text-xs text-[#94A3B8] mt-1">
-          Progress: <span className="font-mono text-[#F8FAFC]">{project.progress}%</span> · Deadline: {project.deadline}
-        </p>
+        <button
+          type="button"
+          onClick={() => {
+            const url = buildPublicProjectTrackerUrl(project);
+            navigator.clipboard.writeText(url);
+            showToast('success', 'Live Project Tracker Link Copied', url);
+          }}
+          className="px-3.5 py-2 text-xs font-semibold text-[#2DD4BF] bg-[#10B981]/10 hover:bg-[#10B981]/20 border border-[#10B981]/30 rounded-lg transition-colors"
+        >
+          Copy Shareable Tracker Link
+        </button>
+      </div>
+
+      {/* 5-Step Horizontal Visual Project Lifecycle Stepper */}
+      <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-5 space-y-2">
+        <div className="flex items-center justify-between text-xs">
+          <span className="font-semibold text-[#F8FAFC]">Project Production Lifecycle</span>
+          <span className="font-mono text-[11px] text-[#2DD4BF]">
+            {project.progress}% Complete
+          </span>
+        </div>
+        <ProjectLifecycleStepper
+          status={project.status}
+          progress={project.progress}
+          isMasterUnlocked={checkProjectMasterUnlockStatus(project.id, invoices).isUnlocked}
+        />
       </div>
 
       <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 space-y-4">
+
         <h2 className="text-sm font-semibold text-[#F8FAFC]">Latest Studio Update & Brief</h2>
         <p className="text-xs text-[#F8FAFC] bg-[#132A4A] p-3.5 rounded-lg">{project.latestUpdate}</p>
         {project.brief && (
@@ -505,17 +651,33 @@ export const ClientProjectDetailsPage: React.FC = () => {
               ) : (
                 <div className="space-y-3">
                   <p className="text-xs text-[#94A3B8]">
-                    Review your drafts below using timestamped video notes or graphic frame pins. Once satisfied, click{' '}
-                    <strong className="text-[#F8FAFC]">Approve Final Deliverable</strong> to log your formal approval timestamp and unlock master source files upon invoice settlement.
+                    Review your drafts below using timestamped video notes or graphic frame pins. Click any timestamp chip below to insert it directly into your revision note, or click{' '}
+                    <strong className="text-[#F8FAFC]">Approve Final Deliverable</strong> to log your formal approval timestamp.
                   </p>
+                  <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                    <span className="text-[#94A3B8] mr-1">Quick-Insert Video Timestamp:</span>
+                    {['[00:15]', '[00:30]', '[00:45]', '[01:15]', '[02:00]', '[Color Grade]', '[Audio Mix]'].map((chip) => (
+                      <button
+                        key={chip}
+                        type="button"
+                        onClick={() =>
+                          setRevisionNote((prev) => `${prev ? `${prev.trim()} ` : ''}${chip} `)
+                        }
+                        className="px-2 py-0.5 rounded bg-[#132A4A] hover:bg-[#1E3A5F] text-[#2DD4BF] border border-[#1E3A5F] font-mono text-[10px] transition-colors"
+                      >
+                        + {chip}
+                      </button>
+                    ))}
+                  </div>
                   <input
                     type="text"
                     value={revisionNote}
                     onChange={(e) => setRevisionNote(e.target.value)}
-                    placeholder="Optional note regarding revision details or final milestone sign-off..."
+                    placeholder="e.g. [00:42] Boost vocal clarity and brighten headline contrast..."
                     className="w-full px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
                   />
                   <div className="flex flex-wrap gap-3">
+
                     <button
                       type="button"
                       onClick={() => handleAction('Completed')}
@@ -709,15 +871,33 @@ export const ClientProjectDetailsPage: React.FC = () => {
                       </div>
                       <p className="text-[#F8FAFC]">{pin.comment}</p>
                     </div>
-                    <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-semibold shrink-0 ${
-                        pin.resolved
-                          ? 'bg-[#16A34A]/20 text-[#4ADE80]'
-                          : 'bg-amber-500/20 text-amber-300'
-                      }`}
-                    >
-                      {pin.resolved ? 'Resolved' : 'Open'}
-                    </span>
+                    <div className="flex flex-col items-end gap-1.5 shrink-0">
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                          pin.resolved
+                            ? 'bg-[#16A34A]/20 text-[#4ADE80]'
+                            : 'bg-amber-500/20 text-amber-300'
+                        }`}
+                      >
+                        {pin.resolved ? 'Resolved' : 'Open'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const tag =
+                            pin.timestampSeconds !== undefined && pin.timestampSeconds !== null
+                              ? `[${formatVideoTimestamp(pin.timestampSeconds)}]`
+                              : `[Pin #${idx + 1} (${pin.xPercent}%,${pin.yPercent}%)]`;
+                          setRevisionNote((prev) =>
+                            `${prev ? `${prev.trim()} ` : ''}${tag} ${pin.comment}`
+                          );
+                          showToast('info', 'Inserted into Revision Note', `${tag} added above.`);
+                        }}
+                        className="text-[10px] font-semibold text-[#38BDF8] hover:underline"
+                      >
+                        + Insert into Revision Note
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -725,6 +905,78 @@ export const ClientProjectDetailsPage: React.FC = () => {
           </div>
         );
       })()}
+
+      {/* Client 5-Star Testimonial & Review Submission on Completed Projects */}
+      {project.status === 'Completed' && (
+        <div className="bg-[#0D1F38] border border-[#10B981]/40 rounded-lg p-6 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#10B981]">
+                Project Completed · Client Feedback
+              </span>
+              <h3 className="text-sm font-semibold text-[#F8FAFC] mt-0.5">
+                Rate Your Studio Experience with Prithvi Editify
+              </h3>
+            </div>
+            <div className="flex items-center gap-1">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  onClick={() => setTestimonialRating(star)}
+                  className={`text-lg transition-transform hover:scale-110 ${
+                    star <= testimonialRating ? 'text-amber-400' : 'text-[#475569]'
+                  }`}
+                >
+                  ★
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {testimonialSubmitted ||
+          getProjectTestimonials().some((t) => t.projectId === project.id) ? (
+            <div className="p-3.5 rounded-lg bg-[#16A34A]/15 border border-[#16A34A]/30 text-xs text-[#4ADE80] font-medium">
+              ★ Thank you for sharing your review! Your feedback has been recorded for Shankar Baluragi.
+            </div>
+          ) : (
+            <div className="flex flex-col sm:flex-row gap-2.5">
+              <input
+                type="text"
+                value={testimonialFeedback}
+                onChange={(e) => setTestimonialFeedback(e.target.value)}
+                placeholder="Share a quick testimonial on editing quality, turnaround speed, or communication..."
+                className="flex-1 px-3 py-2 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg text-[#F8FAFC]"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  if (!testimonialFeedback.trim()) {
+                    showToast('error', 'Review Text Required', 'Please write a short note.');
+                    return;
+                  }
+                  submitProjectTestimonial({
+                    projectId: project.id,
+                    projectTitle: project.title,
+                    serviceType: project.serviceType,
+                    clientName: profile?.displayName || 'Verified Client',
+                    rating: testimonialRating,
+                    reviewText: testimonialFeedback.trim(),
+                  });
+
+                  setTestimonialSubmitted(true);
+                  setTestimonialFeedback('');
+                  showToast('success', 'Thank You for Your 5-Star Review!');
+                }}
+                className="px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg shrink-0"
+              >
+                Submit Review ({testimonialRating}★)
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
 
       {/* Project Comments */}
       <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 space-y-4">
@@ -816,7 +1068,7 @@ export const ClientTimelinePage: React.FC = () => {
                 <p className="font-semibold text-[#F8FAFC]">{t.title}</p>
                 <p className="text-[#94A3B8]">Due: {t.dueDate}</p>
               </div>
-              <span className="font-semibold text-[#F8FAFC]">{t.status}</span>
+              <CrmStatusBadge status={t.status} />
             </div>
           ))
         )}
@@ -824,6 +1076,7 @@ export const ClientTimelinePage: React.FC = () => {
     </div>
   );
 };
+
 
 export const ClientFilesPage: React.FC = () => {
   const { user } = useAuth();
@@ -1151,8 +1404,11 @@ export const ClientInvoicesPage: React.FC = () => {
                     </td>
                     <td className="py-3.5 px-4">{q.projectTitle}</td>
                     <td className="py-3.5 px-4 font-mono text-[#94A3B8]">{q.expiryDate}</td>
-                    <td className="py-3.5 px-4 font-semibold">{q.status}</td>
+                    <td className="py-3.5 px-4">
+                      <CrmStatusBadge status={q.status} />
+                    </td>
                     <td className="py-3.5 px-4 text-right font-mono font-semibold tabular-nums">
+
                       {formatINR(q.total)}
                     </td>
                     <td className="py-3.5 px-4 text-right space-x-3">
@@ -1299,14 +1555,15 @@ export const ClientInvoicesPage: React.FC = () => {
                     <td className="py-3.5 px-4">{inv.projectTitle}</td>
                     <td className="py-3.5 px-4 font-mono text-[#94A3B8]">{inv.dueDate}</td>
                     <td className="py-3.5 px-4 font-medium">
-                      <span>{inv.status}</span>
+                      <CrmStatusBadge status={inv.status} />
                       {pendingProof && (
-                        <span className="block text-[10px] text-[#D97706] font-semibold">
+                        <span className="block text-[10px] text-[#D97706] font-semibold mt-1">
                           UTR Submitted (Pending Admin Verification)
                         </span>
                       )}
                     </td>
                     <td className="py-3.5 px-4 text-right font-mono tabular-nums">
+
                       {formatINR(inv.total)}
                     </td>
                     <td className="py-3.5 px-4 text-right font-mono font-semibold tabular-nums">

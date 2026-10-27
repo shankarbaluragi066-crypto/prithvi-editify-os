@@ -75,7 +75,9 @@ import {
   getProofingPins,
   checkProjectMasterUnlockStatus,
   buildWhatsAppProjectStatusTemplateLink,
+  buildPublicProjectTrackerUrl,
 } from '../services/workflowEnhancementsService';
+import { CrmStatusBadge } from '../components/StudioEnhancements';
 import {
   DependencySafeDeleteModal,
   SafeDeleteModalConfig,
@@ -952,7 +954,7 @@ export const AdminDashboardPage: React.FC = () => {
                       {inq.serviceRequired} · {inq.budgetRange}
                     </p>
                   </div>
-                  <span className="text-xs font-medium text-[#F8FAFC] shrink-0">{inq.status}</span>
+                  <CrmStatusBadge status={inq.status} />
                 </div>
               ))}
             </div>
@@ -1235,7 +1237,7 @@ export const AdminInquiriesPage: React.FC = () => {
                 >
                   <div className="flex items-center justify-between gap-4">
                     <p className="text-sm font-semibold text-[#F8FAFC]">{inq.fullName}</p>
-                    <span className="text-xs font-medium text-[#F8FAFC]">{inq.status}</span>
+                    <CrmStatusBadge status={inq.status} />
                   </div>
                   <p className="text-xs text-[#94A3B8] mt-1">
                     {inq.serviceRequired} · {inq.budgetRange} · {inq.phone}
@@ -2074,21 +2076,15 @@ export const AdminClientsPage: React.FC = () => {
                       </span>
                     </td>
                     <td className="py-3.5 px-4">
-                      <span
-                        className={`font-semibold ${
+                      <CrmStatusBadge
+                        status={
                           c.accountStatus === 'active'
-                            ? 'text-[#16A34A]'
+                            ? 'Active'
                             : c.accountStatus === 'deactivated'
-                            ? 'text-[#DC2626]'
-                            : 'text-[#D97706]'
-                        }`}
-                      >
-                        {c.accountStatus === 'active'
-                          ? 'Active'
-                          : c.accountStatus === 'deactivated'
-                          ? 'Archived'
-                          : 'Invited'}
-                      </span>
+                            ? 'Archived'
+                            : 'Invited'
+                        }
+                      />
                     </td>
                     <td className="py-3.5 px-4 text-center font-mono">
                       <span className="font-semibold text-[#F8FAFC]">{metrics.projectsCount}</span>
@@ -3328,12 +3324,17 @@ export const AdminProjectsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Create / Edit Project Builder Modal / Form */}
+      {/* Slide-Over Project Builder Drawer */}
       {showBuilder && (
-        <form
-          onSubmit={handleSubmitForm}
-          className="bg-[#0D1F38] border border-[#10B981] rounded-lg p-6 space-y-4 shadow-sm"
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex justify-end bg-[#040D1A]/75 backdrop-blur-xs"
         >
+          <form
+            onSubmit={handleSubmitForm}
+            className="bg-[#0D1F38] border-l border-[#10B981] w-full max-w-2xl h-full overflow-y-auto p-6 space-y-5 shadow-2xl"
+          >
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#1E3A5F] pb-3">
             <div>
               <h2 className="text-base font-semibold text-[#F8FAFC]">
@@ -3562,6 +3563,7 @@ export const AdminProjectsPage: React.FC = () => {
             </button>
           </div>
         </form>
+        </div>
       )}
 
       {viewMode === 'table' ? (
@@ -3649,8 +3651,24 @@ export const AdminProjectsPage: React.FC = () => {
                       <td className="py-3.5 px-4 text-right font-mono tabular-nums">
                         {formatINR(p.budget)}
                       </td>
-                      <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                       <td className="py-3.5 px-4 text-right whitespace-nowrap">
                         <div className="inline-flex items-center justify-end gap-1.5 flex-wrap">
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              const trackerUrl = buildPublicProjectTrackerUrl(p);
+                              try {
+                                await navigator.clipboard.writeText(trackerUrl);
+                                showToast('success', 'Magic Tracker Link Copied!', trackerUrl);
+                              } catch {
+                                showToast('info', 'Tracker URL Ready', trackerUrl);
+                              }
+                            }}
+                            title="Copy Read-Only Live Project Tracker Link (/track/...)"
+                            className="px-2 py-1 text-[11px] font-semibold text-[#38BDF8] bg-[#0EA5E9]/10 hover:bg-[#0EA5E9]/20 border border-[#0EA5E9]/30 rounded-md"
+                          >
+                            Tracker Link
+                          </button>
                           <a
                             href={buildWhatsAppProjectStatusTemplateLink(
                               p,
@@ -3696,6 +3714,15 @@ export const AdminProjectsPage: React.FC = () => {
             return (
               <div
                 key={col.label}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const droppedId = e.dataTransfer.getData('text/plain');
+                  const draggedProj = projects.find((proj) => proj.id === droppedId);
+                  if (draggedProj && draggedProj.status !== col.status) {
+                    handleQuickProjectStatusChange(draggedProj, col.status);
+                  }
+                }}
                 className="bg-[#132A4A] border border-[#1E3A5F] rounded-lg p-3 flex flex-col min-h-[420px]"
               >
                 <div className="flex items-center justify-between pb-2.5 mb-3 border-b border-[#1E3A5F]">
@@ -3707,13 +3734,17 @@ export const AdminProjectsPage: React.FC = () => {
                 <div className="space-y-3 flex-1">
                   {colProjects.length === 0 ? (
                     <p className="text-[11px] text-[#94A3B8] text-center py-8">
-                      No projects in {col.label}
+                      Drop project card here ({col.label})
                     </p>
                   ) : (
                     colProjects.map((p) => (
                       <div
                         key={p.id}
-                        className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-3.5 space-y-2.5 shadow-2xs"
+                        draggable
+                        onDragStart={(e) => {
+                          e.dataTransfer.setData('text/plain', p.id);
+                        }}
+                        className="bg-[#0D1F38] border border-[#1E3A5F] hover:border-[#10B981]/50 cursor-grab active:cursor-grabbing rounded-lg p-3.5 space-y-2.5 shadow-2xs"
                       >
                         <div className="flex items-start justify-between gap-2">
                           <Link
@@ -4084,6 +4115,21 @@ export const AdminProjectDetailsPage: React.FC = () => {
             </span>
             <p className="text-[11px] text-[#94A3B8]">{unlockInfo.reason}</p>
           </div>
+          <button
+            type="button"
+            onClick={async () => {
+              const trackerUrl = buildPublicProjectTrackerUrl(project);
+              try {
+                await navigator.clipboard.writeText(trackerUrl);
+                showToast('success', 'Magic Tracker Link Copied!', trackerUrl);
+              } catch {
+                showToast('info', 'Tracker Link Ready', trackerUrl);
+              }
+            }}
+            className="px-3 py-2 text-xs font-semibold text-[#38BDF8] bg-[#0D1F38] border border-[#0EA5E9]/40 hover:bg-[#0EA5E9]/15 rounded-lg"
+          >
+            Copy Live Tracker Link
+          </button>
           <button
             type="button"
             onClick={async () => {
@@ -4701,8 +4747,12 @@ export const AdminTasksPage: React.FC = () => {
               return (
                 <div key={t.id} className="p-4 flex items-center justify-between gap-4 text-xs">
                   <div>
-                    <p className="font-semibold text-[#F8FAFC]">{t.title}</p>
-                    <p className="text-[#94A3B8] mt-0.5">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-semibold text-[#F8FAFC]">{t.title}</p>
+                      <CrmStatusBadge status={t.status} />
+                      <CrmStatusBadge status={t.priority} />
+                    </div>
+                    <p className="text-[#94A3B8] mt-1">
                       {proj?.title || t.projectId} · Due {t.dueDate} ·{' '}
                       {t.visibility === 'client' ? 'Client Visible' : 'Internal Only'}
                     </p>

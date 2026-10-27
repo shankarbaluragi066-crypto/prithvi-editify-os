@@ -946,6 +946,76 @@ export const PROJECT_MILESTONE_TEMPLATES: ProjectMilestoneTemplateDef[] = [
     serviceCategory: 'Social Media & Ad Creatives',
     tasks: STUDIO_MILESTONE_TEMPLATES['Social Media & Ad Creatives'],
   },
+  {
+    id: 'tpl-reels-pack',
+    name: 'Instagram Reels & Shorts Viral Pack (4 Milestones)',
+    serviceCategory: 'Instagram Reels Editing',
+    tasks: [
+      {
+        title: '01. Hook Selection & Beat-Synced Rough Cut',
+        description: 'Trim silences, lock the first 3-second retention hook, and sync cuts to audio track.',
+        daysOffset: 1,
+        priority: 'High',
+        visibility: 'client',
+      },
+      {
+        title: '02. Dynamic Kinetic Captions & B-Roll Overlays',
+        description: 'Animate highlighted word-by-word captions, emojis, and contextual B-roll.',
+        daysOffset: 2,
+        priority: 'High',
+        visibility: 'client',
+      },
+      {
+        title: '03. SFX Risers, Whooshes & Color Grade Preview',
+        description: 'Deliver 1080×1920 watermarked draft to Client Portal for timestamped feedback.',
+        daysOffset: 2,
+        priority: 'Medium',
+        visibility: 'client',
+      },
+      {
+        title: '04. Final 1080×1920 60fps Master + Cover Frame',
+        description: 'Export unwatermarked vertical master and custom Reel cover frame.',
+        daysOffset: 3,
+        priority: 'High',
+        visibility: 'client',
+      },
+    ],
+  },
+  {
+    id: 'tpl-brand-identity',
+    name: 'Brand Identity & Logo System (4 Milestones)',
+    serviceCategory: 'Logo and Brand Design',
+    tasks: [
+      {
+        title: '01. Brand Discovery, Moodboard & Typography Exploration',
+        description: 'Define visual direction, color psychology, and typographic pairing.',
+        daysOffset: 1,
+        priority: 'Medium',
+        visibility: 'client',
+      },
+      {
+        title: '02. Primary Logo Mark Concepts (3 Directions)',
+        description: 'Present 3 distinct vector logo mark concepts on dark and light mockups.',
+        daysOffset: 3,
+        priority: 'High',
+        visibility: 'client',
+      },
+      {
+        title: '03. Refinement & Social Media Kit Adaptation',
+        description: 'Refine selected mark and prepare profile avatars, banners, and watermark.',
+        daysOffset: 4,
+        priority: 'Medium',
+        visibility: 'client',
+      },
+      {
+        title: '04. Final Vector Master Pack (AI, EPS, SVG, PNG) & Brand Guide',
+        description: 'Deliver complete scalable vector kit and brand usage sheet in Client Portal.',
+        daysOffset: 5,
+        priority: 'High',
+        visibility: 'client',
+      },
+    ],
+  },
 ];
 
 export function buildTasksFromMilestoneTemplate(
@@ -1134,6 +1204,259 @@ export function buildWhatsAppInvoiceReminderLink(
   return phonePrefix
     ? `https://wa.me/${phonePrefix}?text=${encodeURIComponent(message)}`
     : `https://wa.me/?text=${encodeURIComponent(message)}`;
+}
+
+// ============================================================================
+// 9. UNIVERSAL CRM STATUS BADGE CONFIG (INQUIRIES, QUOTES, INVOICES, TASKS, PROJECTS)
+// ============================================================================
+export function getCrmStatusBadgeStyle(status: string): {
+  containerClass: string;
+  dotClass: string;
+  barClass: string;
+} {
+  const s = (status || '').trim().toLowerCase();
+
+  // Green: Completed, Paid, Accepted, Approved, Converted, Done, Active
+  if (
+    s === 'completed' ||
+    s === 'paid' ||
+    s === 'accepted' ||
+    s === 'approved' ||
+    s === 'converted' ||
+    s === 'converted to invoice' ||
+    s === 'done' ||
+    s === 'active' ||
+    s === 'published'
+  ) {
+    return {
+      containerClass: 'bg-[#16A34A]/15 text-[#4ADE80] border-[#16A34A]/40',
+      dotClass: 'bg-[#4ADE80]',
+      barClass: 'bg-[#16A34A]',
+    };
+  }
+
+  // Amber: In Progress, In Review, Waiting for Client, Partially Paid, Sent, Contacted, Quoted, Pending Verification, Medium
+  if (
+    s === 'in progress' ||
+    s === 'in review' ||
+    s === 'waiting for client' ||
+    s === 'partially paid' ||
+    s === 'sent' ||
+    s === 'contacted' ||
+    s === 'quoted' ||
+    s === 'pending verification' ||
+    s === 'medium'
+  ) {
+    return {
+      containerClass: 'bg-[#F59E0B]/15 text-[#FBBF24] border-[#F59E0B]/40',
+      dotClass: 'bg-[#FBBF24]',
+      barClass: 'bg-[#F59E0B]',
+    };
+  }
+
+  // Blue: Planned, Inquiry, New, To Do, Todo, Draft, Upcoming
+  if (
+    s === 'planned' ||
+    s === 'inquiry' ||
+    s === 'new' ||
+    s === 'to do' ||
+    s === 'todo' ||
+    s === 'draft' ||
+    s === 'upcoming'
+  ) {
+    return {
+      containerClass: 'bg-[#0EA5E9]/15 text-[#38BDF8] border-[#0EA5E9]/40',
+      dotClass: 'bg-[#38BDF8]',
+      barClass: 'bg-[#0EA5E9]',
+    };
+  }
+
+  // Orange: Revision Requested, Changes Requested, High, Unpaid
+  if (
+    s === 'revision requested' ||
+    s === 'changes requested' ||
+    s === 'high' ||
+    s === 'unpaid'
+  ) {
+    return {
+      containerClass: 'bg-[#EA580C]/15 text-[#FB923C] border-[#EA580C]/40',
+      dotClass: 'bg-[#FB923C]',
+      barClass: 'bg-[#EA580C]',
+    };
+  }
+
+  // Red: Cancelled, Overdue, Rejected, Declined, Blocked, Urgent
+  if (
+    s === 'cancelled' ||
+    s === 'overdue' ||
+    s === 'rejected' ||
+    s === 'declined' ||
+    s === 'blocked' ||
+    s === 'urgent'
+  ) {
+    return {
+      containerClass: 'bg-[#DC2626]/15 text-[#F87171] border-[#DC2626]/40',
+      dotClass: 'bg-[#F87171]',
+      barClass: 'bg-[#DC2626]',
+    };
+  }
+
+  // Slate: On Hold, Closed, Archived, Deactivated, Low
+  return {
+    containerClass: 'bg-[#64748B]/20 text-[#CBD5E1] border-[#64748B]/40',
+    dotClass: 'bg-[#94A3B8]',
+    barClass: 'bg-[#64748B]',
+  };
+}
+
+// ============================================================================
+// 10. PUBLIC SHAREABLE PROJECT STATUS TRACKER LINK (/track/:projectId)
+// ============================================================================
+export function buildPublicProjectTrackerUrl(project: ProjectRecord): string {
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const basePath =
+    typeof window !== 'undefined' &&
+    window.location.pathname.startsWith('/prithvi-editify')
+      ? '/prithvi-editify'
+      : '';
+  try {
+    const compactPayload = btoa(
+      encodeURIComponent(
+        JSON.stringify({
+          id: project.id,
+          title: project.title,
+          clientName: project.clientName,
+          clientEmail: project.clientEmail,
+          serviceType: project.serviceType,
+          status: project.status,
+          progress: project.progress,
+          deadline: project.deadline,
+          startDate: project.startDate,
+          budget: project.budget,
+          latestUpdate: project.latestUpdate,
+          brief: project.brief,
+        })
+      )
+    );
+    return `${origin}${basePath}/track/${encodeURIComponent(project.id)}?d=${compactPayload}`;
+  } catch {
+    return `${origin}${basePath}/track/${encodeURIComponent(project.id)}`;
+  }
+}
+
+// ============================================================================
+// 11. CLIENT MONTHLY RETAINER QUOTA TRACKER & TESTIMONIALS
+// ============================================================================
+export interface ClientRetainerPlanRecord {
+  clientId: string;
+  clientEmail: string;
+  planName: string;
+  monthlyDeliverableQuota: number;
+  usedDeliverablesCount: number;
+  renewalDate: string;
+  monthlyRateInr: number;
+  includedServicesSummary: string;
+  isActive: boolean;
+}
+
+const RETAINER_PLANS_KEY = 'pe_crm_retainer_plans_v1';
+
+export function getClientRetainerPlan(
+  clientIdOrEmail: string,
+  fallbackUsedCount = 0
+): ClientRetainerPlanRecord | null {
+  if (!clientIdOrEmail) return null;
+  const keyLower = clientIdOrEmail.toLowerCase();
+  try {
+    const raw = localStorage.getItem(RETAINER_PLANS_KEY);
+    const list: ClientRetainerPlanRecord[] = raw ? JSON.parse(raw) : [];
+    const found = list.find(
+      (r) =>
+        r.clientId.toLowerCase() === keyLower ||
+        r.clientEmail.toLowerCase() === keyLower
+    );
+    if (found) return found;
+  } catch {
+    // ignore
+  }
+  if (fallbackUsedCount > 0) {
+    const nextMonth = new Date(Date.now() + 25 * 86400000).toISOString().split('T')[0];
+    return {
+      clientId: clientIdOrEmail,
+      clientEmail: clientIdOrEmail.includes('@') ? clientIdOrEmail : '',
+      planName: 'Creator Studio Growth Pack',
+      monthlyDeliverableQuota: Math.max(10, fallbackUsedCount + 4),
+      usedDeliverablesCount: fallbackUsedCount,
+      renewalDate: nextMonth,
+      monthlyRateInr: 12500,
+      includedServicesSummary: 'YouTube Thumbnails · Reels/Shorts Editing · Social Media Creatives',
+      isActive: true,
+    };
+  }
+  return null;
+}
+
+export function saveClientRetainerPlan(plan: ClientRetainerPlanRecord): void {
+  try {
+    const raw = localStorage.getItem(RETAINER_PLANS_KEY);
+    const list: ClientRetainerPlanRecord[] = raw ? JSON.parse(raw) : [];
+    const filtered = list.filter(
+      (r) =>
+        r.clientId.toLowerCase() !== plan.clientId.toLowerCase() &&
+        (!plan.clientEmail || r.clientEmail.toLowerCase() !== plan.clientEmail.toLowerCase())
+    );
+    localStorage.setItem(RETAINER_PLANS_KEY, JSON.stringify([plan, ...filtered]));
+  } catch {
+    // ignore
+  }
+}
+
+export interface ClientProjectTestimonial {
+  id: string;
+  projectId: string;
+  projectTitle: string;
+  serviceType: string;
+  clientName: string;
+  rating: number;
+  reviewText: string;
+  publishedToWebsite: boolean;
+  createdAt: string;
+}
+
+const TESTIMONIALS_KEY = 'pe_crm_project_testimonials_v1';
+
+export function getProjectTestimonials(projectId?: string): ClientProjectTestimonial[] {
+  try {
+    const raw = localStorage.getItem(TESTIMONIALS_KEY);
+    const list: ClientProjectTestimonial[] = raw ? JSON.parse(raw) : [];
+    return projectId ? list.filter((t) => t.projectId === projectId) : list;
+  } catch {
+    return [];
+  }
+}
+
+export function submitProjectTestimonial(
+  input: Omit<ClientProjectTestimonial, 'id' | 'publishedToWebsite' | 'createdAt'>
+): ClientProjectTestimonial {
+  const all = getProjectTestimonials();
+  const existingIdx = all.findIndex((t) => t.projectId === input.projectId);
+  const record: ClientProjectTestimonial = {
+    ...input,
+    id: existingIdx >= 0 ? all[existingIdx].id : `testi_${Date.now()}`,
+    publishedToWebsite: existingIdx >= 0 ? all[existingIdx].publishedToWebsite : true,
+    createdAt: new Date().toISOString(),
+  };
+  if (existingIdx >= 0) {
+    all[existingIdx] = record;
+  } else {
+    all.unshift(record);
+  }
+  try {
+    localStorage.setItem(TESTIMONIALS_KEY, JSON.stringify(all));
+  } catch {
+    // ignore
+  }
+  return record;
 }
 
 

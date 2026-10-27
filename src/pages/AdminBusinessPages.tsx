@@ -65,7 +65,7 @@ import {
 import { MediaLibraryManager } from '../components/MediaLibraryManager';
 import { MediaPreviewModal, PreviewableMediaItem } from '../components/MediaPreviewModal';
 import { MediaSearchFilterState } from '../components/MediaSearchFilterBar';
-import { UpiQrCodeCard } from '../components/StudioEnhancements';
+import { UpiQrCodeCard, CrmStatusBadge } from '../components/StudioEnhancements';
 import {
   GstTaxMode,
   computeGstBreakdown,
@@ -856,7 +856,7 @@ export const AdminServicesPage: React.FC = () => {
                     </span>
                   </td>
                   <td className="py-3.5 px-4">
-                    {srv.published ? 'Published' : 'Unpublished Draft'}
+                    <CrmStatusBadge status={srv.published ? 'Published' : 'Draft'} />
                   </td>
                   <td className="py-3.5 px-4 text-right space-x-3 whitespace-nowrap">
                     <Link
@@ -2719,19 +2719,7 @@ export const AdminInvoicesPage: React.FC = () => {
                     </td>
                     <td className="py-3.5 px-4 font-mono text-[#94A3B8]">{inv.dueDate}</td>
                     <td className="py-3.5 px-4">
-                      <span
-                        className={`font-semibold ${
-                          inv.status === 'Paid'
-                            ? 'text-[#16A34A]'
-                            : inv.status === 'Void' || inv.status === 'Overdue'
-                            ? 'text-[#DC2626]'
-                            : inv.status === 'Partially Paid'
-                            ? 'text-[#B87514]'
-                            : 'text-[#F8FAFC]'
-                        }`}
-                      >
-                        {inv.status}
-                      </span>
+                      <CrmStatusBadge status={inv.status} />
                     </td>
                     <td className="py-3.5 px-4 text-right font-mono tabular-nums">
                       {formatINR(inv.total)}

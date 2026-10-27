@@ -763,7 +763,28 @@ export const HomePage: React.FC = () => {
                   >
                     <span>{custom.heroSecondaryCtaLabel || 'Explore Portfolio'}</span>
                   </Link>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const videoItem = portfolio.find((p) => Boolean(p.videoUrl)) || portfolio[0];
+                      setPreviewMedia({
+                        id: 'studio-showreel-hero',
+                        title: `${settings.businessName || 'Prithvi Editify'} — 60s Studio Showreel & Editing Highlights`,
+                        url: heroPreviewSrc,
+                        videoUrl: videoItem?.videoUrl || undefined,
+                        description:
+                          'High-retention YouTube editing, dynamic Instagram Reels motion graphics, color grading, and CTR-tested thumbnail systems by Shankar Baluragi.',
+                        categoryLabel: 'Studio Showreel · 4K 60fps Master',
+                        storageBucket: 'portfolio-media',
+                      });
+                    }}
+                    className="inline-flex items-center gap-2 px-4 py-3.5 text-xs font-semibold text-[#2DD4BF] bg-[#0D1F38] hover:bg-[#132A4A] border border-[#10B981]/40 rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+                  >
+                    <Film className="w-4 h-4 text-[#10B981]" />
+                    <span>Watch Studio Showreel</span>
+                  </button>
                 </div>
+
 
                 {custom.heroDisciplines && custom.heroDisciplines.length > 0 && (
                   <div
@@ -1369,6 +1390,7 @@ export const ServicesPage: React.FC = () => {
                 cat === 'All'
                   ? services.length
                   : services.filter((srv) => matchesServiceCategoryFilter(srv, cat)).length;
+              if (cat !== 'All' && services.length > 0 && matchCount === 0 && !active) return null;
 
               return (
                 <button
@@ -1392,13 +1414,14 @@ export const ServicesPage: React.FC = () => {
                           : 'bg-[#1E3A5F]/70 text-[#F8FAFC]'
                       }`}
                     >
-                      {matchCount}
+                      ({matchCount})
                     </span>
                   )}
                 </button>
               );
             })}
           </div>
+
 
           <button
             type="button"
@@ -2150,7 +2173,22 @@ export const ServiceDetailPage: React.FC = () => {
               </div>
             </div>
           </section>
+
+          {/* Category-Specific Before / After Visual Quality Comparison inside Service Detail Page */}
+          <BeforeAfterComparisonShowcase
+            defaultPresetId={
+              displayCategory.toLowerCase().includes('video') ||
+              displayCategory.toLowerCase().includes('reel')
+                ? 'colorgrade'
+                : displayCategory.toLowerCase().includes('photo') ||
+                  displayCategory.toLowerCase().includes('brand') ||
+                  displayCategory.toLowerCase().includes('logo')
+                ? 'retouch'
+                : 'thumbnail'
+            }
+          />
         </div>
+
 
         {/* RIGHT STICKY COLUMN: Single Service Pricing Card */}
         <aside className="lg:col-span-5 xl:col-span-4 lg:sticky lg:top-24 space-y-5">
@@ -2806,6 +2844,7 @@ export const PortfolioPage: React.FC = () => {
                 cat === 'All'
                   ? items.length
                   : items.filter((item) => matchesPortfolioCategoryFilter(item, cat)).length;
+              if (cat !== 'All' && items.length > 0 && matchCount === 0 && !active) return null;
 
               return (
                 <button
@@ -2829,13 +2868,14 @@ export const PortfolioPage: React.FC = () => {
                           : 'bg-[#1E3A5F]/70 text-[#F8FAFC]'
                       }`}
                     >
-                      {matchCount}
+                      ({matchCount})
                     </span>
                   )}
                 </button>
               );
             })}
           </div>
+
 
           <button
             type="button"

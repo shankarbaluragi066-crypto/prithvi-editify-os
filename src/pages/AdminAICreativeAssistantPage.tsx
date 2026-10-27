@@ -79,7 +79,7 @@ import {
   buildWhatsAppQuotationShareUrl,
   generateAIDraftedQuotationFromInquiry,
 } from '../services/workflowEnhancementsService';
-import { UpiQrCodeCard } from '../components/StudioEnhancements';
+import { UpiQrCodeCard, CrmStatusBadge } from '../components/StudioEnhancements';
 import {
   AIBrandProfile,
   AIUsageHistoryEntry,
@@ -3955,21 +3955,11 @@ export const AdminQuotationsPage: React.FC<{
                     </td>
                     <td className="py-3.5 px-4 font-mono text-[#94A3B8]">{q.expiryDate}</td>
                     <td className="py-3.5 px-4">
-                      <span
-                        className={`font-semibold ${
-                          q.status === 'Accepted'
-                            ? 'text-[#16A34A]'
-                            : q.status === 'Rejected' || q.status === 'Expired'
-                            ? 'text-[#DC2626]'
-                            : q.status === 'Archived'
-                            ? 'text-[#94A3B8]'
-                            : 'text-[#F8FAFC]'
-                        }`}
-                      >
-                        {q.status}
-                      </span>
+                      <CrmStatusBadge status={q.status} />
                       {q.convertedProjectId && (
-                        <span className="block text-[10px] text-[#16A34A]">Converted to Project</span>
+                        <span className="block text-[10px] text-[#4ADE80] mt-1 font-medium">
+                          ✓ Converted to Project
+                        </span>
                       )}
                     </td>
                     <td className="py-3.5 px-4 text-right font-mono font-semibold text-[#F8FAFC] tabular-nums">
