@@ -105,6 +105,14 @@ import {
 } from '../utils/seedData';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
+import { STUDIO_OWNER_EMAIL, STUDIO_OFFICIAL_ADMIN_EMAIL } from '../lib/supabaseClient';
+import {
+  getAdminEmailNotificationSettings,
+  saveAdminEmailNotificationSettings,
+  getEmailDeliveryAuditLogs,
+  AdminEmailNotificationPreferences,
+  EmailDeliveryAuditEntry,
+} from '../services/authEmailService';
 import {
   generateStructuredServiceContent,
   generateStructuredPortfolioContent,
@@ -3603,10 +3611,18 @@ export const AdminSettingsPage: React.FC = () => {
   const { showToast } = useToast();
   const [pub, setPub] = useState<PublicSettings>(DEFAULT_PUBLIC_SETTINGS);
   const [priv, setPriv] = useState<PrivateSettings>(DEFAULT_PRIVATE_SETTINGS);
+  const [emailPrefs, setEmailPrefs] = useState<AdminEmailNotificationPreferences>(() =>
+    getAdminEmailNotificationSettings()
+  );
+  const [auditLogs, setAuditLogs] = useState<EmailDeliveryAuditEntry[]>(() =>
+    getEmailDeliveryAuditLogs()
+  );
 
   useEffect(() => {
     fetchPublicSettings().then(setPub).catch(() => {});
     fetchPrivateSettings().then(setPriv).catch(() => {});
+    setEmailPrefs(getAdminEmailNotificationSettings());
+    setAuditLogs(getEmailDeliveryAuditLogs());
   }, []);
 
   const privateAdminLoginUrl =
@@ -3623,6 +3639,17 @@ export const AdminSettingsPage: React.FC = () => {
     } catch {
       showToast('success', 'Private Admin Link', privateAdminLoginUrl);
     }
+  };
+
+  const handleSaveEmailPrefs = (e: React.FormEvent) => {
+    e.preventDefault();
+    const saved = saveAdminEmailNotificationSettings(emailPrefs);
+    setEmailPrefs(saved);
+    showToast(
+      'success',
+      'Email Notification Settings Saved',
+      'Administrator notification recipients and customer welcome email preferences updated.'
+    );
   };
 
   const handleSavePublic = async (e: React.FormEvent) => {
@@ -3675,30 +3702,64 @@ export const AdminSettingsPage: React.FC = () => {
         </Link>
       </div>
 
-      {/* Private Studio Owner Security & Unlisted Admin Login Link */}
-      <div className="bg-[#040D1A] text-[#F8FAFC] border border-[#1E3A5F] rounded-lg p-6 space-y-4">
+      {/* Private Studio Administrator Security & Authorized Admin Accounts */}
+      <div className="bg-[#040D1A] text-[#F8FAFC] border border-[#1E3A5F] rounded-lg p-6 space-y-5">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-2">
             <Lock className="w-4 h-4 text-[#10B981]" />
             <h2 className="text-sm font-semibold text-white">
-              Private Role Security & Studio Owner Login Link (Hidden from Public)
+              Authorized Studio Administrators & Private Gateway Link
             </h2>
           </div>
           <span className="px-2.5 py-0.5 rounded bg-[#16A34A] text-[11px] font-mono text-white">
-            RLS ENFORCED · OWNER VERIFIED
+            RLS ENFORCED · MULTI-ADMIN ALLOWLIST
           </span>
         </div>
+
         <div className="text-xs text-[#94A3B8] space-y-1.5 leading-relaxed">
           <p>
-            <strong className="text-white">Role Security:</strong> All self-registered accounts on the public portal receive the{' '}
+            <strong className="text-white">Role Security:</strong> All self-registered customer accounts on the public portal receive the{' '}
             <code className="font-mono text-[#10B981]">client</code> role enforced by Supabase Row Level Security (RLS).
           </p>
           <p>
-            Studio Administrator access is strictly restricted to verified studio owner{' '}
-            <code className="font-mono text-white">{user?.email}</code> and is completely hidden from all public pages.
+            Studio Administrator access is strictly restricted to the verified administrator allowlist below (<code className="font-mono text-white">public.admin_allowlist</code>). Currently signed in as:{' '}
+            <code className="font-mono text-[#10B981]">{user?.email}</code>.
           </p>
         </div>
-        <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="p-3.5 rounded-lg bg-[#0D1F38] border border-[#1E3A5F] flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <span className="inline-block px-2 py-0.5 rounded bg-[#0EA5E9]/15 text-[#38BDF8] text-[10px] font-mono uppercase">
+                Primary Studio Owner (Preserved)
+              </span>
+              <p className="text-xs font-mono font-semibold text-white mt-1 truncate">
+                {STUDIO_OWNER_EMAIL}
+              </p>
+              <p className="text-[11px] text-[#94A3B8] mt-0.5">
+                Full Admin Dashboard, RLS & Notification Access
+              </p>
+            </div>
+            <CheckCircle2 className="w-4 h-4 text-[#10B981] shrink-0" />
+          </div>
+
+          <div className="p-3.5 rounded-lg bg-[#0D1F38] border border-[#10B981]/50 flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <span className="inline-block px-2 py-0.5 rounded bg-[#10B981]/15 text-[#10B981] text-[10px] font-mono uppercase">
+                Official Studio Administrator
+              </span>
+              <p className="text-xs font-mono font-semibold text-white mt-1 truncate">
+                {STUDIO_OFFICIAL_ADMIN_EMAIL}
+              </p>
+              <p className="text-[11px] text-[#94A3B8] mt-0.5">
+                Full Admin Dashboard, RLS & Security Alerts Recipient
+              </p>
+            </div>
+            <CheckCircle2 className="w-4 h-4 text-[#10B981] shrink-0" />
+          </div>
+        </div>
+
+        <div className="pt-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
           <input
             type="text"
             readOnly
@@ -3714,6 +3775,199 @@ export const AdminSettingsPage: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Customer Welcome Email & Admin Notification Automation Settings */}
+      <form
+        onSubmit={handleSaveEmailPrefs}
+        className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 space-y-5"
+      >
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div>
+            <h2 className="text-base font-semibold text-[#F8FAFC] flex items-center gap-2">
+              <Bell className="w-4 h-4 text-[#10B981]" />
+              <span>Customer Welcome Emails & Admin Security Notifications</span>
+            </h2>
+            <p className="text-xs text-[#94A3B8] mt-0.5">
+              Configure automated customer welcome emails and administrator alerts for registrations and password-reset events.
+            </p>
+          </div>
+          <span className="px-2.5 py-1 rounded bg-[#132A4A] border border-[#1E3A5F] text-[11px] font-mono text-[#2DD4BF]">
+            NO SECRETS IN EMAILS · IDEMPOTENT
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          <div className="p-4 rounded-lg bg-[#132A4A]/60 border border-[#1E3A5F] space-y-3">
+            <p className="font-semibold text-[#F8FAFC]">Automated Email Triggers</p>
+            <label className="flex items-start gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={emailPrefs.enableCustomerWelcomeEmail}
+                onChange={(e) =>
+                  setEmailPrefs({ ...emailPrefs, enableCustomerWelcomeEmail: e.target.checked })
+                }
+                className="mt-0.5"
+              />
+              <span>
+                <strong className="text-white block">Customer Welcome Email</strong>
+                <span className="text-[#94A3B8]">
+                  Send branded HTML + plain-text welcome email (&ldquo;Welcome to Prithvi Editify!&rdquo;) once upon new customer registration.
+                </span>
+              </span>
+            </label>
+
+            <label className="flex items-start gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={emailPrefs.notifyAdminsOnRegistration}
+                onChange={(e) =>
+                  setEmailPrefs({ ...emailPrefs, notifyAdminsOnRegistration: e.target.checked })
+                }
+                className="mt-0.5"
+              />
+              <span>
+                <strong className="text-white block">Admin Alert: New Customer Registration</strong>
+                <span className="text-[#94A3B8]">
+                  Notify authorized administrators when a new customer account is created.
+                </span>
+              </span>
+            </label>
+
+            <label className="flex items-start gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={emailPrefs.notifyAdminsOnPasswordResetRequest}
+                onChange={(e) =>
+                  setEmailPrefs({
+                    ...emailPrefs,
+                    notifyAdminsOnPasswordResetRequest: e.target.checked,
+                  })
+                }
+                className="mt-0.5"
+              />
+              <span>
+                <strong className="text-white block">Admin Alert: Password-Reset Request</strong>
+                <span className="text-[#94A3B8]">
+                  Send informational security alert when a password reset is requested (never includes tokens, links, or passwords).
+                </span>
+              </span>
+            </label>
+
+            <label className="flex items-start gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={emailPrefs.notifyAdminsOnPasswordChanged}
+                onChange={(e) =>
+                  setEmailPrefs({
+                    ...emailPrefs,
+                    notifyAdminsOnPasswordChanged: e.target.checked,
+                  })
+                }
+                className="mt-0.5"
+              />
+              <span>
+                <strong className="text-white block">Admin Alert: Password Change Completed</strong>
+                <span className="text-[#94A3B8]">
+                  Notify administrators only after a verified Supabase password update succeeds.
+                </span>
+              </span>
+            </label>
+          </div>
+
+          <div className="p-4 rounded-lg bg-[#132A4A]/60 border border-[#1E3A5F] space-y-3">
+            <p className="font-semibold text-[#F8FAFC]">Authorized Admin Notification Recipients</p>
+            <label className="flex items-start gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={emailPrefs.notifyOfficialAdmin}
+                onChange={(e) =>
+                  setEmailPrefs({ ...emailPrefs, notifyOfficialAdmin: e.target.checked })
+                }
+                className="mt-0.5"
+              />
+              <span>
+                <strong className="text-white font-mono block">{STUDIO_OFFICIAL_ADMIN_EMAIL}</strong>
+                <span className="text-[#94A3B8]">
+                  Official Prithvi Editify Admin Email (Primary recipient for registration & password-reset security notifications).
+                </span>
+              </span>
+            </label>
+
+            <label className="flex items-start gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={emailPrefs.notifyPrimaryOwner}
+                onChange={(e) =>
+                  setEmailPrefs({ ...emailPrefs, notifyPrimaryOwner: e.target.checked })
+                }
+                className="mt-0.5"
+              />
+              <span>
+                <strong className="text-white font-mono block">{STUDIO_OWNER_EMAIL}</strong>
+                <span className="text-[#94A3B8]">
+                  Existing Studio Owner Email (Preserved administrator recipient).
+                </span>
+              </span>
+            </label>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <button
+            type="submit"
+            className="px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg cursor-pointer"
+          >
+            Save Email & Notification Preferences
+          </button>
+          <button
+            type="button"
+            onClick={() => setAuditLogs(getEmailDeliveryAuditLogs())}
+            className="px-3 py-1.5 text-xs font-medium text-[#CBD5E1] bg-[#132A4A] border border-[#1E3A5F] rounded-lg hover:text-white cursor-pointer"
+          >
+            Refresh Email Audit Logs ({auditLogs.length})
+          </button>
+        </div>
+
+        {auditLogs.length > 0 && (
+          <div className="pt-3 border-t border-[#1E3A5F] space-y-2">
+            <p className="text-xs font-semibold text-[#F8FAFC]">
+              Recent Email Delivery & Security Notification Audit Log
+            </p>
+            <div className="max-h-48 overflow-y-auto border border-[#1E3A5F] rounded-lg divide-y divide-[#1E3A5F] bg-[#081629]">
+              {auditLogs.slice(0, 12).map((entry) => (
+                <div
+                  key={entry.id}
+                  className="px-3.5 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px]"
+                >
+                  <div className="min-w-0">
+                    <p className="font-semibold text-[#F8FAFC] truncate">
+                      {entry.subject}{' '}
+                      <span className="font-mono text-[#94A3B8]">→ {entry.recipientEmail}</span>
+                    </p>
+                    {entry.note && <p className="text-[#94A3B8] truncate">{entry.note}</p>}
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span
+                      className={`px-2 py-0.5 rounded font-mono uppercase text-[10px] ${
+                        entry.status === 'sent' || entry.status === 'queued_relay'
+                          ? 'bg-[#10B981]/15 text-[#10B981]'
+                          : entry.status === 'pending_provider_config'
+                          ? 'bg-[#F59E0B]/15 text-[#F59E0B]'
+                          : 'bg-[#94A3B8]/15 text-[#94A3B8]'
+                      }`}
+                    >
+                      {entry.status}
+                    </span>
+                    <span className="text-[#64748B] font-mono">
+                      {new Date(entry.timestamp).toLocaleTimeString()}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </form>
 
       <form onSubmit={handleSavePublic} className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 space-y-4">
         <h2 className="text-base font-semibold text-[#F8FAFC]">Public Identity & WhatsApp Configuration</h2>

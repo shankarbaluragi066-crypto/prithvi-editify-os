@@ -39,6 +39,19 @@ export const supabase = createClient(
 );
 
 export const STUDIO_OWNER_EMAIL = 'shankarbaluragi066@gmail.com';
+export const STUDIO_OFFICIAL_ADMIN_EMAIL = 'prithvieditify.official@gmail.com';
+
+export const AUTHORIZED_ADMIN_EMAILS: readonly string[] = [
+  STUDIO_OWNER_EMAIL,
+  STUDIO_OFFICIAL_ADMIN_EMAIL,
+];
+
+export function isAuthorizedAdminEmail(email?: string | null): boolean {
+  if (!email) return false;
+  const normalized = email.trim().toLowerCase();
+  return AUTHORIZED_ADMIN_EMAILS.some((adminEmail) => adminEmail.toLowerCase() === normalized);
+}
+
 export const LOCAL_GOOGLE_SESSION_KEY = 'pe_google_auth_session_v1';
 
 type SchemaStatusListener = (missing: boolean) => void;

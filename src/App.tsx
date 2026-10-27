@@ -33,7 +33,7 @@ import {
   NotFoundPage,
 } from './pages/PublicPages';
 
-import { LoginPage, AdminLoginPage, ForgotPasswordPage } from './pages/AuthPages';
+import { LoginPage, AdminLoginPage, ForgotPasswordPage, ResetPasswordPage } from './pages/AuthPages';
 
 import {
   AdminDashboardPage,
@@ -151,7 +151,7 @@ const RequireAdmin: React.FC<{ children: React.ReactNode }> = ({ children }) => 
             Administrator Access Restricted
           </h1>
           <p className="text-xs text-[#94A3B8] leading-relaxed">
-            Your current session has standard client permissions. Studio Administrator access is strictly restricted to the verified studio owner.
+            Your current session has standard client permissions. Studio Administrator access is strictly restricted to verified Prithvi Editify administrators.
           </p>
           <div className="flex gap-3 pt-2">
             <Link
@@ -237,6 +237,7 @@ export default function App() {
                 <Route path="/contact" element={<ContactPage />} />
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
                 <Route path="/quote/:quoteId" element={<PublicQuotationApprovalPage />} />
                 <Route path="/privacy" element={<PrivacyPolicyPage />} />
                 <Route path="/terms" element={<TermsPage />} />

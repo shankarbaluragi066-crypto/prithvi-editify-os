@@ -2,7 +2,17 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { LogIn, UserPlus, KeyRound, ShieldCheck, Lock, AlertTriangle, ArrowLeft } from 'lucide-react';
+import {
+  LogIn,
+  UserPlus,
+  KeyRound,
+  ShieldCheck,
+  Lock,
+  AlertTriangle,
+  ArrowLeft,
+  CheckCircle2,
+  Mail,
+} from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import {
@@ -11,12 +21,23 @@ import {
   registerSchema,
   RegisterFormValues,
 } from '../schemas/validation';
-import { STUDIO_OWNER_EMAIL } from '../lib/supabaseClient';
+import {
+  isAuthorizedAdminEmail,
+  supabase,
+  isSupabaseConfigured,
+} from '../lib/supabaseClient';
 import { DEFAULT_STUDIO_LOGO_URL } from '../utils/seedData';
 
 export const LoginPage: React.FC = () => {
-  const { user, profile, loading, loginWithGoogle, loginWithEmail, registerClientWithEmail } =
-    useAuth();
+  const {
+    user,
+    profile,
+    loading,
+    lastRegistrationEmailStatus,
+    loginWithGoogle,
+    loginWithEmail,
+    registerClientWithEmail,
+  } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
   const [mode, setMode] = useState<'login' | 'register'>('login');
@@ -75,11 +96,19 @@ export const LoginPage: React.FC = () => {
   const onClientRegister = async (values: RegisterFormValues) => {
     try {
       const prof = await registerClientWithEmail(values);
-      showToast(
-        'success',
-        'Client Account Created',
-        `Welcome to the Prithvi Editify Client Portal, ${prof.displayName}!`
-      );
+      if (lastRegistrationEmailStatus?.welcomeEmailStatus === 'sent') {
+        showToast(
+          'success',
+          'Account Created & Welcome Email Sent',
+          `Welcome to Prithvi Editify, ${prof.displayName}! A welcome email has been sent to ${prof.email}.`
+        );
+      } else {
+        showToast(
+          'success',
+          'Client Account Created',
+          `Welcome to the Prithvi Editify Client Portal, ${prof.displayName}! Your account is ready.`
+        );
+      }
       navigate('/portal', { replace: true });
     } catch (err) {
       showToast(
@@ -328,7 +357,9 @@ export const LoginPage: React.FC = () => {
 
 /**
  * Private Studio Administrator Login Page (/admin-login)
- * Unlisted from all public navigation and strictly restricted to STUDIO_OWNER_EMAIL.
+ * Unlisted from all public navigation and strictly restricted to authorized admin emails:
+ * - shankarbaluragi066@gmail.com (Primary Studio Owner)
+ * - prithvieditify.official@gmail.com (Official Studio Administrator)
  */
 export const AdminLoginPage: React.FC = () => {
   const { user, profile, isAdmin, loading, loginWithGoogle, loginWithEmail, logout } = useAuth();
@@ -344,7 +375,7 @@ export const AdminLoginPage: React.FC = () => {
 
   useEffect(() => {
     if (!loading && user && profile) {
-      if (isAdmin && user.email?.toLowerCase() === STUDIO_OWNER_EMAIL.toLowerCase()) {
+      if (isAdmin && isAuthorizedAdminEmail(user.email)) {
         navigate('/admin', { replace: true });
       }
     }
@@ -355,7 +386,7 @@ export const AdminLoginPage: React.FC = () => {
     setGoogleBusy(true);
     try {
       const prof = await loginWithGoogle('/admin-login');
-      if (prof.role === 'admin') {
+      if (prof.role === 'admin' && isAuthorizedAdminEmail(prof.email)) {
         showToast('success', 'Studio Admin Authenticated', `Welcome back, ${prof.displayName}`);
         navigate('/admin', { replace: true });
       }
@@ -376,17 +407,21 @@ export const AdminLoginPage: React.FC = () => {
   const onAdminEmailLogin = async (values: LoginFormValues) => {
     setAuthError(null);
     const enteredEmail = values.email.trim().toLowerCase();
-    if (enteredEmail !== STUDIO_OWNER_EMAIL.toLowerCase()) {
+    if (!isAuthorizedAdminEmail(enteredEmail)) {
       setAuthError(
-        'Access Denied: Unauthorized email address. Only the verified Studio Owner may sign in here.'
+        'Access Denied: Unauthorized email address. Only authorized Prithvi Editify Studio Administrators may sign in here.'
       );
-      showToast('error', 'Unauthorized Access', 'Studio Administrator access is restricted to the studio owner.');
+      showToast(
+        'error',
+        'Unauthorized Access',
+        'Studio Administrator access is restricted to authorized administrator accounts.'
+      );
       return;
     }
 
     try {
       const prof = await loginWithEmail(values.email, values.password);
-      if (prof.email.toLowerCase() !== STUDIO_OWNER_EMAIL.toLowerCase() || prof.role !== 'admin') {
+      if (!isAuthorizedAdminEmail(prof.email) || prof.role !== 'admin') {
         await logout();
         setAuthError('Access Denied: Studio Administrator verification failed.');
         return;
@@ -415,7 +450,7 @@ export const AdminLoginPage: React.FC = () => {
           </Link>
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#132A4A] text-[11px] font-mono text-[#2DD4BF]">
             <Lock className="w-3 h-3" />
-            PRIVATE OWNER ACCESS
+            PRIVATE ADMIN ACCESS
           </span>
         </div>
 
@@ -433,7 +468,7 @@ export const AdminLoginPage: React.FC = () => {
               Studio Administrator Sign In
             </h1>
             <p className="text-xs text-[#94A3B8] mt-1.5 leading-relaxed">
-              This unlisted portal is reserved exclusively for the verified studio owner. Client accounts must sign in via the public Client Portal.
+              This unlisted portal is reserved exclusively for verified Prithvi Editify administrators. Client accounts must sign in via the public Client Portal.
             </p>
           </div>
 
@@ -451,12 +486,16 @@ export const AdminLoginPage: React.FC = () => {
             className="w-full flex items-center justify-center gap-2.5 px-4 py-3 text-sm font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-colors disabled:opacity-60"
           >
             <ShieldCheck className="w-4 h-4 text-[#10B981]" />
-            <span>{googleBusy ? 'Verifying Owner Google Account...' : 'Sign In with Owner Google Account'}</span>
+            <span>
+              {googleBusy
+                ? 'Verifying Admin Google Account...'
+                : 'Sign In with Authorized Admin Google Account'}
+            </span>
           </button>
 
           <div className="relative flex py-1 items-center">
             <div className="flex-grow border-t border-[#1E3A5F]" />
-            <span className="flex-shrink mx-3 text-[11px] text-[#94A3B8]">OR OWNER CREDENTIALS</span>
+            <span className="flex-shrink mx-3 text-[11px] text-[#94A3B8]">OR ADMIN CREDENTIALS</span>
             <div className="flex-grow border-t border-[#1E3A5F]" />
           </div>
 
@@ -470,7 +509,7 @@ export const AdminLoginPage: React.FC = () => {
                 type="email"
                 autoComplete="username"
                 {...loginForm.register('email')}
-                placeholder="Authorized studio owner email"
+                placeholder="Authorized administrator email"
                 className="w-full px-3.5 py-2.5 text-sm bg-[#132A4A]/60 border border-[#1E3A5F] rounded-lg focus:outline-none focus:border-[#10B981]"
               />
               {loginForm.formState.errors.email && (
@@ -484,7 +523,7 @@ export const AdminLoginPage: React.FC = () => {
                   Password
                 </label>
                 <Link to="/forgot-password" className="text-xs text-[#94A3B8] hover:text-[#F8FAFC] underline">
-                  Reset owner password
+                  Reset admin password
                 </Link>
               </div>
               <input
@@ -506,7 +545,7 @@ export const AdminLoginPage: React.FC = () => {
               className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-colors"
             >
               <Lock className="w-4 h-4" />
-              <span>{loginForm.formState.isSubmitting ? 'Verifying Owner...' : 'Unlock Studio Admin Console'}</span>
+              <span>{loginForm.formState.isSubmitting ? 'Verifying Administrator...' : 'Unlock Studio Admin Console'}</span>
             </button>
           </form>
         </div>
@@ -521,21 +560,29 @@ export const ForgotPasswordPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim()) return;
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      setErrorMessage('Please enter a valid registered email address.');
+      return;
+    }
     setBusy(true);
+    setErrorMessage(null);
     try {
-      await sendResetLink(email);
+      await sendResetLink(cleanEmail);
       setSent(true);
-      showToast('success', 'Reset Link Dispatched', 'Check your inbox for password reset instructions.');
-    } catch (err) {
       showToast(
-        'error',
-        'Reset Failed',
-        err instanceof Error ? err.message : 'Unable to send reset email.'
+        'success',
+        'Password Reset Requested',
+        'If an account exists for that email, reset instructions have been sent.'
       );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unable to process password-reset request.';
+      setErrorMessage(msg);
+      showToast('error', 'Reset Request Failed', msg);
     } finally {
       setBusy(false);
     }
@@ -549,40 +596,66 @@ export const ForgotPasswordPage: React.FC = () => {
           <h1 className="font-editorial text-2xl font-semibold">Reset Password</h1>
         </div>
         <p className="text-xs text-[#94A3B8] leading-relaxed">
-          Enter the email address associated with your Prithvi Editify portal account and we will send a Supabase password reset link.
+          Enter the email address associated with your Prithvi Editify account. We will send a secure password-reset link directly to your registered email address via Supabase Auth.
         </p>
 
+        {errorMessage && (
+          <div className="p-3.5 rounded-lg bg-[#DC2626]/10 border border-[#DC2626]/30 flex items-start gap-2.5 text-xs text-[#DC2626]">
+            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+            <span>{errorMessage}</span>
+          </div>
+        )}
+
         {sent ? (
-          <div className="bg-[#132A4A] border border-[#1E3A5F] rounded-lg p-4 text-xs text-[#F8FAFC] space-y-3">
-            <p>
-              If an account exists for <span className="font-semibold">{email}</span>, a password reset link has been sent.
+          <div className="bg-[#132A4A] border border-[#1E3A5F] rounded-lg p-5 text-xs text-[#F8FAFC] space-y-3">
+            <div className="flex items-center gap-2 text-[#10B981] font-semibold">
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <span>Password-Reset Instructions Dispatched</span>
+            </div>
+            <p className="text-[#CBD5E1] leading-relaxed">
+              If an account exists for <span className="font-semibold text-white">{email.trim()}</span>, a password-reset link has been sent to that email address. Please open the link in your email to set your new password.
             </p>
-            <Link to="/login" className="inline-block font-semibold text-[#10B981] hover:underline">
-              ← Return to Sign In
-            </Link>
+            <div className="pt-2 flex items-center justify-between border-t border-[#1E3A5F]">
+              <Link to="/login" className="inline-block font-semibold text-[#10B981] hover:underline">
+                ← Return to Sign In
+              </Link>
+              <button
+                type="button"
+                onClick={() => {
+                  setSent(false);
+                  setErrorMessage(null);
+                }}
+                className="text-[#94A3B8] hover:text-white underline cursor-pointer"
+              >
+                Use another email
+              </button>
+            </div>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="reset-email" className="block text-xs font-medium text-[#F8FAFC] mb-1">
-                Email Address
+                Registered Email Address
               </label>
-              <input
-                id="reset-email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@company.com"
-                className="w-full px-3.5 py-2.5 text-sm bg-[#132A4A]/60 border border-[#1E3A5F] rounded-lg"
-              />
+              <div className="relative">
+                <Mail className="w-4 h-4 text-[#94A3B8] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  id="reset-email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="w-full pl-10 pr-3.5 py-2.5 text-sm bg-[#132A4A]/60 border border-[#1E3A5F] rounded-lg focus:outline-none focus:border-[#10B981]"
+                />
+              </div>
             </div>
             <button
               type="submit"
               disabled={busy}
-              className="w-full py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-colors"
+              className="w-full py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-colors cursor-pointer disabled:opacity-60"
             >
-              {busy ? 'Sending...' : 'Send Reset Link'}
+              {busy ? 'Requesting Reset Link...' : 'Send Password Reset Link'}
             </button>
             <div className="text-center pt-2">
               <Link to="/login" className="text-xs text-[#94A3B8] hover:text-[#F8FAFC]">
@@ -595,3 +668,233 @@ export const ForgotPasswordPage: React.FC = () => {
     </div>
   );
 };
+
+/**
+ * Customer Password Reset Completion Page (/reset-password)
+ * Validates Supabase Auth recovery session, updates the user's password via
+ * supabase.auth.updateUser({ password }), and triggers the verified password-changed
+ * notification only after completion.
+ */
+export const ResetPasswordPage: React.FC = () => {
+  const { user, completePasswordReset } = useAuth();
+  const { showToast } = useToast();
+  const navigate = useNavigate();
+
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [recoveryReady, setRecoveryReady] = useState<boolean>(!isSupabaseConfigured);
+  const [checkingSession, setCheckingSession] = useState<boolean>(isSupabaseConfigured);
+  const [linkError, setLinkError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [completed, setCompleted] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash || '';
+      const search = window.location.search || '';
+      const combined = `${hash}&${search}`;
+      if (combined.includes('error=') || combined.includes('error_description=')) {
+        const params = new URLSearchParams(hash.replace(/^#/, '') || search.replace(/^\?/, ''));
+        const desc =
+          params.get('error_description') ||
+          'This password-reset link is invalid or has expired. Please request a new reset link.';
+        setLinkError(desc.replace(/\+/g, ' '));
+        setCheckingSession(false);
+        return;
+      }
+    }
+
+    if (!isSupabaseConfigured) {
+      setRecoveryReady(true);
+      setCheckingSession(false);
+      return;
+    }
+
+    let mounted = true;
+
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (!mounted) return;
+      if (error) {
+        setLinkError(error.message);
+      } else if (session?.user) {
+        setRecoveryReady(true);
+      }
+      setCheckingSession(false);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!mounted) return;
+      if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session?.user)) {
+        setRecoveryReady(true);
+        setLinkError(null);
+        setCheckingSession(false);
+      }
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError(null);
+
+    if (newPassword.length < 6) {
+      setFormError('Your new password must be at least 6 characters long.');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setFormError('Passwords do not match. Please confirm your new password.');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await completePasswordReset(newPassword, user?.email || undefined);
+      setCompleted(true);
+      showToast(
+        'success',
+        'Password Updated Successfully',
+        'Your Prithvi Editify account password has been updated.'
+      );
+    } catch (err) {
+      const msg =
+        err instanceof Error
+          ? err.message
+          : 'Unable to update password. Your reset link may have expired.';
+      setFormError(msg);
+      showToast('error', 'Password Update Failed', msg);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="max-w-md mx-auto px-6 py-16">
+      <div className="pe-card-interactive bg-[#0D1F38] border border-[#1E3A5F] rounded-xl p-8 space-y-5 shadow-xl">
+        <div className="flex items-center gap-2.5 text-[#F8FAFC]">
+          <KeyRound className="w-5 h-5 text-[#10B981]" />
+          <h1 className="font-editorial text-2xl font-semibold">Set New Password</h1>
+        </div>
+
+        {checkingSession ? (
+          <div className="py-6 text-xs text-[#94A3B8] text-center">
+            Verifying your password-reset session...
+          </div>
+        ) : completed ? (
+          <div className="bg-[#132A4A] border border-[#10B981]/40 rounded-lg p-5 space-y-4 text-xs">
+            <div className="flex items-center gap-2 text-[#10B981] font-semibold text-sm">
+              <CheckCircle2 className="w-5 h-5 shrink-0" />
+              <span>Password Updated Successfully</span>
+            </div>
+            <p className="text-[#CBD5E1] leading-relaxed">
+              Your Prithvi Editify account password has been securely updated. You can now access your Client Portal.
+            </p>
+            <div className="pt-2 flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => navigate('/portal', { replace: true })}
+                className="px-4 py-2.5 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] rounded-lg cursor-pointer"
+              >
+                Continue to Client Portal
+              </button>
+              <Link
+                to="/login"
+                className="px-4 py-2.5 text-xs font-semibold text-[#F8FAFC] bg-[#0D1F38] border border-[#1E3A5F] rounded-lg"
+              >
+                Return to Sign In
+              </Link>
+            </div>
+          </div>
+        ) : linkError || (!recoveryReady && !user) ? (
+          <div className="bg-[#132A4A] border border-[#DC2626]/40 rounded-lg p-5 space-y-4 text-xs">
+            <div className="flex items-start gap-2.5 text-[#DC2626]">
+              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold">Invalid or Expired Password-Reset Link</p>
+                <p className="text-[#CBD5E1] mt-1 leading-relaxed">
+                  {linkError ||
+                    'We could not verify an active password-reset session. Please request a fresh password-reset email and open the link directly from your inbox.'}
+                </p>
+              </div>
+            </div>
+            <div className="pt-2 flex items-center justify-between border-t border-[#1E3A5F]">
+              <Link
+                to="/forgot-password"
+                className="px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] rounded-lg"
+              >
+                Request New Reset Link
+              </Link>
+              <Link to="/login" className="text-xs text-[#94A3B8] hover:text-white">
+                ← Back to Sign In
+              </Link>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleUpdatePassword} className="space-y-4">
+            <p className="text-xs text-[#94A3B8] leading-relaxed">
+              Enter and confirm your new password below to complete your password reset.
+            </p>
+
+            {formError && (
+              <div className="p-3.5 rounded-lg bg-[#DC2626]/10 border border-[#DC2626]/30 flex items-start gap-2.5 text-xs text-[#DC2626]">
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{formError}</span>
+              </div>
+            )}
+
+            <div>
+              <label htmlFor="new-password" className="block text-xs font-medium text-[#F8FAFC] mb-1">
+                New Password (min 6 characters) *
+              </label>
+              <input
+                id="new-password"
+                type="password"
+                required
+                minLength={6}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full px-3.5 py-2.5 text-sm bg-[#132A4A]/60 border border-[#1E3A5F] rounded-lg focus:outline-none focus:border-[#10B981]"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="confirm-password"
+                className="block text-xs font-medium text-[#F8FAFC] mb-1"
+              >
+                Confirm New Password *
+              </label>
+              <input
+                id="confirm-password"
+                type="password"
+                required
+                minLength={6}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full px-3.5 py-2.5 text-sm bg-[#132A4A]/60 border border-[#1E3A5F] rounded-lg focus:outline-none focus:border-[#10B981]"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={submitting}
+              className="w-full py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-colors cursor-pointer disabled:opacity-60"
+            >
+              {submitting ? 'Updating Password...' : 'Save New Password'}
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+};
+

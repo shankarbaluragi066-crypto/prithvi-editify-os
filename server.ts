@@ -12,6 +12,32 @@ const PORT = Number(process.env.PORT) || 3000;
 const STUDIO_ADMIN_EMAIL = (
   process.env.STUDIO_ADMIN_EMAIL || 'shankarbaluragi066@gmail.com'
 ).toLowerCase();
+const STUDIO_OFFICIAL_ADMIN_EMAIL = (
+  process.env.STUDIO_OFFICIAL_ADMIN_EMAIL || 'prithvieditify.official@gmail.com'
+).toLowerCase();
+
+const AUTHORIZED_ADMIN_EMAILS = Array.from(
+  new Set([STUDIO_ADMIN_EMAIL, STUDIO_OFFICIAL_ADMIN_EMAIL])
+);
+
+function isServerAuthorizedAdminEmail(email?: string | null): boolean {
+  if (!email) return false;
+  return AUTHORIZED_ADMIN_EMAILS.includes(email.trim().toLowerCase());
+}
+
+const processedIdempotencyKeys = new Map<string, number>();
+const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000; // 24h for registration idempotency
+const RESET_NOTIFY_COOLDOWN_MS = 10 * 60 * 1000; // 10m cooldown for password-reset admin alerts
+
+function checkAndRecordIdempotencyKey(key: string, ttlMs = IDEMPOTENCY_TTL_MS): boolean {
+  const now = Date.now();
+  const prev = processedIdempotencyKeys.get(key);
+  if (prev && now - prev < ttlMs) {
+    return false; // Duplicate within TTL window
+  }
+  processedIdempotencyKeys.set(key, now);
+  return true;
+}
 
 const SUPABASE_URL =
   process.env.VITE_SUPABASE_URL || 'https://kjsnawvgctdsikexzjfp.supabase.co';
@@ -109,7 +135,7 @@ async function verifyAdminMiddleware(
 
     if (token.startsWith('pe_google_admin:')) {
       const googleEmail = token.slice('pe_google_admin:'.length).trim().toLowerCase();
-      if (googleEmail === STUDIO_ADMIN_EMAIL) {
+      if (isServerAuthorizedAdminEmail(googleEmail)) {
         const rateCheck = checkRateLimit(googleEmail || req.ip || 'admin');
         if (!rateCheck.allowed) {
           res.status(429).json({
@@ -118,12 +144,12 @@ async function verifyAdminMiddleware(
           });
           return;
         }
-        req.adminUser = { id: 'studio-owner-google', email: googleEmail };
+        req.adminUser = { id: 'studio-admin-google', email: googleEmail };
         next();
         return;
       }
       res.status(403).json({
-        error: 'Forbidden. Only the verified studio owner can access administrator endpoints.',
+        error: 'Forbidden. Only authorized studio administrators can access administrator endpoints.',
       });
       return;
     }
@@ -147,7 +173,7 @@ async function verifyAdminMiddleware(
     const emailLower = (userData.email || '').toLowerCase();
     const userId = userData.id || '';
 
-    let isAuthorizedAdmin = emailLower === STUDIO_ADMIN_EMAIL;
+    let isAuthorizedAdmin = isServerAuthorizedAdminEmail(emailLower);
 
     // Also check profiles table role if email differs from primary owner email
     if (!isAuthorizedAdmin && userId) {
@@ -980,6 +1006,439 @@ async function startServer() {
 
   app.post('/api/orders/notify', handleBackgroundOrderNotify);
   app.post('/api/inquiries/notify-admin', handleBackgroundOrderNotify);
+
+  // --------------------------------------------------------------------------
+  // 6. AUTHENTICATION EMAIL AUTOMATION & ADMIN SECURITY NOTIFICATIONS
+  // --------------------------------------------------------------------------
+  function buildCustomerWelcomeEmailContent(customerName?: string): {
+    subject: string;
+    text: string;
+    html: string;
+  } {
+    const cleanName = (customerName || '').trim();
+    const greeting = cleanName ? `Hello ${cleanName},` : 'Hello,';
+    const subject = 'Welcome to Prithvi Editify!';
+
+    const text = [
+      greeting,
+      '',
+      'Welcome to Prithvi Editify!',
+      '',
+      "Thank you for creating your account with us. We're excited to help you with your creative projects and make your experience smooth and professional.",
+      '',
+      'With your Prithvi Editify account, you can access the features available to you, manage your project information, and stay updated on your creative work.',
+      '',
+      'If you need assistance, have a question about our services, or would like to discuss a project, please contact our team through the official website.',
+      '',
+      'Thank you for choosing Prithvi Editify.',
+      '',
+      'Best regards,',
+      '',
+      'Prithvi Editify Team',
+      'Website: https://prithvieditify.netlify.app/',
+    ].join('\n');
+
+    const safeHtmlGreeting = cleanName
+      ? `Hello ${cleanName.replace(/[<>&"']/g, '')},`
+      : 'Hello,';
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Welcome to Prithvi Editify!</title>
+</head>
+<body style="margin:0;padding:0;background-color:#040D1A;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#F8FAFC;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#040D1A;padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:580px;background-color:#0D1F38;border:1px solid #1E3A5F;border-radius:12px;overflow:hidden;">
+          <tr>
+            <td style="padding:24px 32px;background-color:#081629;border-bottom:1px solid #1E3A5F;">
+              <span style="font-size:18px;font-weight:700;color:#F8FAFC;letter-spacing:-0.01em;">Prithvi Editify</span>
+              <span style="display:inline-block;margin-left:10px;padding:2px 8px;font-size:11px;font-weight:600;color:#10B981;background-color:rgba(16,185,129,0.15);border-radius:4px;">Client Portal</span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:32px;font-size:14px;line-height:1.65;color:#E2E8F0;">
+              <p style="margin:0 0 16px 0;font-size:16px;font-weight:600;color:#F8FAFC;">${safeHtmlGreeting}</p>
+              <p style="margin:0 0 16px 0;font-size:18px;font-weight:700;color:#10B981;">Welcome to Prithvi Editify!</p>
+              <p style="margin:0 0 16px 0;">Thank you for creating your account with us. We're excited to help you with your creative projects and make your experience smooth and professional.</p>
+              <p style="margin:0 0 16px 0;">With your Prithvi Editify account, you can access the features available to you, manage your project information, and stay updated on your creative work.</p>
+              <p style="margin:0 0 24px 0;">If you need assistance, have a question about our services, or would like to discuss a project, please contact our team through the official website.</p>
+              <p style="margin:0 0 24px 0;">
+                <a href="https://prithvieditify.netlify.app/portal" style="display:inline-block;padding:12px 24px;background:linear-gradient(90deg,#0EA5E9,#10B981);color:#FFFFFF;text-decoration:none;font-weight:600;font-size:13px;border-radius:8px;">Open Prithvi Editify Website</a>
+              </p>
+              <p style="margin:0 0 8px 0;">Thank you for choosing Prithvi Editify.</p>
+              <p style="margin:16px 0 0 0;color:#94A3B8;">Best regards,<br /><strong style="color:#F8FAFC;">Prithvi Editify Team</strong><br />Website: <a href="https://prithvieditify.netlify.app/" style="color:#0EA5E9;text-decoration:none;">https://prithvieditify.netlify.app/</a></p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+    return { subject, text, html };
+  }
+
+  // 6A. POST /api/auth/events/registration — Customer Welcome Email + Admin Registration Alert
+  app.post('/api/auth/events/registration', async (req: Request, res: Response) => {
+    try {
+      const body = req.body || {};
+      const customerEmail = sanitizeInputText(body.customerEmail, 254).toLowerCase();
+      const customerName = sanitizeInputText(body.customerName, 120);
+      const registrationTimestamp =
+        sanitizeInputText(body.registrationTimestamp, 80) || new Date().toISOString();
+      const idempotencyKey =
+        sanitizeInputText(body.idempotencyKey, 280) || `welcome:${customerEmail}`;
+      const enableCustomerWelcomeEmail = body.enableCustomerWelcomeEmail !== false;
+      const notifyAdminsOnRegistration = body.notifyAdminsOnRegistration !== false;
+
+      if (!customerEmail || !customerEmail.includes('@')) {
+        res.status(400).json({ error: 'Valid customer email is required.' });
+        return;
+      }
+
+      if (!checkAndRecordIdempotencyKey(idempotencyKey, IDEMPOTENCY_TTL_MS)) {
+        res.status(200).json({
+          ok: true,
+          deduplicated: true,
+          welcomeEmailStatus: 'already_sent',
+          adminNotificationStatus: 'already_sent',
+        });
+        return;
+      }
+
+      const resendKey = (process.env.RESEND_API_KEY || '').trim();
+      const fromAddress =
+        (process.env.RESEND_FROM_EMAIL || '').trim() ||
+        'Prithvi Editify <onboarding@resend.dev>';
+
+      let welcomeEmailStatus: 'sent' | 'pending_provider_config' | 'failed' =
+        'pending_provider_config';
+      let adminNotificationStatus: 'sent' | 'queued_relay' | 'failed' = 'failed';
+
+      // 1. Send Customer Welcome Email via transactional email provider (Resend) when configured
+      if (enableCustomerWelcomeEmail && resendKey) {
+        try {
+          const welcomeContent = buildCustomerWelcomeEmailContent(customerName);
+          const welcomeRes = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${resendKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              from: fromAddress,
+              to: [customerEmail],
+              subject: welcomeContent.subject,
+              text: welcomeContent.text,
+              html: welcomeContent.html,
+            }),
+          });
+          welcomeEmailStatus = welcomeRes.ok ? 'sent' : 'failed';
+        } catch {
+          welcomeEmailStatus = 'failed';
+        }
+      }
+
+      // 2. Send Admin New Customer Registration Notification to prithvieditify.official@gmail.com & shankarbaluragi066@gmail.com
+      if (notifyAdminsOnRegistration) {
+        const adminRecipients = AUTHORIZED_ADMIN_EMAILS;
+        const adminSubject = 'Prithvi Editify — New Customer Registration';
+        const adminText = [
+          'A new customer has registered on the Prithvi Editify website.',
+          '',
+          `Customer name: ${customerName || 'Not provided'}`,
+          '',
+          `Customer email: ${customerEmail}`,
+          '',
+          `Registration time: ${registrationTimestamp}`,
+          '',
+          "Open the admin dashboard to review the customer's account.",
+        ].join('\n');
+
+        if (resendKey) {
+          try {
+            const adminRes = await fetch('https://api.resend.com/emails', {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${resendKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                from: fromAddress,
+                to: adminRecipients,
+                subject: adminSubject,
+                text: adminText,
+              }),
+            });
+            if (adminRes.ok) {
+              adminNotificationStatus = 'sent';
+            }
+          } catch {
+            // Fall through to relay
+          }
+        }
+
+        // Also dispatch via FormSubmit AJAX relay to both admin emails in background
+        setImmediate(async () => {
+          for (const adminEmail of adminRecipients) {
+            try {
+              await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(adminEmail)}`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Accept: 'application/json',
+                  Origin: 'https://prithvieditify.netlify.app',
+                  Referer: 'https://prithvieditify.netlify.app/',
+                },
+                body: JSON.stringify({
+                  _subject: adminSubject,
+                  _template: 'table',
+                  _captcha: 'false',
+                  Notice: 'A new customer has registered on the Prithvi Editify website.',
+                  Customer_Name: customerName || 'Not provided',
+                  Customer_Email: customerEmail,
+                  Registration_Time: registrationTimestamp,
+                  Action: "Open the admin dashboard to review the customer's account.",
+                }),
+              });
+            } catch {
+              // Silent background relay
+            }
+          }
+        });
+
+        if (adminNotificationStatus !== 'sent') {
+          adminNotificationStatus = 'queued_relay';
+        }
+      }
+
+      res.status(200).json({
+        ok: true,
+        welcomeEmailStatus,
+        adminNotificationStatus,
+      });
+    } catch {
+      res.status(200).json({
+        ok: true,
+        welcomeEmailStatus: 'pending_provider_config',
+        adminNotificationStatus: 'queued_relay',
+      });
+    }
+  });
+
+  // 6B. POST /api/auth/events/password-reset-requested — Admin Password-Reset Request Alert
+  app.post('/api/auth/events/password-reset-requested', async (req: Request, res: Response) => {
+    try {
+      const body = req.body || {};
+      const customerEmail = sanitizeInputText(body.customerEmail, 254).toLowerCase();
+      const requestTimestamp =
+        sanitizeInputText(body.requestTimestamp, 80) || new Date().toISOString();
+      const idempotencyKey =
+        sanitizeInputText(body.idempotencyKey, 280) ||
+        `pw_reset_req:${customerEmail}:${Math.floor(Date.now() / RESET_NOTIFY_COOLDOWN_MS)}`;
+
+      if (!customerEmail || !customerEmail.includes('@')) {
+        res.status(200).json({ ok: true });
+        return;
+      }
+
+      if (!checkAndRecordIdempotencyKey(idempotencyKey, RESET_NOTIFY_COOLDOWN_MS)) {
+        res.status(200).json({ ok: true, deduplicated: true });
+        return;
+      }
+
+      res.status(202).json({ ok: true, queued: true });
+
+      setImmediate(async () => {
+        const subject = 'Prithvi Editify — Password Reset Request';
+        const textBody = [
+          'A password-reset request was submitted on the Prithvi Editify website.',
+          '',
+          `Customer email: ${customerEmail}`,
+          '',
+          `Request time: ${requestTimestamp}`,
+          '',
+          'Source: Prithvi Editify website',
+          '',
+          'This is an informational security notification. The customer must use the password-reset email sent to their own registered address to complete the process.',
+        ].join('\n');
+
+        const resendKey = (process.env.RESEND_API_KEY || '').trim();
+        const fromAddress =
+          (process.env.RESEND_FROM_EMAIL || '').trim() ||
+          'Prithvi Editify Security <onboarding@resend.dev>';
+
+        if (resendKey) {
+          try {
+            await fetch('https://api.resend.com/emails', {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${resendKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                from: fromAddress,
+                to: AUTHORIZED_ADMIN_EMAILS,
+                subject,
+                text: textBody,
+              }),
+            });
+          } catch {
+            // Non-blocking
+          }
+        }
+
+        for (const adminEmail of AUTHORIZED_ADMIN_EMAILS) {
+          try {
+            await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(adminEmail)}`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                Origin: 'https://prithvieditify.netlify.app',
+                Referer: 'https://prithvieditify.netlify.app/',
+              },
+              body: JSON.stringify({
+                _subject: subject,
+                _template: 'table',
+                _captcha: 'false',
+                Notice: 'A password-reset request was submitted on the Prithvi Editify website.',
+                Customer_Email: customerEmail,
+                Request_Time: requestTimestamp,
+                Source: 'Prithvi Editify website',
+                Security_Notice:
+                  'This is an informational security notification. The customer must use the password-reset email sent to their own registered address to complete the process.',
+              }),
+            });
+          } catch {
+            // Non-blocking
+          }
+        }
+      });
+    } catch {
+      res.status(200).json({ ok: true });
+    }
+  });
+
+  // 6C. POST /api/auth/events/password-changed — Verified Password-Changed Notification
+  app.post('/api/auth/events/password-changed', async (req: Request, res: Response) => {
+    try {
+      const body = req.body || {};
+      const customerEmail = sanitizeInputText(body.customerEmail, 254).toLowerCase();
+      const changedAt = sanitizeInputText(body.changedAt, 80) || new Date().toISOString();
+      const idempotencyKey =
+        sanitizeInputText(body.idempotencyKey, 280) ||
+        `pw_changed:${customerEmail}:${changedAt.slice(0, 16)}`;
+
+      if (!customerEmail || !customerEmail.includes('@')) {
+        res.status(200).json({ ok: true });
+        return;
+      }
+
+      if (!checkAndRecordIdempotencyKey(idempotencyKey, RESET_NOTIFY_COOLDOWN_MS)) {
+        res.status(200).json({ ok: true, deduplicated: true });
+        return;
+      }
+
+      res.status(202).json({ ok: true, queued: true });
+
+      setImmediate(async () => {
+        const subject = 'Prithvi Editify — Password Changed';
+        const adminText = [
+          'A customer password change was completed on the Prithvi Editify website.',
+          '',
+          `Customer email: ${customerEmail}`,
+          '',
+          `Completed time: ${changedAt}`,
+          '',
+          'Source: Prithvi Editify website',
+        ].join('\n');
+
+        const resendKey = (process.env.RESEND_API_KEY || '').trim();
+        const fromAddress =
+          (process.env.RESEND_FROM_EMAIL || '').trim() ||
+          'Prithvi Editify Security <onboarding@resend.dev>';
+
+        if (resendKey) {
+          try {
+            // Notify customer and authorized admins (without any password or secret)
+            await fetch('https://api.resend.com/emails', {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${resendKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                from: fromAddress,
+                to: [customerEmail],
+                subject,
+                text: [
+                  'Hello,',
+                  '',
+                  'Your Prithvi Editify account password was recently changed.',
+                  `Time: ${changedAt}`,
+                  '',
+                  'If you completed this change, no further action is needed. If you did not authorize this change, please contact Prithvi Editify immediately via https://prithvieditify.netlify.app/contact.',
+                  '',
+                  'Best regards,',
+                  'Prithvi Editify Team',
+                ].join('\n'),
+              }),
+            });
+
+            await fetch('https://api.resend.com/emails', {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${resendKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                from: fromAddress,
+                to: AUTHORIZED_ADMIN_EMAILS,
+                subject,
+                text: adminText,
+              }),
+            });
+          } catch {
+            // Non-blocking
+          }
+        }
+
+        for (const adminEmail of AUTHORIZED_ADMIN_EMAILS) {
+          try {
+            await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(adminEmail)}`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                Origin: 'https://prithvieditify.netlify.app',
+                Referer: 'https://prithvieditify.netlify.app/',
+              },
+              body: JSON.stringify({
+                _subject: subject,
+                _template: 'table',
+                _captcha: 'false',
+                Notice: 'A customer password change was completed on the Prithvi Editify website.',
+                Customer_Email: customerEmail,
+                Completed_Time: changedAt,
+                Source: 'Prithvi Editify website',
+              }),
+            });
+          } catch {
+            // Non-blocking
+          }
+        }
+      });
+    } catch {
+      res.status(200).json({ ok: true });
+    }
+  });
 
   // --------------------------------------------------------------------------
   // VITE MIDDLEWARE (DEVELOPMENT) OR STATIC DIST SERVING (PRODUCTION)

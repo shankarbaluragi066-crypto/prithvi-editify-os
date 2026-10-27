@@ -7,9 +7,17 @@ import {
   supabaseUrl,
   supabasePublishableKey,
   STUDIO_OWNER_EMAIL,
+  STUDIO_OFFICIAL_ADMIN_EMAIL,
+  isAuthorizedAdminEmail,
   LOCAL_GOOGLE_SESSION_KEY,
 } from '../lib/supabaseClient';
 import { UserProfile } from '../types/crm';
+import {
+  triggerNewCustomerRegistrationEmails,
+  triggerPasswordResetRequestAdminNotification,
+  triggerPasswordChangedNotification,
+  RegistrationEmailDispatchResult,
+} from '../services/authEmailService';
 
 export interface AppAuthUser {
   uid: string;
@@ -39,6 +47,7 @@ interface AuthContextValue {
   isAdmin: boolean;
   isClient: boolean;
   loading: boolean;
+  lastRegistrationEmailStatus: RegistrationEmailDispatchResult | null;
   loginWithGoogle: (redirectPath?: string) => Promise<UserProfile>;
   loginWithEmail: (email: string, password: string) => Promise<UserProfile>;
   registerClientWithEmail: (data: {
@@ -48,7 +57,8 @@ interface AuthContextValue {
     phone?: string;
     companyName?: string;
   }) => Promise<UserProfile>;
-  sendResetLink: (email: string) => Promise<void>;
+  sendResetLink: (email: string) => Promise<{ rateLimited?: boolean }>;
+  completePasswordReset: (newPassword: string, fallbackEmail?: string) => Promise<{ email: string }>;
   resendVerificationEmail: () => Promise<void>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -63,9 +73,9 @@ function readStoredGoogleSession(): StoredGoogleSession | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as StoredGoogleSession;
     if (parsed?.user?.uid && parsed?.profile?.email) {
-      // If an older session had the studio owner email without explicit admin gateway flag, clear it so customers never inherit admin access
+      // If an older session had an admin email without explicit admin gateway flag, clear it so customers never inherit admin access
       if (
-        parsed.profile.email.toLowerCase() === STUDIO_OWNER_EMAIL.toLowerCase() &&
+        isAuthorizedAdminEmail(parsed.profile.email) &&
         !parsed.isAdminGatewaySession
       ) {
         window.localStorage.removeItem(LOCAL_GOOGLE_SESSION_KEY);
@@ -105,7 +115,7 @@ function readSavedClientGoogleAccounts(): SavedClientGoogleAccount[] {
           item &&
             typeof item.email === 'string' &&
             item.email.includes('@') &&
-            item.email.toLowerCase() !== STUDIO_OWNER_EMAIL.toLowerCase()
+            !isAuthorizedAdminEmail(item.email)
         )
     );
   } catch {
@@ -115,7 +125,7 @@ function readSavedClientGoogleAccounts(): SavedClientGoogleAccount[] {
 
 function saveClientGoogleAccountToChooser(email: string, displayName: string): SavedClientGoogleAccount[] {
   const cleanEmail = email.trim().toLowerCase();
-  if (!cleanEmail || cleanEmail === STUDIO_OWNER_EMAIL.toLowerCase()) {
+  if (!cleanEmail || isAuthorizedAdminEmail(cleanEmail)) {
     return readSavedClientGoogleAccounts();
   }
   const existing = readSavedClientGoogleAccounts().filter(
@@ -194,7 +204,7 @@ async function checkSupabaseGoogleProviderEnabled(): Promise<boolean> {
   }
 }
 
-function getAppRedirectUrl(subPath: string): string {
+export function getAppRedirectUrl(subPath: string): string {
   const cleanSubPath = subPath.startsWith('/') ? subPath : `/${subPath}`;
   if (typeof window === 'undefined') return cleanSubPath;
   const configuredBase = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '');
@@ -222,7 +232,7 @@ function mapSupabaseUser(sbUser: SupabaseAuthUser): AppAuthUser {
     id: sbUser.id,
     email: sbUser.email ?? null,
     displayName: metaName,
-    emailVerified: Boolean(sbUser.email_confirmed_at || sbUser.confirmed_at || true),
+    emailVerified: Boolean(sbUser.email_confirmed_at || sbUser.confirmed_at),
   };
 }
 
@@ -232,7 +242,7 @@ function mapProfileRow(
   allowAdminRole = false
 ): UserProfile {
   const email = String(row.email || fallbackUser.email || '').toLowerCase();
-  const isOwner = allowAdminRole && email === STUDIO_OWNER_EMAIL.toLowerCase();
+  const isOwner = allowAdminRole && isAuthorizedAdminEmail(email);
   return {
     uid: String(row.id || fallbackUser.uid),
     email,
@@ -259,7 +269,7 @@ async function ensureUserProfile(
 ): Promise<UserProfile> {
   const emailLower = (authUser.email || '').toLowerCase();
   const isOwnerAdmin =
-    Boolean(extra?.allowAdminRole) && emailLower === STUDIO_OWNER_EMAIL.toLowerCase();
+    Boolean(extra?.allowAdminRole) && isAuthorizedAdminEmail(emailLower);
 
   if (!isSupabaseConfigured) {
     return {
@@ -335,6 +345,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<AppAuthUser | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [lastRegistrationEmailStatus, setLastRegistrationEmailStatus] =
+    useState<RegistrationEmailDispatchResult | null>(null);
 
   // Built-in Google Account Chooser Modal state
   const [googleModalOpen, setGoogleModalOpen] = useState(false);
@@ -378,8 +390,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const prof = await ensureUserProfile(mappedUser, { allowAdminRole: allowAdmin });
       setProfile(prof);
     } catch {
-      const isOwner =
-        allowAdmin && mappedUser.email?.toLowerCase() === STUDIO_OWNER_EMAIL.toLowerCase();
+      const isOwner = allowAdmin && isAuthorizedAdminEmail(mappedUser.email);
       setProfile({
         uid: mappedUser.uid,
         email: mappedUser.email || '',
@@ -436,9 +447,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
-    if (googleModalMode === 'admin' && cleanEmail !== STUDIO_OWNER_EMAIL.toLowerCase()) {
+    if (googleModalMode === 'admin' && !isAuthorizedAdminEmail(cleanEmail)) {
       setGoogleModalError(
         'Access Denied: Unauthorized Google account for Studio Administrator access.'
+      );
+      return;
+    }
+
+    if (googleModalMode === 'client' && isAuthorizedAdminEmail(cleanEmail)) {
+      setGoogleModalError(
+        'Please use a customer Google account for the Client Portal, or sign in through the private Studio Administrator gateway.'
       );
       return;
     }
@@ -448,7 +466,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       const isAdminFlow =
-        googleModalMode === 'admin' && cleanEmail === STUDIO_OWNER_EMAIL.toLowerCase();
+        googleModalMode === 'admin' && isAuthorizedAdminEmail(cleanEmail);
       const formattedDefaultName = cleanEmail
         .split('@')[0]
         .replace(/[._-]+/g, ' ')
@@ -473,7 +491,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ? { ...resolvedProfile, role: 'admin' }
         : { ...resolvedProfile, role: 'client' };
 
-      if (!isAdminFlow && cleanEmail !== STUDIO_OWNER_EMAIL.toLowerCase()) {
+      if (!isAdminFlow && !isAuthorizedAdminEmail(cleanEmail)) {
         const updatedAccounts = saveClientGoogleAccountToChooser(
           cleanEmail,
           finalProfile.displayName
@@ -571,8 +589,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const isAdminGateway =
       typeof window !== 'undefined' && window.location.pathname.includes('admin');
 
-    if (isAdminGateway && cleanEmail !== STUDIO_OWNER_EMAIL.toLowerCase()) {
-      throw new Error('Access Denied: Only the verified Studio Owner may sign in to the Admin Console.');
+    if (isAdminGateway && !isAuthorizedAdminEmail(cleanEmail)) {
+      throw new Error(
+        'Access Denied: Only authorized Prithvi Editify Studio Administrators may sign in to the Admin Console.'
+      );
     }
 
     // 1. Check locally registered accounts first
@@ -593,7 +613,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (existingAccount.password !== password) {
             throw new Error('Incorrect password. Please check your password and try again.');
           }
-          const allowAdmin = isAdminGateway && cleanEmail === STUDIO_OWNER_EMAIL.toLowerCase();
+          const allowAdmin = isAdminGateway && isAuthorizedAdminEmail(cleanEmail);
           const localUser: AppAuthUser = {
             uid: deterministicUuidFromEmail(cleanEmail),
             id: deterministicUuidFromEmail(cleanEmail),
@@ -634,7 +654,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           password,
         });
         if (!error && data?.user) {
-          const allowAdmin = isAdminGateway && cleanEmail === STUDIO_OWNER_EMAIL.toLowerCase();
+          const allowAdmin = isAdminGateway && isAuthorizedAdminEmail(cleanEmail);
           const mappedUser = mapSupabaseUser(data.user);
           const prof = await ensureUserProfile(mappedUser, { allowAdminRole: allowAdmin });
           if (prof.status === 'deactivated') {
@@ -661,8 +681,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     // 3. Seamless fallback: if Supabase email confirmation is pending or account is logging in for the first time,
-    // create/persist the session so the client or studio owner is never blocked by Supabase 400 errors.
-    const allowAdmin = isAdminGateway && cleanEmail === STUDIO_OWNER_EMAIL.toLowerCase();
+    // create/persist the session so the client or studio administrator is never blocked by Supabase 400 errors.
+    const allowAdmin = isAdminGateway && isAuthorizedAdminEmail(cleanEmail);
     const defaultDisplayName = cleanEmail
       .split('@')[0]
       .replace(/[._-]+/g, ' ')
@@ -724,13 +744,49 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const cleanPhone = (data.phone || '').trim();
     const cleanCompany = (data.companyName || '').trim();
 
-    // 1. Save locally first so onAuthStateChange or immediate login always finds this client account
+    // Requirement 1.6 & 1.7: Never grant admin privileges via client registration form
+    if (isAuthorizedAdminEmail(cleanEmail)) {
+      throw new Error(
+        'This email address is reserved for Studio Administration. Please sign in through the Administrator Gateway instead of public client registration.'
+      );
+    }
+
+    let createdUid = deterministicUuidFromEmail(cleanEmail);
+    let emailVerifiedStatus = false;
+
+    // Attempt Supabase Auth signUp if configured
+    if (isSupabaseConfigured) {
+      try {
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email: cleanEmail,
+          password: data.password,
+          options: {
+            data: {
+              display_name: cleanName,
+              phone: cleanPhone,
+              company_name: cleanCompany,
+              role: 'client',
+            },
+            emailRedirectTo: getAppRedirectUrl('/portal'),
+          },
+        });
+        if (!signUpError && signUpData?.user?.id) {
+          createdUid = signUpData.user.id;
+          emailVerifiedStatus = Boolean(
+            signUpData.user.email_confirmed_at || signUpData.user.confirmed_at
+          );
+        }
+      } catch {
+        // Fallback to local/profile persistence if Supabase rate-limits or email confirmation is pending
+      }
+    }
+
     const fallbackUser: AppAuthUser = {
-      uid: deterministicUuidFromEmail(cleanEmail),
-      id: deterministicUuidFromEmail(cleanEmail),
+      uid: createdUid,
+      id: createdUid,
       email: cleanEmail,
       displayName: cleanName,
-      emailVerified: true,
+      emailVerified: emailVerifiedStatus,
     };
 
     const initialClientProfile: UserProfile = {
@@ -783,17 +839,111 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
     setUser(fallbackUser);
     setProfile(clientProf);
+
+    // Requirement 2 & 4C: Automatically trigger Customer Welcome Email + Admin Registration Notification
+    // (Idempotent server-side + fallback relay, non-blocking to account creation)
+    try {
+      const dispatchStatus = await triggerNewCustomerRegistrationEmails({
+        customerId: clientProf.uid,
+        customerName: cleanName,
+        customerEmail: cleanEmail,
+        emailVerified: emailVerifiedStatus,
+        registrationTimestamp: new Date().toISOString(),
+      });
+      setLastRegistrationEmailStatus(dispatchStatus);
+    } catch {
+      // Do not fail registration if email service encounters a transient error
+    }
+
     return clientProf;
   };
 
-  const sendResetLink = async (email: string) => {
-    if (!isSupabaseConfigured) {
-      throw new Error('Supabase is not configured.');
+  const sendResetLink = async (email: string): Promise<{ rateLimited?: boolean }> => {
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      throw new Error('Please enter a valid email address.');
     }
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: getAppRedirectUrl('/login'),
+
+    if (isSupabaseConfigured) {
+      const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+        redirectTo: getAppRedirectUrl('/reset-password'),
+      });
+      if (error) {
+        // Preserve enumeration safety unless it's a rate-limit error from Supabase
+        if (error.message.toLowerCase().includes('rate limit') || error.status === 429) {
+          throw new Error(
+            'Too many password-reset requests. Please wait a few minutes before requesting another reset email.'
+          );
+        }
+      }
+    }
+
+    // Requirement 4A: Send informational security notification to prithvieditify.official@gmail.com
+    // (and preserved admin email) without any reset link, token, or password
+    const adminNotifyResult = await triggerPasswordResetRequestAdminNotification({
+      customerEmail: cleanEmail,
+      requestTimestamp: new Date().toISOString(),
     });
-    if (error) throw error;
+
+    return { rateLimited: adminNotifyResult.rateLimited };
+  };
+
+  const completePasswordReset = async (
+    newPassword: string,
+    fallbackEmail?: string
+  ): Promise<{ email: string }> => {
+    if (!newPassword || newPassword.length < 6) {
+      throw new Error('New password must be at least 6 characters.');
+    }
+
+    let resolvedEmail = (user?.email || fallbackEmail || '').trim().toLowerCase();
+
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+      if (error) {
+        throw new Error(
+          error.message ||
+            'Invalid or expired password-reset session. Please request a fresh password-reset link.'
+        );
+      }
+      if (data?.user?.email) {
+        resolvedEmail = data.user.email.toLowerCase();
+      }
+    } else if (!resolvedEmail) {
+      throw new Error(
+        'No active password-reset session found. Please open the link from your password-reset email.'
+      );
+    }
+
+    // Sync local fallback account store if present on this device (never stores plain text in DB)
+    if (typeof window !== 'undefined' && resolvedEmail) {
+      try {
+        const raw = window.localStorage.getItem('pe_registered_client_accounts_v1');
+        if (raw) {
+          const list = JSON.parse(raw) as Array<Record<string, string>>;
+          const updated = list.map((acc) =>
+            (acc.email || '').toLowerCase() === resolvedEmail
+              ? { ...acc, password: newPassword }
+              : acc
+          );
+          window.localStorage.setItem('pe_registered_client_accounts_v1', JSON.stringify(updated));
+        }
+      } catch {
+        // Ignore storage errors
+      }
+    }
+
+    // Requirement 4B: Send Password-Change Completion Notification ONLY after password update succeeds
+    if (resolvedEmail) {
+      await triggerPasswordChangedNotification({
+        customerEmail: resolvedEmail,
+        changedAt: new Date().toISOString(),
+      });
+    }
+
+    return { email: resolvedEmail };
   };
 
   const resendVerificationEmail = async () => {
@@ -829,7 +979,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isAdmin = Boolean(
     user &&
       profile?.role === 'admin' &&
-      user.email?.toLowerCase() === STUDIO_OWNER_EMAIL.toLowerCase()
+      isAuthorizedAdminEmail(user.email)
   );
   const isClient = Boolean(user && !isAdmin);
 
@@ -841,10 +991,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAdmin,
         isClient,
         loading,
+        lastRegistrationEmailStatus,
         loginWithGoogle,
         loginWithEmail,
         registerClientWithEmail,
         sendResetLink,
+        completePasswordReset,
         resendVerificationEmail,
         logout,
         refreshProfile,
