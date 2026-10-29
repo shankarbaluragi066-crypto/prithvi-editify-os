@@ -609,7 +609,28 @@ function normalizeQuotationRecord(raw: Partial<QuotationRecord> & Record<string,
   };
 }
 
+let cachedQuotationsMemory: { list: QuotationRecord[]; timestamp: number } | null = null;
+let inFlightQuotationsPromise: Promise<QuotationRecord[]> | null = null;
+
+export function getCachedQuotationsAdmin(): QuotationRecord[] {
+  const resetAtRaw =
+    typeof window !== 'undefined' ? window.localStorage.getItem('pe_crm_reset_at_v1') : null;
+  const resetAtMs = resetAtRaw ? new Date(resetAtRaw).getTime() : 0;
+  const isAfterReset = (itemTimeStr?: string | null): boolean => {
+    if (!resetAtMs || Number.isNaN(resetAtMs)) return true;
+    if (!itemTimeStr) return false;
+    const t = new Date(itemTimeStr).getTime();
+    return !Number.isNaN(t) && t >= resetAtMs;
+  };
+  return getLocalQuotations()
+    .filter((item) => item && item.id)
+    .map((item) => normalizeQuotationRecord(item))
+    .filter((item) => isAfterReset(item.updatedAt || item.createdAt || item.issueDate))
+    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+}
+
 async function syncQuotationsRegistryToSupabase(list: QuotationRecord[]): Promise<void> {
+  cachedQuotationsMemory = { list, timestamp: Date.now() };
   if (typeof window !== 'undefined') {
     setLocalQuotations(list);
     fetch('/api/crm/sync', {
@@ -664,147 +685,169 @@ async function syncQuotationsRegistryToSupabase(list: QuotationRecord[]): Promis
 }
 
 export async function fetchAllQuotationsAdmin(): Promise<QuotationRecord[]> {
-  await syncSharedCrmStoreWithServer();
-
-  const resetAtRaw =
-    typeof window !== 'undefined' ? window.localStorage.getItem('pe_crm_reset_at_v1') : null;
-  const resetAtMs = resetAtRaw ? new Date(resetAtRaw).getTime() : 0;
-
-  const isAfterReset = (itemTimeStr?: string | null): boolean => {
-    if (!resetAtMs || Number.isNaN(resetAtMs)) return true;
-    if (!itemTimeStr) return false;
-    const t = new Date(itemTimeStr).getTime();
-    return !Number.isNaN(t) && t >= resetAtMs;
-  };
-
-  const localList = getLocalQuotations();
-  const mergedMap = new Map<string, QuotationRecord>();
-
-  for (const item of localList) {
-    if (item && item.id) {
-      const normalized = normalizeQuotationRecord(item);
-      if (!isAfterReset(normalized.updatedAt || normalized.createdAt || normalized.issueDate)) {
-        continue;
-      }
-      mergedMap.set(normalized.id, normalized);
-    }
+  const now = Date.now();
+  if (cachedQuotationsMemory && now - cachedQuotationsMemory.timestamp < 10000) {
+    return cachedQuotationsMemory.list;
+  }
+  if (inFlightQuotationsPromise) {
+    return inFlightQuotationsPromise;
   }
 
-  // Also check pe_crm_table_rows_v1_quotations synced from Supabase Storage / Express server
-  if (typeof window !== 'undefined') {
+  inFlightQuotationsPromise = (async () => {
     try {
-      const rawSynced = window.localStorage.getItem('pe_crm_table_rows_v1_quotations');
-      if (rawSynced) {
-        const parsedSynced = JSON.parse(rawSynced);
-        if (Array.isArray(parsedSynced)) {
-          for (const rawItem of parsedSynced) {
-            if (rawItem && typeof rawItem === 'object' && rawItem.id) {
-              const syncedItem = normalizeQuotationRecord(rawItem);
-              if (
-                !isAfterReset(
-                  syncedItem.updatedAt || syncedItem.createdAt || syncedItem.issueDate
-                )
-              ) {
-                continue;
-              }
-              const existingLocal = mergedMap.get(syncedItem.id);
-              if (
-                !existingLocal ||
-                new Date(syncedItem.updatedAt || 0).getTime() >=
-                  new Date(existingLocal.updatedAt || 0).getTime()
-              ) {
-                mergedMap.set(syncedItem.id, syncedItem);
-              }
-            }
+      await syncSharedCrmStoreWithServer();
+
+      const resetAtRaw =
+        typeof window !== 'undefined' ? window.localStorage.getItem('pe_crm_reset_at_v1') : null;
+      const resetAtMs = resetAtRaw ? new Date(resetAtRaw).getTime() : 0;
+
+      const isAfterReset = (itemTimeStr?: string | null): boolean => {
+        if (!resetAtMs || Number.isNaN(resetAtMs)) return true;
+        if (!itemTimeStr) return false;
+        const t = new Date(itemTimeStr).getTime();
+        return !Number.isNaN(t) && t >= resetAtMs;
+      };
+
+      const localList = getLocalQuotations();
+      const mergedMap = new Map<string, QuotationRecord>();
+
+      for (const item of localList) {
+        if (item && item.id) {
+          const normalized = normalizeQuotationRecord(item);
+          if (!isAfterReset(normalized.updatedAt || normalized.createdAt || normalized.issueDate)) {
+            continue;
           }
+          mergedMap.set(normalized.id, normalized);
         }
       }
-    } catch {
-      // Ignore parse error
-    }
-  }
 
-  if (isSupabaseConfigured) {
-    try {
-      const { data: rows, error } = await supabase
-        .from('media_assets')
-        .select('description, updated_at')
-        .eq('original_filename', QUOTATIONS_REGISTRY_FILENAME)
-        .order('updated_at', { ascending: false })
-        .limit(25);
-
-      if (!error && Array.isArray(rows)) {
-        for (const row of rows) {
-          if (!row?.description) continue;
-          if (!isAfterReset(row.updated_at)) continue;
-          try {
-            const parsed = JSON.parse(row.description);
-            if (Array.isArray(parsed)) {
-              for (const rawItem of parsed) {
+      // Also check pe_crm_table_rows_v1_quotations synced from Supabase Storage / Express server
+      if (typeof window !== 'undefined') {
+        try {
+          const rawSynced = window.localStorage.getItem('pe_crm_table_rows_v1_quotations');
+          if (rawSynced) {
+            const parsedSynced = JSON.parse(rawSynced);
+            if (Array.isArray(parsedSynced)) {
+              for (const rawItem of parsedSynced) {
                 if (rawItem && typeof rawItem === 'object' && rawItem.id) {
-                  const cloudItem = normalizeQuotationRecord(rawItem);
+                  const syncedItem = normalizeQuotationRecord(rawItem);
                   if (
                     !isAfterReset(
-                      cloudItem.updatedAt || cloudItem.createdAt || row.updated_at
+                      syncedItem.updatedAt || syncedItem.createdAt || syncedItem.issueDate
                     )
                   ) {
                     continue;
                   }
-                  const existingLocal = mergedMap.get(cloudItem.id);
+                  const existingLocal = mergedMap.get(syncedItem.id);
                   if (
                     !existingLocal ||
-                    new Date(cloudItem.updatedAt || 0).getTime() >=
+                    new Date(syncedItem.updatedAt || 0).getTime() >=
                       new Date(existingLocal.updatedAt || 0).getTime()
                   ) {
-                    mergedMap.set(cloudItem.id, cloudItem);
+                    mergedMap.set(syncedItem.id, syncedItem);
                   }
                 }
               }
             }
-          } catch {
-            // Ignore malformed description row
           }
+        } catch {
+          // Ignore parse error
         }
       }
-    } catch {
-      // Fallback to local records
-    }
-  }
 
-  // Deduplicate accidental rapid-click duplicate quotations for the same inquiryId + projectTitle + total
-  const dedupedBySignature = new Map<string, QuotationRecord>();
-  const standaloneQuotes: QuotationRecord[] = [];
+      if (isSupabaseConfigured) {
+        try {
+          const timeoutPromise = new Promise<{ data: null; error: { message: string } }>((resolve) =>
+            setTimeout(() => resolve({ data: null, error: { message: 'timeout' } }), 2500)
+          );
+          const { data: rows, error } = await Promise.race([
+            supabase
+              .from('media_assets')
+              .select('description, updated_at')
+              .eq('original_filename', QUOTATIONS_REGISTRY_FILENAME)
+              .order('updated_at', { ascending: false })
+              .limit(10),
+            timeoutPromise,
+          ]);
 
-  for (const q of mergedMap.values()) {
-    if (q.inquiryId) {
-      const sig = `${q.inquiryId}|${(q.projectTitle || '').trim().toLowerCase()}|${q.total}|${q.documentType}`;
-      const prev = dedupedBySignature.get(sig);
-      if (!prev) {
-        dedupedBySignature.set(sig, q);
-      } else {
-        // Prefer Sent/Accepted over Draft, and newer updatedAt
-        const prevIsSent = prev.status !== 'Draft';
-        const currIsSent = q.status !== 'Draft';
-        if (!prevIsSent && currIsSent) {
-          dedupedBySignature.set(sig, q);
-        } else if (prevIsSent === currIsSent) {
-          const prevTime = new Date(prev.updatedAt || prev.createdAt || 0).getTime();
-          const currTime = new Date(q.updatedAt || q.createdAt || 0).getTime();
-          if (currTime > prevTime) {
+          if (!error && Array.isArray(rows)) {
+            for (const row of rows) {
+              if (!row?.description) continue;
+              if (!isAfterReset(row.updated_at)) continue;
+              try {
+                const parsed = JSON.parse(row.description);
+                if (Array.isArray(parsed)) {
+                  for (const rawItem of parsed) {
+                    if (rawItem && typeof rawItem === 'object' && rawItem.id) {
+                      const cloudItem = normalizeQuotationRecord(rawItem);
+                      if (
+                        !isAfterReset(
+                          cloudItem.updatedAt || cloudItem.createdAt || row.updated_at
+                        )
+                      ) {
+                        continue;
+                      }
+                      const existingLocal = mergedMap.get(cloudItem.id);
+                      if (
+                        !existingLocal ||
+                        new Date(cloudItem.updatedAt || 0).getTime() >=
+                          new Date(existingLocal.updatedAt || 0).getTime()
+                      ) {
+                        mergedMap.set(cloudItem.id, cloudItem);
+                      }
+                    }
+                  }
+                }
+              } catch {
+                // Ignore malformed description row
+              }
+            }
+          }
+        } catch {
+          // Fallback to local records
+        }
+      }
+
+      // Deduplicate accidental rapid-click duplicate quotations for the same inquiryId + projectTitle + total
+      const dedupedBySignature = new Map<string, QuotationRecord>();
+      const standaloneQuotes: QuotationRecord[] = [];
+
+      for (const q of mergedMap.values()) {
+        if (q.inquiryId) {
+          const sig = `${q.inquiryId}|${(q.projectTitle || '').trim().toLowerCase()}|${q.total}|${q.documentType}`;
+          const prev = dedupedBySignature.get(sig);
+          if (!prev) {
             dedupedBySignature.set(sig, q);
+          } else {
+            const prevIsSent = prev.status !== 'Draft';
+            const currIsSent = q.status !== 'Draft';
+            if (!prevIsSent && currIsSent) {
+              dedupedBySignature.set(sig, q);
+            } else if (prevIsSent === currIsSent) {
+              const prevTime = new Date(prev.updatedAt || prev.createdAt || 0).getTime();
+              const currTime = new Date(q.updatedAt || q.createdAt || 0).getTime();
+              if (currTime > prevTime) {
+                dedupedBySignature.set(sig, q);
+              }
+            }
           }
+        } else {
+          standaloneQuotes.push(q);
         }
       }
-    } else {
-      standaloneQuotes.push(q);
-    }
-  }
 
-  const finalQuotes = [...Array.from(dedupedBySignature.values()), ...standaloneQuotes].sort(
-    (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
-  );
-  setLocalQuotations(finalQuotes);
-  return finalQuotes;
+      const finalQuotes = [...Array.from(dedupedBySignature.values()), ...standaloneQuotes].sort(
+        (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+      );
+      cachedQuotationsMemory = { list: finalQuotes, timestamp: Date.now() };
+      setLocalQuotations(finalQuotes);
+      return finalQuotes;
+    } finally {
+      inFlightQuotationsPromise = null;
+    }
+  })();
+
+  return inFlightQuotationsPromise;
 }
 
 export async function fetchClientQuotations(

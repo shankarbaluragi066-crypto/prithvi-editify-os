@@ -58,6 +58,16 @@ import {
   fetchCrmDatabaseCountsAdmin,
   truncateAllCrmDataAdmin,
   CrmDatabaseTableCounts,
+  getCachedPublicSettings,
+  getCachedAllServicesAdmin,
+  getCachedAllPortfolioAdmin,
+  getCachedInquiriesAdmin,
+  getCachedClientsAdmin,
+  getCachedProjectsAdmin,
+  getCachedFilesAdmin,
+  getCachedInvoicesAdmin,
+  getCachedPaymentsAdmin,
+  getCachedActivityLogs,
 } from '../services/crmService';
 import {
   DependencySafeDeleteModal,
@@ -146,7 +156,7 @@ export const AdminServicesPage: React.FC = () => {
   const { showToast, confirmAction } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
-  const [services, setServices] = useState<ServiceItem[]>([]);
+  const [services, setServices] = useState<ServiceItem[]>(() => getCachedAllServicesAdmin());
   const [editing, setEditing] = useState<ServiceItem | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [showMediaPicker, setShowMediaPicker] = useState<'image' | 'gallery' | 'video' | null>(null);
@@ -1003,7 +1013,7 @@ export const AdminPortfolioPage: React.FC = () => {
   const { showToast, confirmAction } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
-  const [items, setItems] = useState<PortfolioItem[]>([]);
+  const [items, setItems] = useState<PortfolioItem[]>(() => getCachedAllPortfolioAdmin());
   const [editing, setEditing] = useState<PortfolioItem | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [showMediaPicker, setShowMediaPicker] = useState<'cover' | 'video' | null>(null);
@@ -1626,11 +1636,11 @@ const INVOICE_STATUS_OPTIONS: InvoiceStatus[] = [
 export const AdminInvoicesPage: React.FC = () => {
   const { showToast, confirmAction } = useToast();
   const location = useLocation();
-  const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
-  const [clients, setClients] = useState<ClientRecord[]>([]);
-  const [projects, setProjects] = useState<ProjectRecord[]>([]);
-  const [payments, setPayments] = useState<PaymentRecord[]>([]);
-  const [services, setServices] = useState<ServiceItem[]>([]);
+  const [invoices, setInvoices] = useState<InvoiceRecord[]>(() => getCachedInvoicesAdmin());
+  const [clients, setClients] = useState<ClientRecord[]>(() => getCachedClientsAdmin());
+  const [projects, setProjects] = useState<ProjectRecord[]>(() => getCachedProjectsAdmin());
+  const [payments, setPayments] = useState<PaymentRecord[]>(() => getCachedPaymentsAdmin());
+  const [services, setServices] = useState<ServiceItem[]>(() => getCachedAllServicesAdmin());
 
   const [showBuilder, setShowBuilder] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState<InvoiceRecord | null>(null);
@@ -2749,9 +2759,11 @@ export const AdminInvoicesPage: React.FC = () => {
 // ============================================================================
 export const AdminPaymentsPage: React.FC = () => {
   const { showToast } = useToast();
-  const [payments, setPayments] = useState<PaymentRecord[]>([]);
-  const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
-  const [proofs, setProofs] = useState<ClientPaymentProofSubmission[]>([]);
+  const [payments, setPayments] = useState<PaymentRecord[]>(() => getCachedPaymentsAdmin());
+  const [invoices, setInvoices] = useState<InvoiceRecord[]>(() => getCachedInvoicesAdmin());
+  const [proofs, setProofs] = useState<ClientPaymentProofSubmission[]>(() =>
+    getClientPaymentProofs()
+  );
 
   const loadPaymentsData = useCallback(async () => {
     const [payList, invList] = await Promise.all([
@@ -3024,8 +3036,8 @@ export const AdminMediaLibraryPage: React.FC = () => {
 export const AdminFilesPage: React.FC = () => {
   const { showToast, confirmAction } = useToast();
   const { profile } = useAuth();
-  const [files, setFiles] = useState<DeliverableFile[]>([]);
-  const [projects, setProjects] = useState<ProjectRecord[]>([]);
+  const [files, setFiles] = useState<DeliverableFile[]>(() => getCachedFilesAdmin());
+  const [projects, setProjects] = useState<ProjectRecord[]>(() => getCachedProjectsAdmin());
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
   const [previewItem, setPreviewItem] = useState<PreviewableMediaItem | null>(null);
@@ -3339,11 +3351,11 @@ export const AdminFilesPage: React.FC = () => {
 // 6. ADMIN REPORTS & ANALYTICS PAGE
 // ============================================================================
 export const AdminReportsPage: React.FC = () => {
-  const [inquiries, setInquiries] = useState<InquiryRecord[]>([]);
-  const [projects, setProjects] = useState<ProjectRecord[]>([]);
-  const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
-  const [payments, setPayments] = useState<PaymentRecord[]>([]);
-  const [logs, setLogs] = useState<ActivityLog[]>([]);
+  const [inquiries, setInquiries] = useState<InquiryRecord[]>(() => getCachedInquiriesAdmin());
+  const [projects, setProjects] = useState<ProjectRecord[]>(() => getCachedProjectsAdmin());
+  const [invoices, setInvoices] = useState<InvoiceRecord[]>(() => getCachedInvoicesAdmin());
+  const [payments, setPayments] = useState<PaymentRecord[]>(() => getCachedPaymentsAdmin());
+  const [logs, setLogs] = useState<ActivityLog[]>(() => getCachedActivityLogs());
 
   useEffect(() => {
     Promise.all([
@@ -3456,7 +3468,9 @@ export const AdminReportsPage: React.FC = () => {
 export const AdminSettingsPage: React.FC = () => {
   const { user } = useAuth();
   const { showToast } = useToast();
-  const [pub, setPub] = useState<PublicSettings>(DEFAULT_PUBLIC_SETTINGS);
+  const [pub, setPub] = useState<PublicSettings>(
+    () => getCachedPublicSettings() || DEFAULT_PUBLIC_SETTINGS
+  );
   const [priv, setPriv] = useState<PrivateSettings>(DEFAULT_PRIVATE_SETTINGS);
   const [emailPrefs, setEmailPrefs] = useState<AdminEmailNotificationPreferences>(() =>
     getAdminEmailNotificationSettings()

@@ -64,16 +64,6 @@ function truncate(str: string | undefined | null, max: number): string {
 }
 
 async function getCurrentUser(): Promise<{ id: string; email?: string | null } | null> {
-  if (isSupabaseConfigured) {
-    try {
-      const { data } = await supabase.auth.getUser();
-      if (data?.user) {
-        return data.user;
-      }
-    } catch {
-      // Fall back to local session below
-    }
-  }
   if (typeof window !== 'undefined') {
     try {
       const raw = window.localStorage.getItem(LOCAL_GOOGLE_SESSION_KEY);
@@ -88,6 +78,16 @@ async function getCurrentUser(): Promise<{ id: string; email?: string | null } |
       }
     } catch {
       // Ignore storage parse error
+    }
+  }
+  if (isSupabaseConfigured) {
+    try {
+      const { data } = await supabase.auth.getSession();
+      if (data?.session?.user) {
+        return data.session.user;
+      }
+    } catch {
+      // Fall back to null
     }
   }
   return null;
@@ -166,6 +166,7 @@ function getLocalResetAtMs(): number {
 }
 
 function wipeLocalOperationalCrmStorage(newResetAtIso: string): void {
+  invalidateRemoteTableCache();
   if (typeof window === 'undefined') return;
   try {
     window.localStorage.setItem(LOCAL_CRM_RESET_AT_KEY, newResetAtIso);
@@ -555,13 +556,131 @@ export function scheduleCloudCrmSnapshotUpload(): void {
   }, 250);
 }
 
+const remoteTableCache = new Map<string, { rows: Record<string, any>[]; timestamp: number }>();
+const inFlightTablePromises = new Map<string, Promise<Record<string, any>[]>>();
+
+export function invalidateRemoteTableCache(table?: string): void {
+  if (!table) {
+    remoteTableCache.clear();
+    return;
+  }
+  for (const key of Array.from(remoteTableCache.keys())) {
+    if (key === table || key.startsWith(`${table}:`)) {
+      remoteTableCache.delete(key);
+    }
+  }
+  if (table === 'inquiries') {
+    remoteTableCache.delete('clients');
+    remoteTableCache.delete('projects');
+  }
+}
+
+async function fetchRemoteTableRowsCached(
+  cacheKey: string,
+  queryFn: () => PromiseLike<{ data: any[] | null; error: any }>,
+  ttlMs = 10000
+): Promise<Record<string, any>[]> {
+  if (!isSupabaseConfigured) return [];
+  const now = Date.now();
+  const cached = remoteTableCache.get(cacheKey);
+  if (cached && now - cached.timestamp < ttlMs) {
+    return cached.rows;
+  }
+
+  const existingInFlight = inFlightTablePromises.get(cacheKey);
+  if (existingInFlight) {
+    return existingInFlight;
+  }
+
+  const requestPromise = (async () => {
+    try {
+      const timeoutPromise = new Promise<{ data: null; error: { message: string } }>((resolve) =>
+        setTimeout(() => resolve({ data: null, error: { message: 'timeout' } }), 2500)
+      );
+      const { data, error } = await Promise.race([
+        Promise.resolve(queryFn()),
+        timeoutPromise,
+      ]);
+      if (!error && Array.isArray(data)) {
+        remoteTableCache.set(cacheKey, { rows: data, timestamp: Date.now() });
+        return data;
+      }
+      return cached ? cached.rows : [];
+    } catch {
+      return cached ? cached.rows : [];
+    } finally {
+      inFlightTablePromises.delete(cacheKey);
+    }
+  })();
+
+  inFlightTablePromises.set(cacheKey, requestPromise);
+  return requestPromise;
+}
+
 let activeSharedSyncPromise: Promise<void> | null = null;
+let activeCloudStorageSyncPromise: Promise<void> | null = null;
 let lastSharedSyncTimestamp = 0;
+let lastCloudStorageSyncTimestamp = 0;
+
+async function syncCloudStorageSnapshotsInBackground(force = false): Promise<void> {
+  if (typeof window === 'undefined' || !isSupabaseConfigured) return;
+  const now = Date.now();
+  if (!force && now - lastCloudStorageSyncTimestamp < 25000) {
+    return;
+  }
+  if (activeCloudStorageSyncPromise) {
+    if (force) await activeCloudStorageSyncPromise;
+    return;
+  }
+
+  activeCloudStorageSyncPromise = (async () => {
+    try {
+      const { data: files, error: listErr } = await supabase.storage
+        .from(CLOUD_SYNC_BUCKET)
+        .list(CLOUD_SYNC_FOLDER, {
+          limit: 2,
+          sortBy: { column: 'name', order: 'desc' },
+        });
+
+      if (!listErr && Array.isArray(files) && files.length > 0) {
+        const validFiles = files.filter(
+          (f) => f && f.name && f.name.startsWith('state_') && f.name.endsWith('.json')
+        );
+        const latestFile = validFiles[0];
+        if (latestFile?.name && (force || latestFile.name !== lastLoadedCloudSnapshotName)) {
+          const { data: pubData } = supabase.storage
+            .from(CLOUD_SYNC_BUCKET)
+            .getPublicUrl(`${CLOUD_SYNC_FOLDER}/${latestFile.name}`);
+          if (pubData?.publicUrl) {
+            const cloudRes = await fetch(pubData.publicUrl, { cache: 'no-store' });
+            if (cloudRes.ok) {
+              const cloudJson = await cloudRes.json().catch(() => null);
+              if (cloudJson && typeof cloudJson === 'object') {
+                applyIncomingSyncPayload(cloudJson);
+                invalidateRemoteTableCache();
+              }
+            }
+          }
+          lastLoadedCloudSnapshotName = latestFile.name;
+        }
+      }
+      lastCloudStorageSyncTimestamp = Date.now();
+    } catch {
+      // Non-blocking if storage list fails
+    } finally {
+      activeCloudStorageSyncPromise = null;
+    }
+  })();
+
+  if (force) {
+    await activeCloudStorageSyncPromise;
+  }
+}
 
 export async function syncSharedCrmStoreWithServer(force = false): Promise<void> {
   if (typeof window === 'undefined') return;
   const now = Date.now();
-  if (!force && now - lastSharedSyncTimestamp < 1200) {
+  if (!force && now - lastSharedSyncTimestamp < 20000) {
     if (activeSharedSyncPromise) {
       await activeSharedSyncPromise;
     }
@@ -574,60 +693,18 @@ export async function syncSharedCrmStoreWithServer(force = false): Promise<void>
 
   activeSharedSyncPromise = (async () => {
     try {
-      // 1. Pull latest shared cloud snapshots from Supabase Storage (works across Netlify, all browsers, and both admin accounts)
-      if (isSupabaseConfigured) {
-        try {
-          const { data: files, error: listErr } = await supabase.storage
-            .from(CLOUD_SYNC_BUCKET)
-            .list(CLOUD_SYNC_FOLDER, {
-              limit: 3,
-              sortBy: { column: 'name', order: 'desc' },
-            });
-
-          if (!listErr && Array.isArray(files) && files.length > 0) {
-            const validFiles = files.filter(
-              (f) => f && f.name && f.name.startsWith('state_') && f.name.endsWith('.json')
-            );
-            // Process from oldest of the top 2 to newest so newest wins
-            const toFetch = validFiles.slice(0, 2).reverse();
-            for (const fileObj of toFetch) {
-              if (
-                !force &&
-                validFiles[0]?.name === lastLoadedCloudSnapshotName &&
-                fileObj.name === lastLoadedCloudSnapshotName
-              ) {
-                continue;
-              }
-              const { data: pubData } = supabase.storage
-                .from(CLOUD_SYNC_BUCKET)
-                .getPublicUrl(`${CLOUD_SYNC_FOLDER}/${fileObj.name}`);
-              if (pubData?.publicUrl) {
-                const cloudRes = await fetch(pubData.publicUrl, { cache: 'no-store' });
-                if (cloudRes.ok) {
-                  const cloudJson = await cloudRes.json().catch(() => null);
-                  if (cloudJson && typeof cloudJson === 'object') {
-                    applyIncomingSyncPayload(cloudJson);
-                  }
-                }
-              }
-            }
-            if (validFiles[0]?.name) {
-              lastLoadedCloudSnapshotName = validFiles[0].name;
-            }
-          }
-        } catch {
-          // Non-blocking if storage list fails
-        }
-      }
-
-      // 2. Sync with local Express backend (/api/crm/sync) when running in preview/server environment
+      // 1. Fast local Express backend sync (/api/crm/sync) with a 400ms timeout
       const localPayload = buildCurrentLocalSyncPayload();
       try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 400);
         const res = await fetch('/api/crm/sync', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(localPayload),
+          signal: controller.signal,
         });
+        clearTimeout(timer);
 
         if (res.ok) {
           const data = (await res.json().catch(() => null)) as {
@@ -645,6 +722,13 @@ export async function syncSharedCrmStoreWithServer(force = false): Promise<void>
       }
 
       lastSharedSyncTimestamp = Date.now();
+
+      // 2. Pull cloud storage snapshots in the background without blocking UI table renders
+      if (force) {
+        await syncCloudStorageSnapshotsInBackground(true);
+      } else {
+        syncCloudStorageSnapshotsInBackground(false).catch(() => {});
+      }
     } catch {
       // Non-blocking
     } finally {
@@ -670,6 +754,7 @@ function upsertLocalTableRow(table: string, row: Record<string, any>): string {
   const next = [mergedRow, ...existing.filter((r) => String(r.id) !== id)];
   writeLocalTableRows(table, next);
   unmarkLocalRowDeleted(table, id);
+  invalidateRemoteTableCache(table);
   pushSharedRowUpsertToServer(table, mergedRow);
   return id;
 }
@@ -680,6 +765,7 @@ function deleteLocalTableRow(table: string, id: string): void {
   const existing = readLocalTableRows(table).filter((r) => String(r.id) !== cleanId);
   writeLocalTableRows(table, existing);
   markLocalRowDeleted(table, cleanId);
+  invalidateRemoteTableCache(table);
   pushSharedRowDeleteToServer(table, cleanId);
 }
 
@@ -762,14 +848,6 @@ function mergeRemoteAndLocalRows<T = Record<string, any>>(
 
   if (combined.length > 0 && (discoveredNewOrUpdatedRemote || (remoteRows && remoteRows.length > 0))) {
     writeLocalTableRows(table, combined);
-    if (typeof window !== 'undefined' && discoveredNewOrUpdatedRemote) {
-      fetch('/api/crm/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tables: { [table]: combined } }),
-      }).catch(() => {});
-      scheduleCloudCrmSnapshotUpload();
-    }
   }
 
   return mapper ? combined.map((row, idx) => mapper(row, idx)) : combined;
@@ -1520,23 +1598,19 @@ export async function logAdminActivity(
   }
 }
 
+export function getCachedActivityLogs(): ActivityLog[] {
+  return mergeRemoteAndLocalRows('activity_logs', [], mapActivityLogRow);
+}
+
 export async function fetchActivityLogs(): Promise<ActivityLog[]> {
   await syncSharedCrmStoreWithServer();
   if (!isSupabaseConfigured) {
     return mergeRemoteAndLocalRows('activity_logs', [], mapActivityLogRow);
   }
-  const { data, error } = await supabase
-    .from('activity_logs')
-    .select('*')
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    if (isMissingSchemaError(error) || isRlsOrPermissionError(error)) {
-      return mergeRemoteAndLocalRows('activity_logs', [], mapActivityLogRow);
-    }
-    handleSupabaseError(error, 'fetchActivityLogs');
-  }
-  return mergeRemoteAndLocalRows('activity_logs', data || [], mapActivityLogRow);
+  const remoteRows = await fetchRemoteTableRowsCached('activity_logs', () =>
+    supabase.from('activity_logs').select('*').order('created_at', { ascending: false })
+  );
+  return mergeRemoteAndLocalRows('activity_logs', remoteRows, mapActivityLogRow);
 }
 
 // ============================================================================
@@ -1779,78 +1853,111 @@ function writeLocalPublicSettings(settings: PublicSettings): void {
   }
 }
 
+export function getCachedPublicSettings(): PublicSettings {
+  return readLocalPublicSettings() || DEFAULT_PUBLIC_SETTINGS;
+}
+
+let cachedPublicSettingsMemory: { settings: PublicSettings; timestamp: number } | null = null;
+let inFlightPublicSettingsPromise: Promise<PublicSettings> | null = null;
+
 export async function fetchPublicSettings(): Promise<PublicSettings> {
   const localCached = readLocalPublicSettings();
   if (!isSupabaseConfigured) {
     return localCached || DEFAULT_PUBLIC_SETTINGS;
   }
-  try {
-    const { data, error } = await supabase
-      .from('public_settings')
-      .select('*')
-      .eq('id', 'default')
-      .maybeSingle();
-
-    // Check if site_customization is stored in public_settings or fallback media_assets row
-    let remoteCustomRaw: Record<string, any> | null = null;
-    if (
-      data &&
-      data.site_customization &&
-      typeof data.site_customization === 'object' &&
-      Object.keys(data.site_customization).length > 0
-    ) {
-      remoteCustomRaw = data.site_customization;
-    } else {
-      try {
-        const { data: assetRows } = await supabase
-          .from('media_assets')
-          .select('description')
-          .eq('original_filename', SITE_CONFIG_FILENAME)
-          .eq('is_public', true)
-          .order('updated_at', { ascending: false })
-          .limit(1);
-        const assetRow = Array.isArray(assetRows) ? assetRows[0] : null;
-        if (assetRow?.description) {
-          remoteCustomRaw = JSON.parse(assetRow.description);
-        }
-      } catch {
-        // Ignore if media_assets fallback not used
-      }
-    }
-
-    if (error || !data) {
-      return localCached || DEFAULT_PUBLIC_SETTINGS;
-    }
-
-    const mergedSiteCustomization = mergeSiteCustomization(
-      remoteCustomRaw || localCached?.siteCustomization || DEFAULT_SITE_CUSTOMIZATION
-    );
-
-    const resolved: PublicSettings = {
-      businessName: String(data.business_name || DEFAULT_PUBLIC_SETTINGS.businessName),
-      ownerName: String(data.owner_name || DEFAULT_PUBLIC_SETTINGS.ownerName),
-      tagline: String(data.tagline || DEFAULT_PUBLIC_SETTINGS.tagline),
-      businessEmail: String(data.business_email || DEFAULT_PUBLIC_SETTINGS.businessEmail),
-      whatsappNumber: String(
-        data.whatsapp_number || localCached?.whatsappNumber || DEFAULT_PUBLIC_SETTINGS.whatsappNumber
-      ).trim(),
-      whatsappDefaultMessage: String(
-        data.whatsapp_default_message || DEFAULT_PUBLIC_SETTINGS.whatsappDefaultMessage
-      ),
-      websiteUrl: String(data.website_url || ''),
-      businessAddress: String(data.business_address ?? localCached?.businessAddress ?? ''),
-      defaultCurrency: 'INR',
-      portfolioVisible:
-        data.portfolio_visible !== undefined ? Boolean(data.portfolio_visible) : true,
-      siteCustomization: mergedSiteCustomization,
-      updatedAt: data.updated_at,
-    };
-
-    writeLocalPublicSettings(resolved);
-    return resolved;
-  } catch {
-    return localCached || DEFAULT_PUBLIC_SETTINGS;
+  const now = Date.now();
+  if (cachedPublicSettingsMemory && now - cachedPublicSettingsMemory.timestamp < 15000) {
+    return cachedPublicSettingsMemory.settings;
   }
+  if (inFlightPublicSettingsPromise) {
+    return inFlightPublicSettingsPromise;
+  }
+
+  inFlightPublicSettingsPromise = (async () => {
+    try {
+      const timeoutMs = 2500;
+      const [settingsRes, assetRes] = await Promise.all([
+        Promise.race([
+          supabase.from('public_settings').select('*').eq('id', 'default').maybeSingle(),
+          new Promise<{ data: null; error: { message: string } }>((resolve) =>
+            setTimeout(() => resolve({ data: null, error: { message: 'timeout' } }), timeoutMs)
+          ),
+        ]),
+        Promise.race([
+          supabase
+            .from('media_assets')
+            .select('description')
+            .eq('original_filename', SITE_CONFIG_FILENAME)
+            .eq('is_public', true)
+            .order('updated_at', { ascending: false })
+            .limit(1),
+          new Promise<{ data: null; error: { message: string } }>((resolve) =>
+            setTimeout(() => resolve({ data: null, error: { message: 'timeout' } }), timeoutMs)
+          ),
+        ]),
+      ]);
+
+      const data = settingsRes?.data;
+      const error = settingsRes?.error;
+
+      let remoteCustomRaw: Record<string, any> | null = null;
+      if (
+        data &&
+        data.site_customization &&
+        typeof data.site_customization === 'object' &&
+        Object.keys(data.site_customization).length > 0
+      ) {
+        remoteCustomRaw = data.site_customization;
+      } else {
+        try {
+          const assetRow = Array.isArray(assetRes?.data) ? assetRes.data[0] : null;
+          if (assetRow?.description) {
+            remoteCustomRaw = JSON.parse(assetRow.description);
+          }
+        } catch {
+          // Ignore if media_assets fallback not used
+        }
+      }
+
+      if (error || !data) {
+        return localCached || DEFAULT_PUBLIC_SETTINGS;
+      }
+
+      const mergedSiteCustomization = mergeSiteCustomization(
+        remoteCustomRaw || localCached?.siteCustomization || DEFAULT_SITE_CUSTOMIZATION
+      );
+
+      const resolved: PublicSettings = {
+        businessName: String(data.business_name || DEFAULT_PUBLIC_SETTINGS.businessName),
+        ownerName: String(data.owner_name || DEFAULT_PUBLIC_SETTINGS.ownerName),
+        tagline: String(data.tagline || DEFAULT_PUBLIC_SETTINGS.tagline),
+        businessEmail: String(data.business_email || DEFAULT_PUBLIC_SETTINGS.businessEmail),
+        whatsappNumber: String(
+          data.whatsapp_number || localCached?.whatsappNumber || DEFAULT_PUBLIC_SETTINGS.whatsappNumber
+        ).trim(),
+        whatsappDefaultMessage: String(
+          data.whatsapp_default_message || DEFAULT_PUBLIC_SETTINGS.whatsappDefaultMessage
+        ),
+        websiteUrl: String(data.website_url || ''),
+        businessAddress: String(data.business_address ?? localCached?.businessAddress ?? ''),
+        defaultCurrency: 'INR',
+        portfolioVisible:
+          data.portfolio_visible !== undefined ? Boolean(data.portfolio_visible) : true,
+        siteCustomization: mergedSiteCustomization,
+        updatedAt: data.updated_at,
+      };
+
+      cachedPublicSettingsMemory = { settings: resolved, timestamp: Date.now() };
+      writeLocalPublicSettings(resolved);
+      return resolved;
+    } catch {
+      return localCached || DEFAULT_PUBLIC_SETTINGS;
+    } finally {
+      inFlightPublicSettingsPromise = null;
+    }
+  })();
+
+  return inFlightPublicSettingsPromise;
 }
 
 export async function savePublicSettings(data: Omit<PublicSettings, 'updatedAt'>): Promise<void> {
@@ -1864,6 +1971,7 @@ export async function savePublicSettings(data: Omit<PublicSettings, 'updatedAt'>
   };
 
   // Always cache locally and notify live UI listeners immediately
+  cachedPublicSettingsMemory = { settings: fullSettings, timestamp: Date.now() };
   writeLocalPublicSettings(fullSettings);
 
   if (!isSupabaseConfigured) return;
@@ -2024,25 +2132,34 @@ export function isDemoSeedService(srv: ServiceItem): boolean {
   return false;
 }
 
+export function getCachedPublishedServices(): ServiceItem[] {
+  const mergedRows = mergeRemoteAndLocalRows('services', []);
+  return mergedRows
+    .map((r, i) => mapServiceRow(r, i))
+    .filter((s) => s.published && !isDemoSeedService(s))
+    .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+}
+
+export function getCachedAllServicesAdmin(): ServiceItem[] {
+  const mergedRows = mergeRemoteAndLocalRows('services', []);
+  return mergedRows
+    .map((r, i) => mapServiceRow(r, i))
+    .filter((s) => !isDemoSeedService(s))
+    .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+}
+
 export async function fetchPublishedServices(): Promise<ServiceItem[]> {
   await syncSharedCrmStoreWithServer();
-  let remoteRows: Record<string, any>[] = [];
-  if (isSupabaseConfigured) {
-    const { data, error } = await supabase
+  const remoteRows = await fetchRemoteTableRowsCached('services', async () => {
+    const res = await supabase
       .from('services')
       .select('*')
-      .eq('published', true)
       .order('sort_order', { ascending: true });
-
-    if (!error && data) {
-      remoteRows = data;
-    } else if (error && isMissingSchemaError(error)) {
-      const fallback = await supabase.from('services').select('*');
-      if (!fallback.error && fallback.data) {
-        remoteRows = fallback.data;
-      }
+    if (res.error && isMissingSchemaError(res.error)) {
+      return supabase.from('services').select('*');
     }
-  }
+    return res;
+  });
 
   const mergedRows = mergeRemoteAndLocalRows('services', remoteRows);
   return mergedRows
@@ -2053,22 +2170,16 @@ export async function fetchPublishedServices(): Promise<ServiceItem[]> {
 
 export async function fetchAllServicesAdmin(): Promise<ServiceItem[]> {
   await syncSharedCrmStoreWithServer();
-  let remoteRows: Record<string, any>[] = [];
-  if (isSupabaseConfigured) {
-    const { data, error } = await supabase
+  const remoteRows = await fetchRemoteTableRowsCached('services', async () => {
+    const res = await supabase
       .from('services')
       .select('*')
       .order('sort_order', { ascending: true });
-
-    if (!error && data) {
-      remoteRows = data;
-    } else if (error && isMissingSchemaError(error)) {
-      const fallback = await supabase.from('services').select('*');
-      if (!fallback.error && fallback.data) {
-        remoteRows = fallback.data;
-      }
+    if (res.error && isMissingSchemaError(res.error)) {
+      return supabase.from('services').select('*');
     }
-  }
+    return res;
+  });
 
   const mergedRows = mergeRemoteAndLocalRows('services', remoteRows);
   return mergedRows
@@ -2176,25 +2287,33 @@ export async function deleteServiceItem(id: string, title: string): Promise<void
 // ============================================================================
 // PORTFOLIO
 // ============================================================================
+export function getCachedPublishedPortfolio(): PortfolioItem[] {
+  const mergedRows = mergeRemoteAndLocalRows('portfolio', []);
+  return mergedRows
+    .map((r, i) => mapPortfolioRow(r, i))
+    .filter((p) => p.published && !p.isSampleContent)
+    .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+}
+
+export function getCachedAllPortfolioAdmin(): PortfolioItem[] {
+  const mergedRows = mergeRemoteAndLocalRows('portfolio', []);
+  return mergedRows
+    .map((r, i) => mapPortfolioRow(r, i))
+    .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+}
+
 export async function fetchPublishedPortfolio(): Promise<PortfolioItem[]> {
   await syncSharedCrmStoreWithServer();
-  let remoteRows: Record<string, any>[] = [];
-  if (isSupabaseConfigured) {
-    const { data, error } = await supabase
+  const remoteRows = await fetchRemoteTableRowsCached('portfolio', async () => {
+    const res = await supabase
       .from('portfolio')
       .select('*')
-      .eq('published', true)
       .order('sort_order', { ascending: true });
-
-    if (!error && data) {
-      remoteRows = data;
-    } else if (error && isMissingSchemaError(error)) {
-      const fallback = await supabase.from('portfolio').select('*');
-      if (!fallback.error && fallback.data) {
-        remoteRows = fallback.data;
-      }
+    if (res.error && isMissingSchemaError(res.error)) {
+      return supabase.from('portfolio').select('*');
     }
-  }
+    return res;
+  });
 
   const mergedRows = mergeRemoteAndLocalRows('portfolio', remoteRows);
   return mergedRows
@@ -2205,22 +2324,16 @@ export async function fetchPublishedPortfolio(): Promise<PortfolioItem[]> {
 
 export async function fetchAllPortfolioAdmin(): Promise<PortfolioItem[]> {
   await syncSharedCrmStoreWithServer();
-  let remoteRows: Record<string, any>[] = [];
-  if (isSupabaseConfigured) {
-    const { data, error } = await supabase
+  const remoteRows = await fetchRemoteTableRowsCached('portfolio', async () => {
+    const res = await supabase
       .from('portfolio')
       .select('*')
       .order('sort_order', { ascending: true });
-
-    if (!error && data) {
-      remoteRows = data;
-    } else if (error && isMissingSchemaError(error)) {
-      const fallback = await supabase.from('portfolio').select('*');
-      if (!fallback.error && fallback.data) {
-        remoteRows = fallback.data;
-      }
+    if (res.error && isMissingSchemaError(res.error)) {
+      return supabase.from('portfolio').select('*');
     }
-  }
+    return res;
+  });
 
   const mergedRows = mergeRemoteAndLocalRows('portfolio', remoteRows);
   return mergedRows
@@ -2722,6 +2835,43 @@ export async function submitInquiryRecord(input: {
   return referenceId;
 }
 
+export function getCachedInquiriesAdmin(): InquiryRecord[] {
+  const deletedIds = readLocalDeletedIds('inquiries');
+  const resetAtMs = getLocalResetAtMs();
+  const localBackup = readLocalInquiriesBackup().filter((item) => {
+    if (
+      !item ||
+      !item.id ||
+      deletedIds.has(item.id) ||
+      String(item.email || '').trim().toLowerCase() === 'sync-check@example.com'
+    ) {
+      return false;
+    }
+    if (resetAtMs > 0) {
+      const t = new Date(item.updatedAt || item.createdAt || 0).getTime();
+      if (Number.isNaN(t) || t < resetAtMs) return false;
+    }
+    return true;
+  });
+
+  const tableMerged = mergeRemoteAndLocalRows('inquiries', [], mapInquiryRow);
+  const byId = new Map<string, InquiryRecord>();
+  for (const item of tableMerged) {
+    if (!item.id || deletedIds.has(item.id)) continue;
+    if (String(item.email || '').trim().toLowerCase() === 'sync-check@example.com') continue;
+    byId.set(item.id, item);
+  }
+  for (const backupItem of localBackup) {
+    if (!backupItem.id || deletedIds.has(backupItem.id)) continue;
+    if (!byId.has(backupItem.id)) {
+      byId.set(backupItem.id, backupItem);
+    }
+  }
+  return Array.from(byId.values()).sort(
+    (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+  );
+}
+
 export async function fetchAllInquiriesAdmin(): Promise<InquiryRecord[]> {
   await syncSharedCrmStoreWithServer();
   const deletedIds = readLocalDeletedIds('inquiries');
@@ -2742,19 +2892,12 @@ export async function fetchAllInquiriesAdmin(): Promise<InquiryRecord[]> {
     return true;
   });
 
-  let remoteRows: Record<string, any>[] = [];
-  if (isSupabaseConfigured) {
-    const { data, error } = await supabase
-      .from('inquiries')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (!error && Array.isArray(data)) {
-      remoteRows = data.filter(
-        (r) => String(r.email || '').trim().toLowerCase() !== 'sync-check@example.com'
-      );
-    }
-  }
+  const rawRemote = await fetchRemoteTableRowsCached('inquiries', () =>
+    supabase.from('inquiries').select('*').order('created_at', { ascending: false })
+  );
+  const remoteRows = rawRemote.filter(
+    (r) => String(r.email || '').trim().toLowerCase() !== 'sync-check@example.com'
+  );
 
   const tableMerged = mergeRemoteAndLocalRows('inquiries', remoteRows, mapInquiryRow);
   const byId = new Map<string, InquiryRecord>();
@@ -2998,31 +3141,53 @@ export async function deleteInquiryAdmin(id: string, name: string): Promise<void
 // ============================================================================
 // CLIENTS
 // ============================================================================
+export function getCachedClientsAdmin(): ClientRecord[] {
+  const clients = mergeRemoteAndLocalRows('clients', [], mapClientRow);
+  const dedupedClientsByEmail = new Map<string, ClientRecord>();
+  const clientsWithoutEmail: ClientRecord[] = [];
+  for (const c of clients) {
+    const emailKey = (c.email || '').trim().toLowerCase();
+    if (!emailKey) {
+      clientsWithoutEmail.push(c);
+      continue;
+    }
+    const prev = dedupedClientsByEmail.get(emailKey);
+    if (!prev) {
+      dedupedClientsByEmail.set(emailKey, c);
+    } else {
+      const prevIsSynthetic = prev.id.startsWith('cli_');
+      const currIsSynthetic = c.id.startsWith('cli_');
+      if (prevIsSynthetic && !currIsSynthetic) {
+        dedupedClientsByEmail.set(emailKey, c);
+      } else if (prevIsSynthetic === currIsSynthetic) {
+        const prevTime = new Date(prev.updatedAt || prev.createdAt || 0).getTime();
+        const currTime = new Date(c.updatedAt || c.createdAt || 0).getTime();
+        if (currTime > prevTime) {
+          dedupedClientsByEmail.set(emailKey, c);
+        }
+      }
+    }
+  }
+  return [...Array.from(dedupedClientsByEmail.values()), ...clientsWithoutEmail].sort(
+    (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+  );
+}
+
 export async function fetchAllClientsAdmin(): Promise<ClientRecord[]> {
   await syncSharedCrmStoreWithServer();
 
-  let remoteRows: Record<string, any>[] = [];
-  if (isSupabaseConfigured) {
-    const { data, error } = await supabase
-      .from('clients')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (!error && Array.isArray(data)) {
-      remoteRows = data;
-    } else if (error && !isMissingSchemaError(error) && !isRlsOrPermissionError(error)) {
-      handleSupabaseError(error, 'fetchAllClientsAdmin');
-    }
-  }
+  const [remoteRows, allInquiries] = await Promise.all([
+    fetchRemoteTableRowsCached('clients', () =>
+      supabase.from('clients').select('*').order('created_at', { ascending: false })
+    ),
+    fetchAllInquiriesAdmin().catch(() => mergeRemoteAndLocalRows('inquiries', [], mapInquiryRow)),
+  ]);
 
   let clients = mergeRemoteAndLocalRows('clients', remoteRows, mapClientRow);
 
   // Ensure every customer who booked an inquiry is represented in the Clients CRM directory
   try {
     const deletedClientIds = readLocalDeletedIds('clients');
-    const allInquiries = await fetchAllInquiriesAdmin().catch(() =>
-      mergeRemoteAndLocalRows('inquiries', [], mapInquiryRow)
-    );
     const knownEmails = new Set(
       clients.map((c) => (c.email || '').trim().toLowerCase()).filter(Boolean)
     );
@@ -3298,31 +3463,54 @@ export async function deleteClientAdmin(
 // ============================================================================
 // PROJECTS & INTERNAL NOTES
 // ============================================================================
+export function getCachedProjectsAdmin(): ProjectRecord[] {
+  const allProjects = mergeRemoteAndLocalRows('projects', [], mapProjectRow);
+  const dedupedProjects = new Map<string, ProjectRecord>();
+  for (const p of allProjects) {
+    const signature = `${(p.clientEmail || '').trim().toLowerCase()}|${(p.title || '')
+      .trim()
+      .toLowerCase()}|${(p.serviceType || '').trim().toLowerCase()}|${(p.brief || '')
+      .trim()
+      .toLowerCase()}`;
+    const existing = dedupedProjects.get(signature);
+    if (!existing) {
+      dedupedProjects.set(signature, p);
+    } else {
+      const existingProgress = Number(existing.progress) || 0;
+      const currProgress = Number(p.progress) || 0;
+      if (currProgress > existingProgress) {
+        dedupedProjects.set(signature, p);
+      } else if (currProgress === existingProgress) {
+        const existingTime = new Date(existing.updatedAt || existing.createdAt || 0).getTime();
+        const currTime = new Date(p.updatedAt || p.createdAt || 0).getTime();
+        if (currTime > existingTime) {
+          dedupedProjects.set(signature, p);
+        }
+      }
+    }
+  }
+  return Array.from(dedupedProjects.values()).sort(
+    (a, b) =>
+      new Date(b.updatedAt || b.createdAt || 0).getTime() -
+      new Date(a.updatedAt || a.createdAt || 0).getTime()
+  );
+}
+
 export async function fetchAllProjectsAdmin(): Promise<ProjectRecord[]> {
   await syncSharedCrmStoreWithServer();
 
-  let remoteRows: Record<string, any>[] = [];
-  if (isSupabaseConfigured) {
-    const { data, error } = await supabase
-      .from('projects')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (!error && Array.isArray(data)) {
-      remoteRows = data;
-    } else if (error && !isMissingSchemaError(error) && !isRlsOrPermissionError(error)) {
-      handleSupabaseError(error, 'fetchAllProjectsAdmin');
-    }
-  }
+  const [remoteRows, allInquiries] = await Promise.all([
+    fetchRemoteTableRowsCached('projects', () =>
+      supabase.from('projects').select('*').order('created_at', { ascending: false })
+    ),
+    fetchAllInquiriesAdmin().catch(() => mergeRemoteAndLocalRows('inquiries', [], mapInquiryRow)),
+  ]);
 
   let allProjects = mergeRemoteAndLocalRows('projects', remoteRows, mapProjectRow);
 
   // Ensure every non-Spam service booking/inquiry is also materialized as a tracked ProjectRecord in Admin Dashboard
   try {
     const deletedProjectIds = readLocalDeletedIds('projects');
-    const allInquiries = await fetchAllInquiriesAdmin().catch(() =>
-      mergeRemoteAndLocalRows('inquiries', [], mapInquiryRow)
-    );
     const allClients = mergeRemoteAndLocalRows('clients', [], mapClientRow);
     let addedProject = false;
 
@@ -3881,23 +4069,19 @@ export async function duplicateProjectAdmin(project: ProjectRecord): Promise<str
 // ============================================================================
 // TASKS & MILESTONES
 // ============================================================================
+export function getCachedTasksAdmin(): TaskRecord[] {
+  return mergeRemoteAndLocalRows('tasks', [], mapTaskRow);
+}
+
 export async function fetchAllTasksAdmin(): Promise<TaskRecord[]> {
   await syncSharedCrmStoreWithServer();
   if (!isSupabaseConfigured) {
     return mergeRemoteAndLocalRows('tasks', [], mapTaskRow);
   }
-  const { data, error } = await supabase
-    .from('tasks')
-    .select('*')
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    if (isMissingSchemaError(error) || isRlsOrPermissionError(error)) {
-      return mergeRemoteAndLocalRows('tasks', [], mapTaskRow);
-    }
-    handleSupabaseError(error, 'fetchAllTasksAdmin');
-  }
-  return mergeRemoteAndLocalRows('tasks', data || [], mapTaskRow);
+  const remoteRows = await fetchRemoteTableRowsCached('tasks', () =>
+    supabase.from('tasks').select('*').order('created_at', { ascending: false })
+  );
+  return mergeRemoteAndLocalRows('tasks', remoteRows, mapTaskRow);
 }
 
 export async function fetchClientVisibleTasks(
@@ -4221,23 +4405,19 @@ export async function uploadFileWithMetadata(params: {
   return newId;
 }
 
+export function getCachedFilesAdmin(): DeliverableFile[] {
+  return mergeRemoteAndLocalRows('files', [], mapFileRow);
+}
+
 export async function fetchAllFilesAdmin(): Promise<DeliverableFile[]> {
   await syncSharedCrmStoreWithServer();
   if (!isSupabaseConfigured) {
     return mergeRemoteAndLocalRows('files', [], mapFileRow);
   }
-  const { data, error } = await supabase
-    .from('files')
-    .select('*')
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    if (isMissingSchemaError(error) || isRlsOrPermissionError(error)) {
-      return mergeRemoteAndLocalRows('files', [], mapFileRow);
-    }
-    handleSupabaseError(error, 'fetchAllFilesAdmin');
-  }
-  return mergeRemoteAndLocalRows('files', data || [], mapFileRow);
+  const remoteRows = await fetchRemoteTableRowsCached('files', () =>
+    supabase.from('files').select('*').order('created_at', { ascending: false })
+  );
+  return mergeRemoteAndLocalRows('files', remoteRows, mapFileRow);
 }
 
 export async function fetchClientFiles(
@@ -4605,23 +4785,19 @@ export async function deleteMediaAssetAdmin(asset: MediaAsset): Promise<void> {
 // ============================================================================
 // INVOICES & PAYMENTS
 // ============================================================================
+export function getCachedInvoicesAdmin(): InvoiceRecord[] {
+  return mergeRemoteAndLocalRows('invoices', [], mapInvoiceRow);
+}
+
 export async function fetchAllInvoicesAdmin(): Promise<InvoiceRecord[]> {
   await syncSharedCrmStoreWithServer();
   if (!isSupabaseConfigured) {
     return mergeRemoteAndLocalRows('invoices', [], mapInvoiceRow);
   }
-  const { data, error } = await supabase
-    .from('invoices')
-    .select('*')
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    if (isMissingSchemaError(error) || isRlsOrPermissionError(error)) {
-      return mergeRemoteAndLocalRows('invoices', [], mapInvoiceRow);
-    }
-    handleSupabaseError(error, 'fetchAllInvoicesAdmin');
-  }
-  return mergeRemoteAndLocalRows('invoices', data || [], mapInvoiceRow);
+  const remoteRows = await fetchRemoteTableRowsCached('invoices', () =>
+    supabase.from('invoices').select('*').order('created_at', { ascending: false })
+  );
+  return mergeRemoteAndLocalRows('invoices', remoteRows, mapInvoiceRow);
 }
 
 export async function fetchClientInvoices(
@@ -5094,23 +5270,19 @@ export async function recordPaymentAdmin(params: {
   return payId;
 }
 
+export function getCachedPaymentsAdmin(): PaymentRecord[] {
+  return mergeRemoteAndLocalRows('payments', [], mapPaymentRow);
+}
+
 export async function fetchAllPaymentsAdmin(): Promise<PaymentRecord[]> {
   await syncSharedCrmStoreWithServer();
   if (!isSupabaseConfigured) {
     return mergeRemoteAndLocalRows('payments', [], mapPaymentRow);
   }
-  const { data, error } = await supabase
-    .from('payments')
-    .select('*')
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    if (isMissingSchemaError(error) || isRlsOrPermissionError(error)) {
-      return mergeRemoteAndLocalRows('payments', [], mapPaymentRow);
-    }
-    handleSupabaseError(error, 'fetchAllPaymentsAdmin');
-  }
-  return mergeRemoteAndLocalRows('payments', data || [], mapPaymentRow);
+  const remoteRows = await fetchRemoteTableRowsCached('payments', () =>
+    supabase.from('payments').select('*').order('created_at', { ascending: false })
+  );
+  return mergeRemoteAndLocalRows('payments', remoteRows, mapPaymentRow);
 }
 
 export async function fetchClientPayments(

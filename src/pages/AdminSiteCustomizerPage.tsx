@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import {
   fetchPublicSettings,
+  getCachedPublicSettings,
   savePublicSettings,
   uploadMediaAssetAdmin,
   fetchMediaAssetsAdmin,
@@ -76,18 +77,28 @@ const COLOR_PRESETS = [
 export const AdminSiteCustomizerPage: React.FC = () => {
   const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<CustomizerTab>('identity');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploadingField, setUploadingField] = useState<string | null>(null);
 
-  const [settings, setSettings] = useState<PublicSettings>(DEFAULT_PUBLIC_SETTINGS);
-  const [site, setSite] = useState<SiteCustomization>(DEFAULT_SITE_CUSTOMIZATION);
-  const [budgetRangesText, setBudgetRangesText] = useState<string>(
-    DEFAULT_SITE_CUSTOMIZATION.inquiryBudgetRanges.join('\n')
+  const [settings, setSettings] = useState<PublicSettings>(
+    () => getCachedPublicSettings() || DEFAULT_PUBLIC_SETTINGS
   );
-  const [disciplinesText, setDisciplinesText] = useState<string>(
-    DEFAULT_SITE_CUSTOMIZATION.heroDisciplines.join(', ')
+  const [site, setSite] = useState<SiteCustomization>(() =>
+    mergeSiteCustomization((getCachedPublicSettings() || DEFAULT_PUBLIC_SETTINGS).siteCustomization)
   );
+  const [budgetRangesText, setBudgetRangesText] = useState<string>(() => {
+    const initialSite = mergeSiteCustomization(
+      (getCachedPublicSettings() || DEFAULT_PUBLIC_SETTINGS).siteCustomization
+    );
+    return (initialSite.inquiryBudgetRanges || []).join('\n');
+  });
+  const [disciplinesText, setDisciplinesText] = useState<string>(() => {
+    const initialSite = mergeSiteCustomization(
+      (getCachedPublicSettings() || DEFAULT_PUBLIC_SETTINGS).siteCustomization
+    );
+    return (initialSite.heroDisciplines || []).join(', ');
+  });
 
   // Media Library Picker Modal State
   const [mediaModalTarget, setMediaModalTarget] = useState<
@@ -96,8 +107,8 @@ export const AdminSiteCustomizerPage: React.FC = () => {
   const [mediaAssets, setMediaAssets] = useState<MediaAsset[]>([]);
   const [loadingMedia, setLoadingMedia] = useState(false);
 
-  const loadSettings = async () => {
-    setLoading(true);
+  const loadSettings = async (showSpinner = false) => {
+    if (showSpinner) setLoading(true);
     try {
       const pub = await fetchPublicSettings();
       const mergedSite = mergeSiteCustomization(pub.siteCustomization);
@@ -113,7 +124,7 @@ export const AdminSiteCustomizerPage: React.FC = () => {
   };
 
   useEffect(() => {
-    loadSettings();
+    loadSettings(false);
   }, []);
 
   const openMediaPicker = async (target: 'logo' | 'heroVisual' | 'founderImage') => {

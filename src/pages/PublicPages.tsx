@@ -32,6 +32,8 @@ import {
 import {
   fetchPublishedServices,
   fetchPublishedPortfolio,
+  getCachedPublishedServices,
+  getCachedPublishedPortfolio,
 } from '../services/crmService';
 import {
   DEFAULT_SITE_CUSTOMIZATION,
@@ -675,11 +677,11 @@ const MarketplacePortfolioCard: React.FC<MarketplacePortfolioCardProps> = ({
 export const HomePage: React.FC = () => {
   const { settings } = useOutletContext<OutletCtx>();
   const custom = mergeSiteCustomization(settings.siteCustomization || DEFAULT_SITE_CUSTOMIZATION);
-  const [services, setServices] = useState<ServiceItem[]>([]);
-  const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
+  const [services, setServices] = useState<ServiceItem[]>(() => getCachedPublishedServices());
+  const [portfolio, setPortfolio] = useState<PortfolioItem[]>(() => getCachedPublishedPortfolio());
   const [portfolioCategory, setPortfolioCategory] = useState<string>('All');
   const [previewMedia, setPreviewMedia] = useState<PreviewableMediaItem | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(() => getCachedPublishedServices().length === 0);
 
   useEffect(() => {
     let active = true;
@@ -1246,11 +1248,11 @@ export const ServicesPage: React.FC = () => {
   const initialCategory = searchParams.get('category') || 'All';
   const initialQuery = searchParams.get('q') || '';
 
-  const [services, setServices] = useState<ServiceItem[]>([]);
+  const [services, setServices] = useState<ServiceItem[]>(() => getCachedPublishedServices());
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory);
   const [searchQuery, setSearchQuery] = useState<string>(initialQuery);
   const [sortBy, setSortBy] = useState<ServiceSortOption>('recommended');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(() => getCachedPublishedServices().length === 0);
   const [previewService, setPreviewService] = useState<PreviewableMediaItem | null>(null);
 
   useEffect(() => {
@@ -1630,8 +1632,8 @@ export const ServiceDetailPage: React.FC = () => {
   const { settings } = useOutletContext<OutletCtx>();
   const custom = mergeSiteCustomization(settings.siteCustomization || DEFAULT_SITE_CUSTOMIZATION);
 
-  const [services, setServices] = useState<ServiceItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [services, setServices] = useState<ServiceItem[]>(() => getCachedPublishedServices());
+  const [loading, setLoading] = useState<boolean>(() => getCachedPublishedServices().length === 0);
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
   const [previewMedia, setPreviewMedia] = useState<PreviewableMediaItem | null>(null);
   const [customPriceRange, setCustomPriceRange] = useState('');
@@ -1639,7 +1641,10 @@ export const ServiceDetailPage: React.FC = () => {
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
+    const cached = getCachedPublishedServices();
+    if (cached.length === 0) {
+      setLoading(true);
+    }
     setActiveMediaIndex(0);
     setCustomPriceRange('');
     setReferenceLink('');
@@ -1650,7 +1655,7 @@ export const ServiceDetailPage: React.FC = () => {
       })
       .catch(() => {
         if (!active) return;
-        setServices([]);
+        if (cached.length === 0) setServices([]);
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -2421,8 +2426,8 @@ export const ServiceBookingPage: React.FC = () => {
   const custom = mergeSiteCustomization(settings.siteCustomization || DEFAULT_SITE_CUSTOMIZATION);
 
   const navState = (location.state as BookingLocationState | null) || null;
-  const [services, setServices] = useState<ServiceItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [services, setServices] = useState<ServiceItem[]>(() => getCachedPublishedServices());
+  const [loading, setLoading] = useState<boolean>(() => getCachedPublishedServices().length === 0);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -2715,12 +2720,12 @@ export const PortfolioPage: React.FC = () => {
   const initialCategory = searchParams.get('category') || 'All';
   const initialQuery = searchParams.get('q') || '';
 
-  const [items, setItems] = useState<PortfolioItem[]>([]);
+  const [items, setItems] = useState<PortfolioItem[]>(() => getCachedPublishedPortfolio());
   const [category, setCategory] = useState<string>(initialCategory);
   const [searchQuery, setSearchQuery] = useState<string>(initialQuery);
   const [sortBy, setSortBy] = useState<PortfolioSortOption>('recommended');
   const [selectedItem, setSelectedItem] = useState<PortfolioItem | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(() => getCachedPublishedPortfolio().length === 0);
 
   useEffect(() => {
     const paramCat = searchParams.get('category') || 'All';
@@ -3126,14 +3131,17 @@ export const PortfolioDetailPage: React.FC = () => {
   const { settings } = useOutletContext<OutletCtx>();
   const custom = mergeSiteCustomization(settings.siteCustomization || DEFAULT_SITE_CUSTOMIZATION);
 
-  const [items, setItems] = useState<PortfolioItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [items, setItems] = useState<PortfolioItem[]>(() => getCachedPublishedPortfolio());
+  const [loading, setLoading] = useState<boolean>(() => getCachedPublishedPortfolio().length === 0);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [previewMedia, setPreviewMedia] = useState<PreviewableMediaItem | null>(null);
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
+    const cached = getCachedPublishedPortfolio();
+    if (cached.length === 0) {
+      setLoading(true);
+    }
     setActiveImageIndex(0);
     fetchPublishedPortfolio()
       .then((list) => {
@@ -3142,7 +3150,7 @@ export const PortfolioDetailPage: React.FC = () => {
       })
       .catch(() => {
         if (!active) return;
-        setItems([]);
+        if (cached.length === 0) setItems([]);
       })
       .finally(() => {
         if (active) setLoading(false);

@@ -67,9 +67,18 @@ import {
   duplicateProjectAdmin,
   buildOrderNotificationLinks,
   fetchActivityLogs,
+  getCachedInquiriesAdmin,
+  getCachedClientsAdmin,
+  getCachedProjectsAdmin,
+  getCachedTasksAdmin,
+  getCachedFilesAdmin,
+  getCachedInvoicesAdmin,
+  getCachedPaymentsAdmin,
+  getCachedActivityLogs,
 } from '../services/crmService';
 import {
   fetchAllQuotationsAdmin,
+  getCachedQuotationsAdmin,
   inferQuotationDocumentType,
   saveQuotationAdmin,
 } from '../services/aiAssistantService';
@@ -146,21 +155,20 @@ function formatRelativeActivityTime(isoDate: string): string {
 // ============================================================================
 export const AdminDashboardPage: React.FC = () => {
   const { showToast } = useToast();
-  const [clients, setClients] = useState<ClientRecord[]>([]);
-  const [inquiries, setInquiries] = useState<InquiryRecord[]>([]);
-  const [projects, setProjects] = useState<ProjectRecord[]>([]);
-  const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
-  const [payments, setPayments] = useState<PaymentRecord[]>([]);
-  const [quotations, setQuotations] = useState<QuotationRecord[]>([]);
-  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
+  const [clients, setClients] = useState<ClientRecord[]>(() => getCachedClientsAdmin());
+  const [inquiries, setInquiries] = useState<InquiryRecord[]>(() => getCachedInquiriesAdmin());
+  const [projects, setProjects] = useState<ProjectRecord[]>(() => getCachedProjectsAdmin());
+  const [invoices, setInvoices] = useState<InvoiceRecord[]>(() => getCachedInvoicesAdmin());
+  const [payments, setPayments] = useState<PaymentRecord[]>(() => getCachedPaymentsAdmin());
+  const [quotations, setQuotations] = useState<QuotationRecord[]>(() => getCachedQuotationsAdmin());
+  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>(() => getCachedActivityLogs());
   const [activityCategory, setActivityCategory] = useState<DashboardActivityCategory>('all');
   const [activitySearch, setActivitySearch] = useState('');
   const [showAllActivity, setShowAllActivity] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [seeding, setSeeding] = useState(false);
 
   const loadAll = useCallback(async () => {
-    setLoading(true);
     try {
       const [c, inq, p, inv, pay, q, logs] = await Promise.all([
         fetchAllClientsAdmin(),
@@ -1468,18 +1476,17 @@ const INQUIRY_STATUSES: InquiryStatus[] = [
 export const AdminInquiriesPage: React.FC = () => {
   const { showToast, confirmAction } = useToast();
   const navigate = useNavigate();
-  const [inquiries, setInquiries] = useState<InquiryRecord[]>([]);
+  const [inquiries, setInquiries] = useState<InquiryRecord[]>(() => getCachedInquiriesAdmin());
   const [filterStatus, setFilterStatus] = useState<string>('All');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<InquiryRecord | null>(null);
   const [notesDraft, setNotesDraft] = useState('');
   const [sourceDraft, setSourceDraft] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [aiDraftingId, setAiDraftingId] = useState<string | null>(null);
   const [convertingId, setConvertingId] = useState<string | null>(null);
 
   const loadInquiries = useCallback(async () => {
-    setLoading(true);
     try {
       const list = await fetchAllInquiriesAdmin();
       setInquiries(list);
@@ -2018,12 +2025,12 @@ export const AdminClientsPage: React.FC = () => {
   const { showToast } = useToast();
   const navigate = useNavigate();
 
-  const [clients, setClients] = useState<ClientRecord[]>([]);
-  const [projects, setProjects] = useState<ProjectRecord[]>([]);
-  const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
-  const [quotations, setQuotations] = useState<QuotationRecord[]>([]);
-  const [inquiries, setInquiries] = useState<InquiryRecord[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [clients, setClients] = useState<ClientRecord[]>(() => getCachedClientsAdmin());
+  const [projects, setProjects] = useState<ProjectRecord[]>(() => getCachedProjectsAdmin());
+  const [invoices, setInvoices] = useState<InvoiceRecord[]>(() => getCachedInvoicesAdmin());
+  const [quotations, setQuotations] = useState<QuotationRecord[]>(() => getCachedQuotationsAdmin());
+  const [inquiries, setInquiries] = useState<InquiryRecord[]>(() => getCachedInquiriesAdmin());
+  const [loading, setLoading] = useState(false);
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'invited' | 'deactivated'>('all');
@@ -2056,7 +2063,6 @@ export const AdminClientsPage: React.FC = () => {
   const [formData, setFormData] = useState(emptyClientForm);
 
   const loadClients = useCallback(async () => {
-    setLoading(true);
     try {
       const [cList, pList, invList, qList, inqList] = await Promise.all([
         fetchAllClientsAdmin(),
@@ -2867,11 +2873,21 @@ export const AdminClientDetailsPage: React.FC = () => {
   const { clientId } = useParams<{ clientId: string }>();
   const navigate = useNavigate();
   const { showToast } = useToast();
-  const [client, setClient] = useState<ClientRecord | null>(null);
-  const [projects, setProjects] = useState<ProjectRecord[]>([]);
-  const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
-  const [quotations, setQuotations] = useState<QuotationRecord[]>([]);
-  const [payments, setPayments] = useState<PaymentRecord[]>([]);
+  const [client, setClient] = useState<ClientRecord | null>(
+    () => getCachedClientsAdmin().find((c) => c.id === clientId) || null
+  );
+  const [projects, setProjects] = useState<ProjectRecord[]>(() =>
+    getCachedProjectsAdmin().filter((p) => p.clientId === clientId)
+  );
+  const [invoices, setInvoices] = useState<InvoiceRecord[]>(() =>
+    getCachedInvoicesAdmin().filter((i) => i.clientId === clientId)
+  );
+  const [quotations, setQuotations] = useState<QuotationRecord[]>(() =>
+    getCachedQuotationsAdmin().filter((q) => q.clientId === clientId)
+  );
+  const [payments, setPayments] = useState<PaymentRecord[]>(() =>
+    getCachedPaymentsAdmin().filter((p) => p.clientId === clientId)
+  );
   const [files, setFiles] = useState<DeliverableFile[]>([]);
   const [inquiries, setInquiries] = useState<InquiryRecord[]>([]);
   const [isDirty, setIsDirty] = useState(false);
@@ -3496,12 +3512,12 @@ export const AdminProjectsPage: React.FC = () => {
   const { showToast } = useToast();
   const navigate = useNavigate();
 
-  const [projects, setProjects] = useState<ProjectRecord[]>([]);
-  const [clients, setClients] = useState<ClientRecord[]>([]);
-  const [quotations, setQuotations] = useState<QuotationRecord[]>([]);
-  const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
-  const [tasks, setTasks] = useState<TaskRecord[]>([]);
-  const [files, setFiles] = useState<DeliverableFile[]>([]);
+  const [projects, setProjects] = useState<ProjectRecord[]>(() => getCachedProjectsAdmin());
+  const [clients, setClients] = useState<ClientRecord[]>(() => getCachedClientsAdmin());
+  const [quotations, setQuotations] = useState<QuotationRecord[]>(() => getCachedQuotationsAdmin());
+  const [invoices, setInvoices] = useState<InvoiceRecord[]>(() => getCachedInvoicesAdmin());
+  const [tasks, setTasks] = useState<TaskRecord[]>(() => getCachedTasksAdmin());
+  const [files, setFiles] = useState<DeliverableFile[]>(() => getCachedFilesAdmin());
 
   const [showBuilder, setShowBuilder] = useState(false);
   const [editingProject, setEditingProject] = useState<ProjectRecord | null>(null);
@@ -4471,13 +4487,19 @@ export const AdminProjectDetailsPage: React.FC = () => {
   const navigate = useNavigate();
   const { showToast } = useToast();
   const { profile } = useAuth();
-  const [project, setProject] = useState<ProjectRecord | null>(null);
-  const [clients, setClients] = useState<ClientRecord[]>([]);
-  const [quotations, setQuotations] = useState<QuotationRecord[]>([]);
+  const [project, setProject] = useState<ProjectRecord | null>(
+    () => getCachedProjectsAdmin().find((p) => p.id === projectId) || null
+  );
+  const [clients, setClients] = useState<ClientRecord[]>(() => getCachedClientsAdmin());
+  const [quotations, setQuotations] = useState<QuotationRecord[]>(() => getCachedQuotationsAdmin());
   const [internalNotes, setInternalNotes] = useState('');
   const [messages, setMessages] = useState<ProjectMessage[]>([]);
-  const [tasks, setTasks] = useState<TaskRecord[]>([]);
-  const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
+  const [tasks, setTasks] = useState<TaskRecord[]>(() =>
+    getCachedTasksAdmin().filter((t) => t.projectId === projectId)
+  );
+  const [invoices, setInvoices] = useState<InvoiceRecord[]>(() =>
+    getCachedInvoicesAdmin().filter((i) => i.projectId === projectId)
+  );
   const [newMessage, setNewMessage] = useState('');
   const [msgVisibility, setMsgVisibility] = useState<'client' | 'internal'>('client');
   const [isDirty, setIsDirty] = useState(false);
@@ -5098,8 +5120,8 @@ export const AdminProjectDetailsPage: React.FC = () => {
 // ============================================================================
 export const AdminTasksPage: React.FC = () => {
   const { showToast } = useToast();
-  const [tasks, setTasks] = useState<TaskRecord[]>([]);
-  const [projects, setProjects] = useState<ProjectRecord[]>([]);
+  const [tasks, setTasks] = useState<TaskRecord[]>(() => getCachedTasksAdmin());
+  const [projects, setProjects] = useState<ProjectRecord[]>(() => getCachedProjectsAdmin());
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
   const [form, setForm] = useState({
     projectId: '',

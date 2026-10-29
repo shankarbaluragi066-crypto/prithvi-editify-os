@@ -15,7 +15,7 @@ import {
 import { useAuth, GoogleBrandIcon } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { PWAInstallButton, OfflineStatusBanner } from '../components/PWAInstallPrompt';
-import { fetchPublicSettings } from '../services/crmService';
+import { fetchPublicSettings, getCachedPublicSettings } from '../services/crmService';
 import {
   DEFAULT_PUBLIC_SETTINGS,
   DEFAULT_SITE_CUSTOMIZATION,
@@ -46,7 +46,9 @@ export const PublicLayout: React.FC = () => {
     return window.sessionStorage.getItem('pe_google_onetap_dismissed_v1') === '1';
   });
   const [googleBusy, setGoogleBusy] = useState(false);
-  const [settings, setSettings] = useState<PublicSettings>(DEFAULT_PUBLIC_SETTINGS);
+  const [settings, setSettings] = useState<PublicSettings>(() =>
+    getCachedPublicSettings() || DEFAULT_PUBLIC_SETTINGS
+  );
   const dropdownRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {

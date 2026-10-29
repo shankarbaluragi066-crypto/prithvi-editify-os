@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { User as SupabaseAuthUser } from '@supabase/supabase-js';
 import { ShieldCheck, X, UserCheck, Mail, ArrowRight } from 'lucide-react';
 import {
@@ -399,16 +399,34 @@ async function ensureUserProfile(
 }
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<AppAuthUser | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const initialStoredGoogle = useMemo(() => readStoredGoogleSession(), []);
+  const [user, setUser] = useState<AppAuthUser | null>(() => initialStoredGoogle?.user ?? null);
+  const [profile, setProfile] = useState<UserProfile | null>(
+    () => initialStoredGoogle?.profile ?? null
+  );
+  const [loading, setLoading] = useState<boolean>(() => {
+    if (initialStoredGoogle) return false;
+    if (typeof window !== 'undefined') {
+      try {
+        const hasSbToken = Object.keys(window.localStorage).some(
+          (k) => k.startsWith('sb-') && k.endsWith('-auth-token')
+        );
+        if (!hasSbToken) return false;
+      } catch {
+        return false;
+      }
+    }
+    return true;
+  });
   const [lastRegistrationEmailStatus, setLastRegistrationEmailStatus] =
     useState<RegistrationEmailDispatchResult | null>(null);
 
   // Built-in Google Account Chooser Modal state
   const [googleModalOpen, setGoogleModalOpen] = useState(false);
   const [googleModalMode, setGoogleModalMode] = useState<'admin' | 'client'>('client');
-  const [savedClientAccounts, setSavedClientAccounts] = useState<SavedClientGoogleAccount[]>([]);
+  const [savedClientAccounts, setSavedClientAccounts] = useState<SavedClientGoogleAccount[]>(() =>
+    readSavedClientGoogleAccounts()
+  );
   const [customGoogleEmail, setCustomGoogleEmail] = useState('');
   const [customGoogleName, setCustomGoogleName] = useState('');
   const [customGooglePhone, setCustomGooglePhone] = useState('');
@@ -444,6 +462,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       (typeof window !== 'undefined' && window.location.pathname.includes('admin'));
 
     setUser(mappedUser);
+    const isOwner = allowAdmin && isAuthorizedAdminEmail(mappedUser.email);
+    setProfile((prev) =>
+      prev && prev.uid === mappedUser.uid
+        ? prev
+        : {
+            uid: mappedUser.uid,
+            email: mappedUser.email || '',
+            displayName: mappedUser.displayName || 'Client',
+            role: isOwner ? 'admin' : 'client',
+            status: 'active',
+            phone: '',
+            companyName: '',
+          }
+    );
+    setLoading(false);
 
     try {
       const prof = await ensureUserProfile(mappedUser, { allowAdminRole: allowAdmin });
@@ -458,18 +491,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         syncClientLoginToCrm(prof, 'Google Account Selector').catch(() => {});
       }
     } catch {
-      const isOwner = allowAdmin && isAuthorizedAdminEmail(mappedUser.email);
-      setProfile({
-        uid: mappedUser.uid,
-        email: mappedUser.email || '',
-        displayName: mappedUser.displayName || 'Client',
-        role: isOwner ? 'admin' : 'client',
-        status: 'active',
-        phone: '',
-        companyName: '',
-      });
-    } finally {
-      setLoading(false);
+      // Optimistic profile already applied above
     }
   };
 
@@ -550,22 +572,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       emailVerified: true,
     };
 
-    const resolvedProfile = await ensureUserProfile(resolvedUser, {
-      displayName,
-      phone: extra?.phone,
-      companyName: extra?.companyName,
-      allowAdminRole: isAdminFlow,
-    });
+    const existingStored = readStoredGoogleSession();
+    const matchedSavedAccount = readSavedClientGoogleAccounts().find(
+      (acc) => acc.email.toLowerCase() === cleanEmail
+    );
 
-    const finalProfile: UserProfile = isAdminFlow
-      ? { ...resolvedProfile, role: 'admin' }
-      : {
-          ...resolvedProfile,
-          role: 'client',
-          displayName: displayName || resolvedProfile.displayName,
-          phone: extra?.phone || resolvedProfile.phone || '',
-          companyName: extra?.companyName || resolvedProfile.companyName || '',
-        };
+    const finalProfile: UserProfile = {
+      uid: resolvedUser.uid,
+      email: cleanEmail,
+      displayName,
+      role: isAdminFlow ? 'admin' : 'client',
+      status: 'active',
+      phone:
+        (extra?.phone || '').trim() ||
+        matchedSavedAccount?.phone ||
+        (existingStored?.profile.email.toLowerCase() === cleanEmail
+          ? existingStored.profile.phone
+          : '') ||
+        '',
+      companyName:
+        (extra?.companyName || '').trim() ||
+        matchedSavedAccount?.companyName ||
+        (existingStored?.profile.email.toLowerCase() === cleanEmail
+          ? existingStored.profile.companyName
+          : '') ||
+        '',
+    };
 
     if (!isAdminFlow && !isAuthorizedAdminEmail(cleanEmail)) {
       const updatedAccounts = saveClientGoogleAccountToChooser(
@@ -574,8 +606,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         { phone: finalProfile.phone, companyName: finalProfile.companyName }
       );
       setSavedClientAccounts(updatedAccounts);
-      // Sync client into CRM directory, link existing projects/invoices, and log activity
-      await syncClientLoginToCrm(finalProfile, 'Google Account Selector').catch(() => {});
     }
 
     saveStoredGoogleSession({
@@ -586,6 +616,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setUser(resolvedUser);
     setProfile(finalProfile);
+
+    // Synchronize profile & CRM records in the background without blocking UI navigation
+    void (async () => {
+      try {
+        const remoteProfile = await ensureUserProfile(resolvedUser, {
+          displayName,
+          phone: finalProfile.phone,
+          companyName: finalProfile.companyName,
+          allowAdminRole: isAdminFlow,
+        });
+        const mergedProfile: UserProfile = isAdminFlow
+          ? { ...remoteProfile, role: 'admin' }
+          : {
+              ...remoteProfile,
+              role: 'client',
+              displayName: displayName || remoteProfile.displayName,
+              phone: finalProfile.phone || remoteProfile.phone || '',
+              companyName: finalProfile.companyName || remoteProfile.companyName || '',
+            };
+        saveStoredGoogleSession({
+          user: resolvedUser,
+          profile: mergedProfile,
+          isAdminGatewaySession: isAdminFlow,
+        });
+        setProfile(mergedProfile);
+        if (!isAdminFlow && !isAuthorizedAdminEmail(cleanEmail)) {
+          await syncClientLoginToCrm(mergedProfile, 'Google Account Selector').catch(() => {});
+        }
+      } catch {
+        // Ignore background sync errors
+      }
+    })();
+
     return finalProfile;
   };
 
