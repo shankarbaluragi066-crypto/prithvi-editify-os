@@ -1210,51 +1210,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 </div>
               )}
 
-              {/* Direct trigger for System/Browser Google Account Chooser Popup if initial popup was blocked */}
-              <button
-                type="button"
-                disabled={googleSubmitting}
-                onClick={async () => {
-                  setGoogleSubmitting(true);
-                  setGoogleModalError(null);
-                  try {
-                    const fbUser = await signInWithSystemGooglePopup();
-                    if (fbUser && fbUser.email) {
-                      const finalProfile = await executeGoogleAccountSessionSignIn(
-                        fbUser.email,
-                        fbUser.displayName || undefined,
-                        googleModalMode,
-                        undefined,
-                        true
-                      );
-                      setGoogleModalOpen(false);
-                      setGoogleSubmitting(false);
-                      if (pendingGoogleResolver.current) {
-                        pendingGoogleResolver.current.resolve(finalProfile);
-                        pendingGoogleResolver.current = null;
-                      }
-                    } else {
-                      setGoogleSubmitting(false);
-                    }
-                  } catch (err: any) {
-                    setGoogleSubmitting(false);
-                    const code = String(err?.code || '');
-                    const msg = String(err?.message || '');
-                    if (msg.includes('Access Denied:')) {
-                      setGoogleModalError(msg);
-                    } else if (code === 'auth/popup-blocked') {
-                      setGoogleModalError(
-                        'Please allow popups for this site in your browser address bar, or select your Google account below.'
-                      );
-                    }
-                  }
-                }}
-                className="w-full flex items-center justify-center gap-2.5 px-4 py-3 rounded-xl bg-white hover:bg-[#F8FAFC] text-[#0F172A] text-xs font-semibold shadow-md transition-all cursor-pointer"
-              >
-                <GoogleBrandIcon className="w-4 h-4 shrink-0" />
-                <span>Open System Google Account Chooser (accounts.google.com)</span>
-              </button>
-
               {/* Saved Customer Google Accounts on this device (Never includes Admin ID) */}
               {googleModalMode === 'client' && savedClientAccounts.length > 0 && (
                 <div className="space-y-2">
