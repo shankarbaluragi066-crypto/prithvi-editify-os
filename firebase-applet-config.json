@@ -3,6 +3,7 @@
   "appId": "1:1093644209752:web:a3db83ca266a0836c9042d",
   "apiKey": "AIzaSyDEqIBoHNYklDk2MLe2qlSBRUm4ZnUbfec",
   "authDomain": "photo-poet-4gltc.firebaseapp.com",
+  "firestoreDatabaseId": "ai-studio-04095bd2-5d09-4f39-9429-8964d3484bce",
   "storageBucket": "photo-poet-4gltc.firebasestorage.app",
   "messagingSenderId": "1093644209752",
   "measurementId": "",
