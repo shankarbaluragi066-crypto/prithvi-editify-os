@@ -20,6 +20,7 @@ import {
 } from '../services/authEmailService';
 import { syncClientLoginToCrm } from '../services/crmService';
 import { DEFAULT_STUDIO_LOGO_URL } from '../utils/seedData';
+import { signInWithSystemGooglePopup, signOutFromFirebase } from '../lib/firebaseClient';
 
 export const GoogleBrandIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4' }) => (
   <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
@@ -105,10 +106,10 @@ function readStoredGoogleSession(): StoredGoogleSession | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as StoredGoogleSession;
     if (parsed?.user?.uid && parsed?.profile?.email) {
-      // If an older session had an admin email without explicit admin gateway flag, clear it so customers never inherit admin access
+      // If an older session claimed admin role without explicit admin gateway flag, clear it so customers never inherit admin access
       if (
-        isAuthorizedAdminEmail(parsed.profile.email) &&
-        !parsed.isAdminGatewaySession
+        parsed.profile.role === 'admin' &&
+        (!isAuthorizedAdminEmail(parsed.profile.email) || !parsed.isAdminGatewaySession)
       ) {
         window.localStorage.removeItem(LOCAL_GOOGLE_SESSION_KEY);
         return null;
@@ -508,7 +509,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     selectedEmail: string,
     selectedName?: string,
     mode: 'admin' | 'client' = 'client',
-    extra?: { phone?: string; companyName?: string }
+    extra?: { phone?: string; companyName?: string },
+    fromSystemGooglePopup = false
   ): Promise<UserProfile> => {
     const cleanEmail = selectedEmail.trim().toLowerCase();
     if (!cleanEmail || !cleanEmail.includes('@')) {
@@ -521,7 +523,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       );
     }
 
-    if (mode === 'client' && isAuthorizedAdminEmail(cleanEmail)) {
+    if (mode === 'client' && isAuthorizedAdminEmail(cleanEmail) && !fromSystemGooglePopup) {
       throw new Error(
         'Please use a customer Google account for the Client Portal, or sign in through the private Studio Administrator gateway.'
       );
@@ -636,38 +638,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loginWithGoogle = async (redirectPath = '/login'): Promise<UserProfile> => {
     const isAdminFlow = redirectPath.includes('admin');
+    const targetMode: 'admin' | 'client' = isAdminFlow ? 'admin' : 'client';
 
-    // 1. Check whether the Google OAuth provider is enabled on the Supabase backend first
-    const googleEnabledOnSupabase = await checkSupabaseGoogleProviderEnabled();
-
-    if (googleEnabledOnSupabase) {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: getAppRedirectUrl(isAdminFlow ? '/admin-login' : '/portal'),
-          queryParams: {
-            prompt: 'select_account',
-          },
-        },
-      });
-      if (error) throw error;
-      return (
-        profile || {
-          uid: '',
-          email: '',
-          displayName: 'Redirecting...',
-          role: 'client',
-          status: 'active',
-          phone: '',
-          companyName: '',
-        }
-      );
+    // 1. Immediately open the real System/Browser Google Account Selector popup (accounts.google.com with prompt: 'select_account')
+    // Calling signInWithSystemGooglePopup synchronously on click ensures browser popup blockers never block the Google window.
+    try {
+      const fbUser = await signInWithSystemGooglePopup();
+      if (fbUser && fbUser.email) {
+        return await executeGoogleAccountSessionSignIn(
+          fbUser.email,
+          fbUser.displayName || undefined,
+          targetMode,
+          undefined,
+          true
+        );
+      }
+    } catch (popupErr: any) {
+      const errCode = String(popupErr?.code || '');
+      const errMsg = String(popupErr?.message || '');
+      // If user intentionally closed or cancelled the real Google Account Selector popup, do not open a fallback modal
+      if (
+        errCode === 'auth/popup-closed-by-user' ||
+        errCode === 'auth/cancelled-popup-request' ||
+        errMsg.toLowerCase().includes('popup-closed-by-user')
+      ) {
+        throw new Error('Google account selection was cancelled.');
+      }
+      // If an unauthorized account was chosen on the Admin Gateway, surface the access error immediately
+      if (errMsg.includes('Access Denied:')) {
+        throw popupErr;
+      }
     }
 
-    // 2. Open the Google Account Selector Modal (never displays admin email to customers)
+    // 2. Fallback if the browser blocked the popup window (e.g. strict popup blocker or embedded webview)
     const currentSaved = readSavedClientGoogleAccounts();
     setSavedClientAccounts(currentSaved);
-    setGoogleModalMode(isAdminFlow ? 'admin' : 'client');
+    setGoogleModalMode(targetMode);
     setShowCustomGoogleForm(isAdminFlow || currentSaved.length === 0);
     setCustomGoogleEmail('');
     setCustomGoogleName('');
@@ -1090,6 +1096,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     saveStoredGoogleSession(null);
+    await signOutFromFirebase();
     if (isSupabaseConfigured) {
       try {
         await supabase.auth.signOut();
@@ -1195,6 +1202,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                   {googleModalError}
                 </div>
               )}
+
+              {/* Direct trigger for System/Browser Google Account Chooser Popup if initial popup was blocked */}
+              <button
+                type="button"
+                disabled={googleSubmitting}
+                onClick={async () => {
+                  setGoogleSubmitting(true);
+                  setGoogleModalError(null);
+                  try {
+                    const fbUser = await signInWithSystemGooglePopup();
+                    if (fbUser && fbUser.email) {
+                      const finalProfile = await executeGoogleAccountSessionSignIn(
+                        fbUser.email,
+                        fbUser.displayName || undefined,
+                        googleModalMode,
+                        undefined,
+                        true
+                      );
+                      setGoogleModalOpen(false);
+                      setGoogleSubmitting(false);
+                      if (pendingGoogleResolver.current) {
+                        pendingGoogleResolver.current.resolve(finalProfile);
+                        pendingGoogleResolver.current = null;
+                      }
+                    } else {
+                      setGoogleSubmitting(false);
+                    }
+                  } catch (err: any) {
+                    setGoogleSubmitting(false);
+                    const msg = String(err?.message || '');
+                    if (!msg.toLowerCase().includes('popup-closed-by-user')) {
+                      setGoogleModalError(
+                        'Your browser blocked the Google popup window. Please allow popups for this site or select/enter your Google account below.'
+                      );
+                    }
+                  }
+                }}
+                className="w-full flex items-center justify-center gap-2.5 px-4 py-3 rounded-xl bg-white hover:bg-[#F8FAFC] text-[#0F172A] text-xs font-semibold shadow-md transition-all cursor-pointer"
+              >
+                <GoogleBrandIcon className="w-4 h-4 shrink-0" />
+                <span>Open System Google Account Chooser (accounts.google.com)</span>
+              </button>
 
               {/* Saved Customer Google Accounts on this device (Never includes Admin ID) */}
               {googleModalMode === 'client' && savedClientAccounts.length > 0 && (
