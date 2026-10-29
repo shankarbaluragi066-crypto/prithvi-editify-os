@@ -11,6 +11,9 @@ const EXTERNAL_MODULES = {
   'react-router-dom': 'https://esm.sh/react-router-dom@7.1.5?deps=react@19.0.1,react-dom@19.0.1',
   'lucide-react': 'https://esm.sh/lucide-react@0.475.0?deps=react@19.0.1',
   '@supabase/supabase-js': 'https://esm.sh/@supabase/supabase-js@2.48.1',
+  'firebase/app': 'https://esm.sh/firebase@11.4.0/app',
+  'firebase/auth': 'https://esm.sh/firebase@11.4.0/auth',
+  'firebase/firestore': 'https://esm.sh/firebase@11.4.0/firestore',
   'recharts': 'https://esm.sh/recharts@2.15.1?deps=react@19.0.1,react-dom@19.0.1',
   'zod': 'https://esm.sh/zod@3.24.2',
   'react-hook-form': 'https://esm.sh/react-hook-form@7.54.2?deps=react@19.0.1',
@@ -21,16 +24,19 @@ const EXTERNAL_MODULES = {
 const SOURCE_MODULES = [
   'src/types/crm.ts',
   'src/lib/supabaseClient.ts',
+  'src/lib/firebaseClient.ts',
   'src/schemas/validation.ts',
   'src/utils/formatters.ts',
   'src/utils/mediaValidation.ts',
   'src/utils/seedData.ts',
-  'src/contexts/ToastContext.tsx',
-  'src/contexts/AuthContext.tsx',
+  'src/services/authEmailService.ts',
   'src/services/crmService.ts',
   'src/services/aiAssistantService.ts',
   'src/services/workflowEnhancementsService.ts',
+  'src/contexts/ToastContext.tsx',
+  'src/contexts/AuthContext.tsx',
   'src/components/ErrorBoundary.tsx',
+  'src/components/PWAInstallPrompt.tsx',
   'src/components/MediaSearchFilterBar.tsx',
   'src/components/MediaPreviewModal.tsx',
   'src/components/MediaLibraryManager.tsx',
@@ -52,6 +58,7 @@ const SOURCE_MODULES = [
 ];
 
 const RAW_SQL_PATH = 'supabase/migrations/20261018000000_prithvi_editify_schema_and_rls.sql';
+const FIREBASE_CONFIG_PATH = 'firebase-applet-config.json';
 
 function normalizeRepoPath(fromFile, relativeImport) {
   const cleanImport = relativeImport.replace(/\?raw$/, '');
@@ -72,8 +79,9 @@ function normalizeRepoPath(fromFile, relativeImport) {
 async function bootFromSourceTree() {
   const { transform } = await import('https://esm.sh/sucrase@3.35.0');
 
-  const [sqlText, ...sourceTexts] = await Promise.all([
+  const [sqlText, firebaseConfigText, ...sourceTexts] = await Promise.all([
     fetch('./' + RAW_SQL_PATH).then((r) => (r.ok ? r.text() : '')),
+    fetch('./' + FIREBASE_CONFIG_PATH).then((r) => (r.ok ? r.text() : '{}')),
     ...SOURCE_MODULES.map((modPath) =>
       fetch('./' + modPath).then((r) => {
         if (!r.ok) throw new Error('Failed to fetch ' + modPath + ' (' + r.status + ')');
@@ -89,6 +97,12 @@ async function bootFromSourceTree() {
     type: 'text/javascript',
   });
   blobUrls.set(RAW_SQL_PATH, URL.createObjectURL(sqlBlob));
+
+  // Register Firebase config JSON module
+  const fbConfigBlob = new Blob([`export default ${firebaseConfigText || '{}'};`], {
+    type: 'text/javascript',
+  });
+  blobUrls.set(FIREBASE_CONFIG_PATH, URL.createObjectURL(fbConfigBlob));
 
   const envReplacement = JSON.stringify({
     BASE_URL: './',

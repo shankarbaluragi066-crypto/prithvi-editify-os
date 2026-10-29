@@ -7,17 +7,11 @@ import {
   signOut as firebaseSignOut,
   User as FirebaseUser,
 } from 'firebase/auth';
-import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
-
-const rawConfig = firebaseConfig as Record<string, string | undefined>;
 
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 
 export const firebaseAuth = getAuth(app);
-export const firestoreDb = rawConfig.firestoreDatabaseId
-  ? getFirestore(app, rawConfig.firestoreDatabaseId)
-  : getFirestore(app);
 
 export const SCOPES = [
   'https://www.googleapis.com/auth/userinfo.email',
@@ -303,22 +297,8 @@ export function handleFirestoreError(
     operationType,
     path,
   };
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
   throw new Error(JSON.stringify(errInfo));
 }
-
-async function testFirestoreConnection(): Promise<void> {
-  if (!rawConfig.firestoreDatabaseId) return;
-  try {
-    await getDocFromServer(doc(firestoreDb, 'test', 'connection'));
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.error('Please check your Firebase configuration.');
-    }
-  }
-}
-
-testFirestoreConnection();
 
 export interface SystemGoogleUserResult {
   uid: string;

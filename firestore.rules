@@ -80,5 +80,9 @@ service cloud.firestore {
       allow list: if isAdmin();
       allow create, update, delete: if isAdmin() && isValidId(adminId);
     }
+
+    match /test/connection {
+      allow get: if true;
+    }
   }
 }

@@ -22,7 +22,6 @@ import { syncClientLoginToCrm } from '../services/crmService';
 import { DEFAULT_STUDIO_LOGO_URL } from '../utils/seedData';
 import {
   initFirebaseGoogleAuth,
-  signInWithSystemGooglePopup,
   signOutFromFirebase,
 } from '../lib/firebaseClient';
 
@@ -647,37 +646,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const isAdminFlow = redirectPath.includes('admin');
     const targetMode: 'admin' | 'client' = isAdminFlow ? 'admin' : 'client';
 
-    // 1. Immediately open the real System/Browser Google Account Selector popup (accounts.google.com with prompt: 'select_account')
-    // Calling signInWithSystemGooglePopup synchronously on click ensures browser popup blockers never block the Google window.
-    try {
-      const fbUser = await signInWithSystemGooglePopup();
-      if (fbUser && fbUser.email) {
-        return await executeGoogleAccountSessionSignIn(
-          fbUser.email,
-          fbUser.displayName || undefined,
-          targetMode,
-          undefined,
-          true
-        );
-      }
-    } catch (popupErr: any) {
-      const errCode = String(popupErr?.code || '');
-      const errMsg = String(popupErr?.message || '');
-      // If user intentionally closed or cancelled the real Google Account Selector popup, do not open a fallback modal
-      if (
-        errCode === 'auth/popup-closed-by-user' ||
-        errCode === 'auth/cancelled-popup-request' ||
-        errMsg.toLowerCase().includes('popup-closed-by-user')
-      ) {
-        throw new Error('Google account selection was cancelled.');
-      }
-      // If an unauthorized account was chosen on the Admin Gateway, surface the access error immediately
-      if (errMsg.includes('Access Denied:')) {
-        throw popupErr;
-      }
-    }
-
-    // 2. Fallback if the browser blocked the popup window (e.g. strict popup blocker or embedded webview)
     const currentSaved = readSavedClientGoogleAccounts();
     setSavedClientAccounts(currentSaved);
     setGoogleModalMode(targetMode);
