@@ -12,8 +12,10 @@ import {
   ArrowLeft,
   CheckCircle2,
   Mail,
+  ArrowRight,
+  X,
 } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth, GoogleBrandIcon } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import {
   loginSchema,
@@ -33,8 +35,11 @@ export const LoginPage: React.FC = () => {
     user,
     profile,
     loading,
+    savedClientAccounts,
     lastRegistrationEmailStatus,
     loginWithGoogle,
+    quickSignInWithGoogleAccount,
+    removeSavedGoogleAccount,
     loginWithEmail,
     registerClientWithEmail,
   } = useAuth();
@@ -73,6 +78,31 @@ export const LoginPage: React.FC = () => {
         'error',
         'Google Sign-In Failed',
         err instanceof Error ? err.message : 'Unable to complete sign-in.'
+      );
+    } finally {
+      setGoogleBusy(false);
+    }
+  };
+
+  const handleQuickSavedAccountSignIn = async (
+    email: string,
+    displayName: string,
+    phone?: string,
+    companyName?: string
+  ) => {
+    setGoogleBusy(true);
+    try {
+      const prof = await quickSignInWithGoogleAccount(email, displayName, {
+        phone,
+        companyName,
+      });
+      showToast('success', 'Signed In with Google', `Welcome back, ${prof.displayName}!`);
+      navigate('/portal', { replace: true });
+    } catch (err) {
+      showToast(
+        'error',
+        'Google Sign-In Failed',
+        err instanceof Error ? err.message : 'Unable to sign in.'
       );
     } finally {
       setGoogleBusy(false);
@@ -165,6 +195,77 @@ export const LoginPage: React.FC = () => {
           </button>
         </div>
 
+        {/* Saved Google Account Selector Box (1-Click Login for Returning Clients) */}
+        {savedClientAccounts.length > 0 && (
+          <div className="p-3.5 rounded-xl bg-[#081629] border border-[#1E3A5F] space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="w-4 h-4 rounded-full bg-white flex items-center justify-center shrink-0">
+                  <GoogleBrandIcon className="w-3 h-3" />
+                </span>
+                <span className="text-xs font-semibold text-[#F8FAFC]">
+                  Choose a saved Google account
+                </span>
+              </div>
+              <span className="text-[10px] font-mono text-[#10B981]">1-Tap Sign In</span>
+            </div>
+
+            <div className="space-y-1.5">
+              {savedClientAccounts.slice(0, 3).map((acc) => {
+                const initials = (acc.displayName || acc.email)
+                  .split(' ')
+                  .map((p) => p[0])
+                  .join('')
+                  .slice(0, 2)
+                  .toUpperCase();
+                return (
+                  <div
+                    key={acc.email}
+                    className="flex items-center gap-2 p-2 rounded-lg bg-[#132A4A]/80 hover:bg-[#132A4A] border border-[#1E3A5F] hover:border-[#10B981] transition-all group"
+                  >
+                    <button
+                      type="button"
+                      disabled={googleBusy}
+                      onClick={() =>
+                        handleQuickSavedAccountSignIn(
+                          acc.email,
+                          acc.displayName,
+                          acc.phone,
+                          acc.companyName
+                        )
+                      }
+                      className="flex-1 flex items-center justify-between gap-2.5 text-left cursor-pointer min-w-0"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#0EA5E9] to-[#10B981] flex items-center justify-center text-xs font-bold text-white shrink-0">
+                          {initials}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-[#F8FAFC] truncate">
+                            Continue as {acc.displayName}
+                          </p>
+                          <p className="text-[11px] text-[#94A3B8] font-mono truncate">
+                            {acc.email}
+                          </p>
+                        </div>
+                      </div>
+                      <ArrowRight className="w-3.5 h-3.5 text-[#94A3B8] group-hover:text-[#10B981] shrink-0" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeSavedGoogleAccount(acc.email)}
+                      title="Remove saved account"
+                      className="p-1 text-[#94A3B8] hover:text-[#DC2626] rounded transition-colors shrink-0"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Customer Google Account Selector Sign-In */}
         <button
           type="button"
@@ -172,10 +273,16 @@ export const LoginPage: React.FC = () => {
           onClick={handleGoogleSignIn}
           className="w-full flex items-center justify-center gap-3 px-4 py-3 text-sm font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg shadow-[0_8px_20px_-4px_rgba(16,185,129,0.4)] transition-all cursor-pointer disabled:opacity-60"
         >
-          <span className="w-5 h-5 rounded-full bg-white flex items-center justify-center text-xs font-bold text-[#040D1A] shrink-0">
-            G
+          <span className="w-5 h-5 rounded-full bg-white flex items-center justify-center shrink-0">
+            <GoogleBrandIcon className="w-3.5 h-3.5" />
           </span>
-          <span>{googleBusy ? 'Opening Google Account Selector...' : 'Continue with Google'}</span>
+          <span>
+            {googleBusy
+              ? 'Opening Google Account Selector...'
+              : savedClientAccounts.length > 0
+              ? 'Use another Google Account'
+              : 'Continue with Google Account'}
+          </span>
         </button>
 
         <div className="relative flex py-1 items-center">

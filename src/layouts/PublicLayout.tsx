@@ -1,7 +1,19 @@
-import React, { useEffect, useState } from 'react';
-import { Link, NavLink, Outlet } from 'react-router-dom';
-import { Menu, X, MessageSquare, ExternalLink, Send } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
+import React, { useEffect, useState, useRef } from 'react';
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import {
+  Menu,
+  X,
+  MessageSquare,
+  ExternalLink,
+  Send,
+  ChevronDown,
+  LogOut,
+  UserCheck,
+  LayoutDashboard,
+  ArrowRight,
+} from 'lucide-react';
+import { useAuth, GoogleBrandIcon } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 import { PWAInstallButton, OfflineStatusBanner } from '../components/PWAInstallPrompt';
 import { fetchPublicSettings } from '../services/crmService';
 import {
@@ -14,9 +26,28 @@ import { PublicSettings } from '../types/crm';
 import { buildWhatsAppLink } from '../utils/formatters';
 
 export const PublicLayout: React.FC = () => {
-  const { user, isAdmin } = useAuth();
+  const {
+    user,
+    profile,
+    isAdmin,
+    loading,
+    savedClientAccounts,
+    loginWithGoogle,
+    quickSignInWithGoogleAccount,
+    logout,
+  } = useAuth();
+  const { showToast } = useToast();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [accountDropdownOpen, setAccountDropdownOpen] = useState(false);
+  const [oneTapDismissed, setOneTapDismissed] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.sessionStorage.getItem('pe_google_onetap_dismissed_v1') === '1';
+  });
+  const [googleBusy, setGoogleBusy] = useState(false);
   const [settings, setSettings] = useState<PublicSettings>(DEFAULT_PUBLIC_SETTINGS);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     fetchPublicSettings().then(setSettings).catch(() => {});
@@ -34,6 +65,16 @@ export const PublicLayout: React.FC = () => {
     return () => {
       window.removeEventListener('pe-public-settings-updated', handleSettingsUpdate);
     };
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setAccountDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const custom = mergeSiteCustomization(settings.siteCustomization || DEFAULT_SITE_CUSTOMIZATION);
@@ -70,6 +111,94 @@ export const PublicLayout: React.FC = () => {
     { label: 'X / Twitter', url: custom.twitterUrl },
   ].filter((s) => Boolean(s.url && s.url.trim()));
 
+  const handleOpenGoogleSelector = async () => {
+    setGoogleBusy(true);
+    setAccountDropdownOpen(false);
+    setMobileOpen(false);
+    try {
+      const prof = await loginWithGoogle('/login');
+      showToast(
+        'success',
+        'Signed in with Google',
+        `Welcome, ${prof.displayName}! Your Client Portal is ready.`
+      );
+      if (
+        !location.pathname.startsWith('/book') &&
+        !location.pathname.startsWith('/contact')
+      ) {
+        navigate('/portal');
+      }
+    } catch (err) {
+      if (err instanceof Error && err.message.includes('cancelled')) return;
+      showToast(
+        'error',
+        'Google Sign-In Failed',
+        err instanceof Error ? err.message : 'Unable to sign in with Google.'
+      );
+    } finally {
+      setGoogleBusy(false);
+    }
+  };
+
+  const handleQuickAccountSignIn = async (
+    email: string,
+    displayName: string,
+    phone?: string,
+    companyName?: string
+  ) => {
+    setGoogleBusy(true);
+    setAccountDropdownOpen(false);
+    setMobileOpen(false);
+    try {
+      const prof = await quickSignInWithGoogleAccount(email, displayName, {
+        phone,
+        companyName,
+      });
+      showToast(
+        'success',
+        'Google Account Connected',
+        `Signed in as ${prof.displayName} (${prof.email})`
+      );
+      if (
+        !location.pathname.startsWith('/book') &&
+        !location.pathname.startsWith('/contact')
+      ) {
+        navigate('/portal');
+      }
+    } catch (err) {
+      showToast(
+        'error',
+        'Google Sign-In Failed',
+        err instanceof Error ? err.message : 'Unable to switch Google account.'
+      );
+    } finally {
+      setGoogleBusy(false);
+    }
+  };
+
+  const handleDismissOneTap = () => {
+    setOneTapDismissed(true);
+    if (typeof window !== 'undefined') {
+      window.sessionStorage.setItem('pe_google_onetap_dismissed_v1', '1');
+    }
+  };
+
+  const showFloatingOneTap =
+    !loading &&
+    !user &&
+    !oneTapDismissed &&
+    !location.pathname.startsWith('/login') &&
+    !location.pathname.startsWith('/admin-login') &&
+    !location.pathname.startsWith('/forgot-password') &&
+    !location.pathname.startsWith('/reset-password');
+
+  const userInitials = (profile?.displayName || user?.email || 'C')
+    .split(' ')
+    .map((p) => p[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+
   return (
     <div
       className="min-h-screen flex flex-col text-[#F8FAFC] pb-20 md:pb-0"
@@ -101,7 +230,7 @@ export const PublicLayout: React.FC = () => {
         className="sticky top-0 z-40 backdrop-blur-md border-b border-[#1E3A5F] no-print"
         style={{ backgroundColor: `${pageBg}E8` }}
       >
-        <div className="max-w-[1200px] mx-auto flex items-center justify-between gap-8 px-6 py-3.5">
+        <div className="max-w-[1200px] mx-auto flex items-center justify-between gap-6 px-6 py-3.5">
           {/* Zone 1: Brand Wordmark & Official Uncropped Logo */}
           <Link
             to="/"
@@ -189,11 +318,155 @@ export const PublicLayout: React.FC = () => {
             )}
           </nav>
 
-          {/* Zone 3: Primary action + PWA Install */}
-          <div className="flex items-center gap-2.5 shrink-0">
-            <div className="hidden sm:block">
+          {/* Zone 3: Top-Website Google Account Selector / Switcher + Primary Portal Action */}
+          <div className="flex items-center gap-2.5 shrink-0" ref={dropdownRef}>
+            <div className="hidden lg:block">
               <PWAInstallButton compact />
             </div>
+
+            {!user ? (
+              <button
+                type="button"
+                disabled={googleBusy}
+                onClick={handleOpenGoogleSelector}
+                className="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-[#F8FAFC] bg-[#0D1F38] hover:bg-[#132A4A] border border-[#1E3A5F] hover:border-[#10B981] rounded-lg transition-all cursor-pointer whitespace-nowrap"
+                title="Sign in with your Google Account"
+              >
+                <span className="w-4 h-4 rounded-full bg-white flex items-center justify-center shrink-0">
+                  <GoogleBrandIcon className="w-3 h-3" />
+                </span>
+                <span>{googleBusy ? 'Signing in...' : 'Sign in with Google'}</span>
+              </button>
+            ) : (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setAccountDropdownOpen((prev) => !prev)}
+                  className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-[#0D1F38] hover:bg-[#132A4A] border border-[#1E3A5F] hover:border-[#10B981] text-xs transition-all cursor-pointer"
+                  title="Google Account Switcher"
+                >
+                  <span className="w-6 h-6 rounded-full bg-gradient-to-br from-[#0EA5E9] to-[#10B981] flex items-center justify-center text-[10px] font-bold text-white shrink-0">
+                    {userInitials}
+                  </span>
+                  <span className="hidden sm:inline font-semibold text-[#F8FAFC] max-w-[110px] truncate">
+                    {profile?.displayName || user.email?.split('@')[0]}
+                  </span>
+                  <ChevronDown className="w-3.5 h-3.5 text-[#94A3B8]" />
+                </button>
+
+                {/* Top-Right Google Account Switcher Dropdown */}
+                {accountDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-80 bg-[#0D1F38] border border-[#1E3A5F] rounded-2xl shadow-2xl overflow-hidden z-50">
+                    <div className="px-4 py-3 bg-[#081629] border-b border-[#1E3A5F] flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full bg-white flex items-center justify-center">
+                          <GoogleBrandIcon className="w-3 h-3" />
+                        </span>
+                        <span className="text-[11px] font-semibold text-[#94A3B8]">
+                          Google Account Connected
+                        </span>
+                      </div>
+                      <span className="px-2 py-0.5 rounded bg-[#10B981]/15 text-[#10B981] text-[10px] font-semibold">
+                        {isAdmin ? 'Studio Admin' : 'Client'}
+                      </span>
+                    </div>
+
+                    <div className="p-4 border-b border-[#1E3A5F] flex items-center gap-3 bg-[#132A4A]/50">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#0EA5E9] to-[#10B981] flex items-center justify-center text-xs font-bold text-white shrink-0">
+                        {userInitials}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-[#F8FAFC] truncate">
+                          {profile?.displayName || 'Client Account'}
+                        </p>
+                        <p className="text-xs text-[#94A3B8] font-mono truncate">
+                          {profile?.email || user.email}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="p-2.5 space-y-1.5">
+                      <Link
+                        to={portalDestination}
+                        onClick={() => setAccountDropdownOpen(false)}
+                        className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 transition-opacity"
+                      >
+                        <span className="inline-flex items-center gap-2">
+                          <LayoutDashboard className="w-3.5 h-3.5" />
+                          <span>Open {portalLabel}</span>
+                        </span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </Link>
+
+                      {!isAdmin &&
+                        savedClientAccounts.filter(
+                          (acc) => acc.email.toLowerCase() !== (user.email || '').toLowerCase()
+                        ).length > 0 && (
+                          <div className="pt-2 border-t border-[#1E3A5F] space-y-1">
+                            <p className="px-2 text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]">
+                              Switch Google Account
+                            </p>
+                            {savedClientAccounts
+                              .filter(
+                                (acc) =>
+                                  acc.email.toLowerCase() !== (user.email || '').toLowerCase()
+                              )
+                              .slice(0, 3)
+                              .map((acc) => (
+                                <button
+                                  key={acc.email}
+                                  type="button"
+                                  onClick={() =>
+                                    handleQuickAccountSignIn(
+                                      acc.email,
+                                      acc.displayName,
+                                      acc.phone,
+                                      acc.companyName
+                                    )
+                                  }
+                                  className="w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg hover:bg-[#132A4A] text-left transition-colors cursor-pointer"
+                                >
+                                  <div className="min-w-0">
+                                    <p className="text-xs font-semibold text-[#F8FAFC] truncate">
+                                      {acc.displayName}
+                                    </p>
+                                    <p className="text-[11px] text-[#94A3B8] font-mono truncate">
+                                      {acc.email}
+                                    </p>
+                                  </div>
+                                  <ArrowRight className="w-3.5 h-3.5 text-[#10B981] shrink-0" />
+                                </button>
+                              ))}
+                          </div>
+                        )}
+
+                      <button
+                        type="button"
+                        onClick={handleOpenGoogleSelector}
+                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-[#F8FAFC] hover:bg-[#132A4A] transition-colors cursor-pointer"
+                      >
+                        <UserCheck className="w-3.5 h-3.5 text-[#0EA5E9]" />
+                        <span>Use another Google account</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          setAccountDropdownOpen(false);
+                          await logout();
+                          showToast('info', 'Signed Out', 'You have been signed out.');
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-[#F87171] hover:bg-[#DC2626]/15 transition-colors cursor-pointer"
+                      >
+                        <LogOut className="w-3.5 h-3.5" />
+                        <span>Sign Out</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             <Link
               to={portalDestination}
               className="px-4 py-2 text-xs font-semibold text-white rounded-lg bg-gradient-to-r from-[#0EA5E9] to-[#10B981] shadow-[0_8px_20px_-4px_rgba(16,185,129,0.45)] hover:opacity-95 transition-all whitespace-nowrap shrink-0"
@@ -239,6 +512,18 @@ export const PublicLayout: React.FC = () => {
                   {custom.navContactLabel || 'Contact'}
                 </Link>
               )}
+              {!user && (
+                <button
+                  type="button"
+                  onClick={handleOpenGoogleSelector}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg bg-[#132A4A] border border-[#1E3A5F] text-xs font-semibold text-[#F8FAFC]"
+                >
+                  <span className="w-4 h-4 rounded-full bg-white flex items-center justify-center">
+                    <GoogleBrandIcon className="w-3 h-3" />
+                  </span>
+                  <span>Sign in with Google Account</span>
+                </button>
+              )}
               <Link
                 to={portalDestination}
                 onClick={() => setMobileOpen(false)}
@@ -253,6 +538,112 @@ export const PublicLayout: React.FC = () => {
           </div>
         )}
       </header>
+
+      {/* Top-Right Floating Google One-Tap Account Selector Prompt (Top Website Style) */}
+      {showFloatingOneTap && (
+        <div
+          className="fixed top-20 right-4 sm:right-6 z-40 w-[330px] max-w-[calc(100vw-2rem)] bg-[#0D1F38]/95 backdrop-blur-md border border-[#1E3A5F] rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.65)] overflow-hidden no-print"
+          role="region"
+          aria-label="Sign in with Google"
+        >
+          <div className="px-4 py-2.5 bg-[#081629] border-b border-[#1E3A5F] flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="w-5 h-5 rounded-full bg-white flex items-center justify-center shrink-0">
+                <GoogleBrandIcon className="w-3.5 h-3.5" />
+              </span>
+              <span className="text-xs font-semibold text-[#F8FAFC] truncate">
+                Sign in to Prithvi Editify with Google
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={handleDismissOneTap}
+              aria-label="Dismiss Google sign-in prompt"
+              className="p-1 text-[#94A3B8] hover:text-[#F8FAFC] rounded-md transition-colors"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="p-4 space-y-3">
+            {savedClientAccounts.length > 0 ? (
+              <>
+                <div className="space-y-2">
+                  {savedClientAccounts.slice(0, 2).map((acc) => {
+                    const initials = (acc.displayName || acc.email)
+                      .split(' ')
+                      .map((part) => part[0])
+                      .join('')
+                      .slice(0, 2)
+                      .toUpperCase();
+                    const firstName = (acc.displayName || 'Client').split(' ')[0];
+                    return (
+                      <div
+                        key={acc.email}
+                        className="p-2.5 rounded-xl bg-[#132A4A]/80 border border-[#1E3A5F] space-y-2.5"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#0EA5E9] to-[#10B981] flex items-center justify-center text-xs font-bold text-white shrink-0">
+                            {initials}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-semibold text-[#F8FAFC] truncate">
+                              {acc.displayName}
+                            </p>
+                            <p className="text-[11px] text-[#94A3B8] font-mono truncate">
+                              {acc.email}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={googleBusy}
+                          onClick={() =>
+                            handleQuickAccountSignIn(
+                              acc.email,
+                              acc.displayName,
+                              acc.phone,
+                              acc.companyName
+                            )
+                          }
+                          className="w-full py-2 px-3 rounded-lg text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 transition-opacity cursor-pointer"
+                        >
+                          Continue as {firstName}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+                <button
+                  type="button"
+                  disabled={googleBusy}
+                  onClick={handleOpenGoogleSelector}
+                  className="w-full py-1.5 text-center text-xs font-semibold text-[#38BDF8] hover:text-[#10B981] transition-colors cursor-pointer"
+                >
+                  Choose another Google account →
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-xs text-[#94A3B8] leading-relaxed">
+                  One-tap client login to track live project milestones, preview deliverables, and download INR invoices.
+                </p>
+                <button
+                  type="button"
+                  disabled={googleBusy}
+                  onClick={handleOpenGoogleSelector}
+                  className="w-full flex items-center justify-center gap-2.5 py-2.5 px-3.5 rounded-xl text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 shadow-md transition-all cursor-pointer"
+                >
+                  <span className="w-4 h-4 rounded-full bg-white flex items-center justify-center shrink-0">
+                    <GoogleBrandIcon className="w-3 h-3" />
+                  </span>
+                  <span>Select Google Account</span>
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
       <main className="flex-1 pe-page-enter">

@@ -4,8 +4,10 @@ import {
   handleSupabaseError,
   isMissingSchemaError,
   LOCAL_GOOGLE_SESSION_KEY,
+  isAuthorizedAdminEmail,
 } from '../lib/supabaseClient';
 import {
+  UserProfile,
   ClientRecord,
   ServiceItem,
   ServicePackageTier,
@@ -5486,4 +5488,117 @@ export async function truncateAllCrmDataAdmin(): Promise<{
     ],
   };
 }
+
+// ============================================================================
+// CLIENT GOOGLE ACCOUNT SELECTOR / AUTH -> CRM AUTO-SYNC
+// ============================================================================
+export async function syncClientLoginToCrm(
+  profile: UserProfile,
+  source: 'Google Account Selector' | 'Email & Password' | 'Client Registration' = 'Google Account Selector'
+): Promise<void> {
+  if (!profile || !profile.email) return;
+  const cleanEmail = profile.email.trim().toLowerCase();
+  if (!cleanEmail || isAuthorizedAdminEmail(cleanEmail)) return;
+
+  await syncSharedCrmStoreWithServer().catch(() => {});
+
+  const nowIso = new Date().toISOString();
+  const cleanName = truncate(profile.displayName || cleanEmail.split('@')[0] || 'Client', 120);
+  const cleanPhone = truncate(profile.phone || '', 40);
+  const cleanCompany = truncate(profile.companyName || '', 150);
+  const userUuid = toNullableUuid(profile.uid);
+
+  const existingLocalClients = mergeRemoteAndLocalRows('clients', [], mapClientRow);
+  const existingClient = existingLocalClients.find(
+    (c) => (c.email || '').trim().toLowerCase() === cleanEmail
+  );
+
+  const clientId = existingClient?.id || userUuid || crypto.randomUUID();
+
+  const clientRow: Record<string, any> = {
+    id: clientId,
+    user_id: userUuid,
+    full_name: cleanName || existingClient?.fullName || 'Client',
+    email: cleanEmail,
+    phone: cleanPhone || existingClient?.phone || '',
+    company_name: cleanCompany || existingClient?.companyName || '',
+    country: existingClient?.country || 'India',
+    preferred_contact: existingClient?.preferredContact || 'WhatsApp',
+    account_status: 'active',
+    admin_notes:
+      existingClient?.adminNotes ||
+      `Verified client account (${source}) · Signed in on ${new Date().toLocaleString('en-IN')}`,
+    created_at: existingClient?.createdAt || nowIso,
+    updated_at: nowIso,
+  };
+
+  upsertLocalTableRow('clients', clientRow);
+
+  if (isSupabaseConfigured) {
+    try {
+      if (existingClient?.id && !existingClient.id.startsWith('cli_')) {
+        await adaptiveUpdateRow(
+          'clients',
+          existingClient.id,
+          clientRow,
+          { name: clientRow.full_name, status: 'active' },
+          'syncClientLoginToCrm (update)'
+        );
+      } else {
+        await adaptiveInsertRow(
+          'clients',
+          clientRow,
+          { name: clientRow.full_name, status: 'active' },
+          'syncClientLoginToCrm (insert)'
+        );
+      }
+    } catch {
+      // Non-fatal if RLS restricts client self-insert; shared CRM store already holds the row
+    }
+  }
+
+  // Link any existing projects or invoices matching this client's Google email to their uid & clientId
+  try {
+    const localProjects = readLocalTableRows('projects');
+    for (const proj of localProjects) {
+      const pEmail = String(proj.client_email || proj.clientEmail || '').trim().toLowerCase();
+      if (pEmail === cleanEmail) {
+        upsertLocalTableRow('projects', {
+          ...proj,
+          client_id: proj.client_id || clientId,
+          client_user_id: userUuid || proj.client_user_id || profile.uid,
+          updated_at: proj.updated_at || nowIso,
+        });
+      }
+    }
+
+    const localInvoices = readLocalTableRows('invoices');
+    for (const inv of localInvoices) {
+      const iEmail = String(inv.client_email || inv.clientEmail || '').trim().toLowerCase();
+      if (iEmail === cleanEmail) {
+        upsertLocalTableRow('invoices', {
+          ...inv,
+          client_id: inv.client_id || clientId,
+          client_user_id: userUuid || inv.client_user_id || profile.uid,
+          updated_at: inv.updated_at || nowIso,
+        });
+      }
+    }
+  } catch {
+    // Ignore local linking error
+  }
+
+  await logAdminActivity(
+    existingClient
+      ? `Client Signed In (${source})`
+      : `New Client Joined via ${source}`,
+    'client',
+    clientId,
+    `${cleanName} (${cleanEmail})`,
+    cleanEmail
+  ).catch(() => {});
+
+  await uploadCloudCrmSnapshotNow().catch(() => {});
+}
+
 

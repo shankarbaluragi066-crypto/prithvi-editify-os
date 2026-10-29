@@ -18,7 +18,7 @@ import {
   PanelLeftOpen,
   Plus,
 } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth, GoogleBrandIcon } from '../contexts/AuthContext';
 import { DEFAULT_STUDIO_LOGO_URL } from '../utils/seedData';
 
 const CLIENT_NAV_ITEMS = [
@@ -36,7 +36,7 @@ const CLIENT_NAV_ITEMS = [
 const CLIENT_GROUPS = ['Workspace', 'Billing & Support', 'Account'];
 
 export const ClientLayout: React.FC = () => {
-  const { profile, logout, isAdmin } = useAuth();
+  const { profile, logout, isAdmin, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -234,6 +234,17 @@ export const ClientLayout: React.FC = () => {
                 <span>Admin Portal →</span>
               </Link>
             )}
+            <button
+              type="button"
+              onClick={() => loginWithGoogle('/login').catch(() => {})}
+              className="hidden sm:inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold text-[#F8FAFC] bg-[#0D1F38] hover:bg-[#132A4A] border border-[#1E3A5F] hover:border-[#10B981] rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+              title="Switch Google Account"
+            >
+              <span className="w-4 h-4 rounded-full bg-white flex items-center justify-center shrink-0">
+                <GoogleBrandIcon className="w-3 h-3" />
+              </span>
+              <span className="max-w-[140px] truncate">{profile?.email || 'Switch Account'}</span>
+            </button>
             <Link
               to="/portal/book"
               className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-all whitespace-nowrap shrink-0"

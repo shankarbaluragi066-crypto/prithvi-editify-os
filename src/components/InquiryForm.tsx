@@ -21,7 +21,7 @@ import {
 } from '../services/crmService';
 import { ServiceItem } from '../types/crm';
 import { useToast } from '../contexts/ToastContext';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth, GoogleBrandIcon } from '../contexts/AuthContext';
 import { Link, useSearchParams } from 'react-router-dom';
 
 const SERVICE_OPTIONS = [
@@ -88,7 +88,7 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({
   onSuccessClose,
 }) => {
   const { showToast } = useToast();
-  const { user, profile, isClient } = useAuth();
+  const { user, profile, isClient, loginWithGoogle } = useAuth();
   const [searchParams] = useSearchParams();
   const [referenceFile, setReferenceFile] = useState<File | null>(null);
   const [referenceLink, setReferenceLink] = useState<string>(defaultReferenceLink || '');
@@ -698,6 +698,57 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({
       </div>
 
       {/* 3. Customer Contact Details */}
+      <div className="rounded-xl border border-[#1E3A5F] bg-[#132A4A]/50 p-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        {isClient && (profile?.email || user?.email) ? (
+          <>
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-full bg-[#10B981]/20 border border-[#10B981]/40 flex items-center justify-center shrink-0">
+                <GoogleBrandIcon className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-[#F8FAFC] truncate">
+                  Connected with Google: {profile?.displayName || user?.displayName || 'Client'}
+                </p>
+                <p className="text-[11px] text-[#94A3B8] truncate">
+                  {profile?.email || user?.email} • Order will auto-link to your Client Portal
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => loginWithGoogle(window.location.pathname + window.location.search)}
+              className="px-3 py-1.5 rounded-lg bg-[#0A192F] hover:bg-[#1E3A5F] border border-[#1E3A5F] text-[11px] font-semibold text-[#F8FAFC] transition-colors shrink-0"
+            >
+              Switch Google Account
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shrink-0 shadow-sm">
+                <GoogleBrandIcon className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-[#F8FAFC]">
+                  Fast Booking with Google Account
+                </p>
+                <p className="text-[11px] text-[#94A3B8]">
+                  Select your Google account to auto-fill your details and track this order in your Client Portal.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => loginWithGoogle(window.location.pathname + window.location.search)}
+              className="inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-lg bg-white hover:bg-[#F8FAFC] text-[#0F172A] text-xs font-semibold transition-all shadow-sm shrink-0"
+            >
+              <GoogleBrandIcon className="w-3.5 h-3.5" />
+              Select Google Account
+            </button>
+          </>
+        )}
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label htmlFor="inq-fullName" className="block text-xs font-medium text-[#F8FAFC] mb-1.5">
