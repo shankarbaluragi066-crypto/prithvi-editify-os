@@ -1,12 +1,11 @@
 {
-  "projectId": "oval-cedar-qw2pc",
-  "appId": "1:389962542501:web:ae134e2e042013a6d6cc4c",
-  "apiKey": "AIzaSyAVOPVt4QTffLIDQ9vEDuRXHn1x0wSmaLc",
-  "authDomain": "oval-cedar-qw2pc.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-04095bd2-5d09-4f39-9429-8964d3484bce",
-  "storageBucket": "oval-cedar-qw2pc.firebasestorage.app",
-  "messagingSenderId": "389962542501",
+  "projectId": "photo-poet-4gltc",
+  "appId": "1:1093644209752:web:a3db83ca266a0836c9042d",
+  "apiKey": "AIzaSyDEqIBoHNYklDk2MLe2qlSBRUm4ZnUbfec",
+  "authDomain": "photo-poet-4gltc.firebaseapp.com",
+  "storageBucket": "photo-poet-4gltc.firebasestorage.app",
+  "messagingSenderId": "1093644209752",
   "measurementId": "",
-  "oAuthClientId": "389962542501-a4f6m721feb34pvf8tippia2k6makui0.apps.googleusercontent.com",
+  "oAuthClientId": "1093644209752-k9fadkt4los7m00ccm6psfg1gnq5cfgs.apps.googleusercontent.com",
   "recaptchaSiteKey": ""
 }

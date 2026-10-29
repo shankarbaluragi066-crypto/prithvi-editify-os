@@ -20,7 +20,11 @@ import {
 } from '../services/authEmailService';
 import { syncClientLoginToCrm } from '../services/crmService';
 import { DEFAULT_STUDIO_LOGO_URL } from '../utils/seedData';
-import { signInWithSystemGooglePopup, signOutFromFirebase } from '../lib/firebaseClient';
+import {
+  initFirebaseGoogleAuth,
+  signInWithSystemGooglePopup,
+  signOutFromFirebase,
+} from '../lib/firebaseClient';
 
 export const GoogleBrandIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4' }) => (
   <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
@@ -499,9 +503,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     });
 
+    const unsubscribeFirebase = initFirebaseGoogleAuth();
+
     return () => {
       mounted = false;
       subscription.unsubscribe();
+      unsubscribeFirebase();
     };
   }, []);
 
@@ -1231,10 +1238,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     }
                   } catch (err: any) {
                     setGoogleSubmitting(false);
+                    const code = String(err?.code || '');
                     const msg = String(err?.message || '');
-                    if (!msg.toLowerCase().includes('popup-closed-by-user')) {
+                    if (msg.includes('Access Denied:')) {
+                      setGoogleModalError(msg);
+                    } else if (code === 'auth/popup-blocked') {
                       setGoogleModalError(
-                        'Your browser blocked the Google popup window. Please allow popups for this site or select/enter your Google account below.'
+                        'Please allow popups for this site in your browser address bar, or select your Google account below.'
                       );
                     }
                   }
