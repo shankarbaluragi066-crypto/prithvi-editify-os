@@ -30,6 +30,8 @@ import {
   getCrmStatusBadgeStyle,
   checkProjectMasterUnlockStatus,
   submitClientPaymentProof,
+  getInvoiceGstMeta,
+  calculateGstBreakdown,
 } from '../services/workflowEnhancementsService';
 import {
   fetchAllProjectsAdmin,
@@ -43,8 +45,11 @@ import {
   TaskRecord,
   DeliverableFile,
   InvoiceRecord,
+  InvoiceLineItem,
+  PaymentRecord,
   ProjectStatus,
 } from '../types/crm';
+import { DEFAULT_STUDIO_LOGO_URL } from '../utils/seedData';
 import { formatINR } from '../utils/formatters';
 import { useToast } from '../contexts/ToastContext';
 
@@ -974,17 +979,26 @@ export const PublicQuotationApprovalPage: React.FC = () => {
     <div className="max-w-4xl mx-auto px-6 py-10 space-y-6">
       <div className="pe-card-interactive bg-[#0D1F38] border border-[#1E3A5F] rounded-xl p-6 sm:p-10 space-y-6 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[#1E3A5F] pb-6">
-          <div>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-[#10B981]/15 text-[#0EA5E9] text-[11px] font-semibold">
-              OFFICIAL STUDIO QUOTATION · SAC 9983
-            </span>
-            <h1 className="font-editorial text-2xl sm:text-3xl font-semibold text-[#F8FAFC] mt-1">
-              {quotation.projectTitle}
-            </h1>
-            <p className="text-xs text-[#94A3B8] mt-1">
-              Prepared by <strong>Prithvi Editify (Shankar Baluragi)</strong> for{' '}
-              <strong className="text-[#F8FAFC]">{quotation.clientName}</strong> ({quotation.clientEmail})
-            </p>
+          <div className="flex items-start gap-4">
+            <div className="w-14 h-14 rounded-xl bg-white p-1.5 border border-[#1E3A5F] shadow-md shrink-0 flex items-center justify-center">
+              <img
+                src={DEFAULT_STUDIO_LOGO_URL}
+                alt="Prithvi Editify Logo"
+                className="w-full h-full object-contain"
+              />
+            </div>
+            <div>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-[#10B981]/15 text-[#2DD4BF] text-[11px] font-semibold">
+                OFFICIAL STUDIO QUOTATION · SAC 9983
+              </span>
+              <h1 className="font-editorial text-2xl sm:text-3xl font-semibold text-[#F8FAFC] mt-1">
+                {quotation.projectTitle}
+              </h1>
+              <p className="text-xs text-[#94A3B8] mt-1">
+                Prepared by <strong>Prithvi Editify (Shankar Baluragi)</strong> for{' '}
+                <strong className="text-[#F8FAFC]">{quotation.clientName}</strong> ({quotation.clientEmail})
+              </p>
+            </div>
           </div>
           <div className="text-right font-mono text-xs">
             <p className="text-base font-bold text-[#F8FAFC]">{quotation.quotationNumber}</p>
@@ -1843,5 +1857,491 @@ export const PublicProjectTrackerPage: React.FC = () => {
     </div>
   );
 };
+
+// ============================================================================
+// 9. BRANDED STUDIO INVOICE & QUOTATION DOCUMENTS (WITH OFFICIAL PRITHVI EDITIFY LOGO)
+// ============================================================================
+export interface BrandedStudioInvoiceDocumentProps {
+  invoice: InvoiceRecord;
+  lineItems?: InvoiceLineItem[];
+  payments?: PaymentRecord[];
+  logoUrl?: string;
+  businessName?: string;
+  ownerName?: string;
+  tagline?: string;
+  businessEmail?: string;
+  officialEmail?: string;
+  whatsappNumber?: string;
+  businessAddress?: string;
+  websiteUrl?: string;
+  clientPhone?: string;
+  clientCompany?: string;
+  onSubmitUtrClick?: () => void;
+  headerActions?: React.ReactNode;
+}
+
+export const BrandedStudioInvoiceDocument: React.FC<BrandedStudioInvoiceDocumentProps> = ({
+  invoice,
+  lineItems = [],
+  payments = [],
+  logoUrl,
+  businessName = 'Prithvi Editify',
+  ownerName = 'Shankar Baluragi',
+  tagline = 'Creative Design, Video Editing & Visual Production Studio',
+  businessEmail = 'shankarbaluragi066@gmail.com',
+  officialEmail = 'prithvieditify.official@gmail.com',
+  whatsappNumber = '+91 63619 02619',
+  businessAddress = 'Karnataka, India',
+  websiteUrl = 'https://prithvieditify.netlify.app',
+  clientPhone,
+  clientCompany,
+  onSubmitUtrClick,
+  headerActions,
+}) => {
+  const studioUpi = getStudioUpiSettings();
+  const invGstMeta = getInvoiceGstMeta(invoice.id);
+  const invGstBreakdown = calculateGstBreakdown(
+    invoice.subtotal,
+    invoice.discount,
+    invGstMeta.gstMode,
+    invoice.taxRate,
+    invGstMeta.sacCode || studioUpi.sacCode || '9983'
+  );
+
+  const effectiveLogo = (logoUrl || '').trim() || DEFAULT_STUDIO_LOGO_URL;
+  const sacCode = invGstMeta.sacCode || studioUpi.sacCode || '9983';
+
+  // Ensure there is always at least one itemized row even if lineItems weren't separately fetched
+  const effectiveLineItems: Array<{
+    id: string;
+    description: string;
+    quantity: number;
+    unitPrice: number;
+    amount: number;
+  }> =
+    lineItems.length > 0
+      ? lineItems
+      : [
+          {
+            id: 'default-line-1',
+            description:
+              invoice.projectTitle ||
+              'Creative Graphic Design, Thumbnail & Video Editing Services',
+            quantity: 1,
+            unitPrice: Number(invoice.subtotal) || Number(invoice.total) || 0,
+            amount: Number(invoice.subtotal) || Number(invoice.total) || 0,
+          },
+        ];
+
+  const isPaid = invoice.status === 'Paid' || Number(invoice.balanceDue) <= 0;
+  const isPartial = invoice.status === 'Partially Paid';
+  const isOverdue = invoice.status === 'Overdue';
+  const isCancelled = invoice.status === 'Cancelled';
+
+  const statusStampConfig = isPaid
+    ? {
+        label: 'PAID IN FULL',
+        badgeClass:
+          'bg-[#16A34A]/15 text-[#4ADE80] border-[#16A34A]/50 print:bg-emerald-50 print:text-emerald-800 print:border-emerald-400',
+      }
+    : isPartial
+    ? {
+        label: 'PARTIALLY PAID',
+        badgeClass:
+          'bg-[#F59E0B]/15 text-[#FBBF24] border-[#F59E0B]/50 print:bg-amber-50 print:text-amber-800 print:border-amber-400',
+      }
+    : isOverdue
+    ? {
+        label: 'PAYMENT OVERDUE',
+        badgeClass:
+          'bg-[#DC2626]/15 text-[#F87171] border-[#DC2626]/50 print:bg-red-50 print:text-red-800 print:border-red-400',
+      }
+    : isCancelled
+    ? {
+        label: 'VOID / CANCELLED',
+        badgeClass:
+          'bg-[#64748B]/20 text-[#94A3B8] border-[#64748B]/40 print:bg-slate-100 print:text-slate-600 print:border-slate-300',
+      }
+    : {
+        label: invoice.status === 'Draft' ? 'DRAFT INVOICE' : 'AWAITING SETTLEMENT',
+        badgeClass:
+          'bg-[#0EA5E9]/15 text-[#38BDF8] border-[#0EA5E9]/50 print:bg-sky-50 print:text-sky-800 print:border-sky-400',
+      };
+
+  const invoicePayments = payments.filter((p) => p.invoiceId === invoice.id);
+
+  return (
+    <div className="bg-[#081528] border-2 border-[#1E3A5F] rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.55)] print:bg-white print:text-slate-900 print:border-slate-300 print:shadow-none">
+      {/* Top Action Bar (Hidden when printing) */}
+      {headerActions && (
+        <div className="bg-[#0D1F38] border-b border-[#1E3A5F] px-6 py-4 flex flex-wrap items-center justify-between gap-3 no-print">
+          {headerActions}
+        </div>
+      )}
+
+      {/* Top Emerald/Cyan Brand Accent Ribbon */}
+      <div className="h-2 w-full bg-gradient-to-r from-[#0EA5E9] via-[#10B981] to-[#059669]" />
+
+      <div className="p-6 sm:p-10 space-y-8">
+        {/* 1. Executive Studio Header with Official Logo & Invoice Metadata */}
+        <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6 border-b border-[#1E3A5F] print:border-slate-200 pb-7">
+          {/* Left: Official Studio Brand Identity & Logo */}
+          <div className="flex items-start gap-4 sm:gap-5">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white p-2 border-2 border-[#10B981]/50 shadow-[0_8px_24px_rgba(16,185,129,0.2)] shrink-0 flex items-center justify-center">
+              <img
+                src={effectiveLogo}
+                alt={`${businessName} Official Logo`}
+                className="w-full h-full object-contain"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-md bg-[#10B981]/15 border border-[#10B981]/30 text-[#2DD4BF] print:bg-emerald-50 print:text-emerald-800 print:border-emerald-200 text-[10px] font-mono uppercase tracking-widest font-semibold">
+                <span>OFFICIAL STUDIO INVOICE · SAC {sacCode}</span>
+              </div>
+              <h2 className="font-editorial text-2xl sm:text-3xl font-bold tracking-tight text-[#F8FAFC] print:text-slate-900">
+                {businessName}
+              </h2>
+              <p className="text-xs font-medium text-[#2DD4BF] print:text-emerald-700">
+                {tagline}
+              </p>
+              <div className="pt-1 text-[11px] text-[#94A3B8] print:text-slate-600 space-y-0.5">
+                <p>
+                  Founder &amp; Lead Creative:{' '}
+                  <strong className="text-[#F8FAFC] print:text-slate-900">{ownerName}</strong>
+                  {businessAddress ? ` · ${businessAddress}` : ''}
+                </p>
+                <p className="font-mono text-[10.5px]">
+                  {businessEmail}
+                  {officialEmail && officialEmail !== businessEmail ? ` · ${officialEmail}` : ''}
+                </p>
+                <p className="font-mono text-[10.5px]">
+                  WhatsApp: {whatsappNumber} · Web: {websiteUrl.replace(/^https?:\/\//, '')}
+                </p>
+                {studioUpi.gstin && (
+                  <p className="font-mono text-[11px] font-semibold text-[#F8FAFC] print:text-slate-900 pt-0.5">
+                    Studio GSTIN: {studioUpi.gstin}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Invoice Number, Dates & Status Stamp */}
+          <div className="flex flex-col lg:items-end justify-between gap-3 bg-[#0D1F38] print:bg-slate-50 border border-[#1E3A5F] print:border-slate-200 rounded-xl p-4 sm:p-5 min-w-[260px]">
+            <div className="flex lg:flex-col items-center lg:items-end justify-between w-full gap-2">
+              <span className="text-[10px] font-mono uppercase tracking-widest text-[#94A3B8] print:text-slate-500">
+                {invGstMeta.gstMode !== 'NON_GST' || studioUpi.gstin
+                  ? 'TAX INVOICE (INR)'
+                  : 'STUDIO COMMERCIAL INVOICE'}
+              </span>
+              <span
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-[11px] font-mono font-bold uppercase tracking-wider border ${statusStampConfig.badgeClass}`}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                {statusStampConfig.label}
+              </span>
+            </div>
+
+            <div className="w-full pt-2 border-t border-[#1E3A5F]/80 print:border-slate-200 space-y-1 text-xs lg:text-right">
+              <p className="font-mono text-lg sm:text-xl font-bold text-[#F8FAFC] print:text-slate-900 tracking-tight">
+                {invoice.invoiceNumber}
+              </p>
+              <div className="flex lg:justify-end gap-4 text-[11px] text-[#94A3B8] print:text-slate-600 font-mono">
+                <span>
+                  Issued:{' '}
+                  <strong className="text-[#F8FAFC] print:text-slate-900">
+                    {invoice.issueDate || '—'}
+                  </strong>
+                </span>
+                <span>
+                  Due:{' '}
+                  <strong className="text-[#F8FAFC] print:text-slate-900">
+                    {invoice.dueDate || 'On Receipt'}
+                  </strong>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 2. Two-Column Billing & Project Reference Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Billed To */}
+          <div className="p-4 sm:p-5 rounded-xl bg-[#0D1F38] print:bg-slate-50 border border-[#1E3A5F] print:border-slate-200 space-y-1.5">
+            <p className="text-[10px] font-mono uppercase tracking-widest text-[#10B981] print:text-emerald-700 font-semibold">
+              01 · BILLED TO (CLIENT DETAILS)
+            </p>
+            <p className="text-base font-bold text-[#F8FAFC] print:text-slate-900">
+              {invoice.clientName || 'Valued Studio Client'}
+            </p>
+            {clientCompany && clientCompany !== invoice.clientName && (
+              <p className="text-xs font-medium text-[#CBD5E1] print:text-slate-700">
+                {clientCompany}
+              </p>
+            )}
+            <div className="text-xs text-[#94A3B8] print:text-slate-600 space-y-0.5 pt-1 font-mono">
+              {invoice.clientEmail && <p>Email: {invoice.clientEmail}</p>}
+              {clientPhone && <p>Phone / WhatsApp: {clientPhone}</p>}
+              {invGstMeta.clientGstin && (
+                <p className="text-[#F8FAFC] print:text-slate-900 font-semibold">
+                  Client GSTIN: {invGstMeta.clientGstin}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Project & Engagement Reference */}
+          <div className="p-4 sm:p-5 rounded-xl bg-[#0D1F38] print:bg-slate-50 border border-[#1E3A5F] print:border-slate-200 space-y-1.5">
+            <p className="text-[10px] font-mono uppercase tracking-widest text-[#0EA5E9] print:text-sky-700 font-semibold">
+              02 · PROJECT &amp; ENGAGEMENT DETAILS
+            </p>
+            <p className="text-base font-bold text-[#F8FAFC] print:text-slate-900">
+              {invoice.projectTitle || 'Creative Design & Video Production'}
+            </p>
+            <div className="grid grid-cols-2 gap-2 pt-1.5 text-[11px] text-[#94A3B8] print:text-slate-600">
+              <div>
+                <span className="block text-[10px] uppercase font-mono text-[#64748B]">
+                  HSN / SAC Classification
+                </span>
+                <span className="font-mono font-semibold text-[#F8FAFC] print:text-slate-900">
+                  SAC {sacCode} (Creative Services)
+                </span>
+              </div>
+              <div>
+                <span className="block text-[10px] uppercase font-mono text-[#64748B]">
+                  Settlement Currency
+                </span>
+                <span className="font-mono font-semibold text-[#F8FAFC] print:text-slate-900">
+                  INR (₹) · Indian Rupee
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 3. Structured Itemized Deliverables Table */}
+        <div className="rounded-xl border border-[#1E3A5F] print:border-slate-300 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="bg-[#132A4A] print:bg-slate-100 border-b border-[#1E3A5F] print:border-slate-300 text-[11px] font-mono uppercase tracking-wider text-[#94A3B8] print:text-slate-700">
+                  <th className="py-3.5 px-4 w-12">#</th>
+                  <th className="py-3.5 px-4">Service &amp; Deliverable Description</th>
+                  <th className="py-3.5 px-3 text-center w-24">SAC Code</th>
+                  <th className="py-3.5 px-3 text-right w-20">Qty</th>
+                  <th className="py-3.5 px-4 text-right w-32">Unit Rate (₹)</th>
+                  <th className="py-3.5 px-4 text-right w-36">Line Total (₹)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#1E3A5F] print:divide-slate-200 bg-[#0D1F38]/60 print:bg-white">
+                {effectiveLineItems.map((li, index) => (
+                  <tr
+                    key={li.id || index}
+                    className="hover:bg-[#132A4A]/40 print:hover:bg-transparent transition-colors"
+                  >
+                    <td className="py-3.5 px-4 font-mono text-[#94A3B8] print:text-slate-500">
+                      {String(index + 1).padStart(2, '0')}
+                    </td>
+                    <td className="py-3.5 px-4 font-medium text-[#F8FAFC] print:text-slate-900">
+                      {li.description}
+                    </td>
+                    <td className="py-3.5 px-3 text-center font-mono text-[11px] text-[#94A3B8] print:text-slate-600">
+                      {sacCode}
+                    </td>
+                    <td className="py-3.5 px-3 text-right font-mono text-[#F8FAFC] print:text-slate-900">
+                      {li.quantity}
+                    </td>
+                    <td className="py-3.5 px-4 text-right font-mono text-[#CBD5E1] print:text-slate-700">
+                      {formatINR(li.unitPrice)}
+                    </td>
+                    <td className="py-3.5 px-4 text-right font-mono font-semibold text-[#F8FAFC] print:text-slate-900">
+                      {formatINR(li.amount)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* 4. Financial Summary & Payment Ledger Split */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Left 7 Cols: Recorded Payment History + Studio Terms */}
+          <div className="lg:col-span-7 space-y-4">
+            {invoicePayments.length > 0 && (
+              <div className="p-4 rounded-xl bg-[#0D1F38] print:bg-slate-50 border border-[#1E3A5F] print:border-slate-200 space-y-2.5">
+                <p className="text-[11px] font-mono uppercase tracking-wider text-[#4ADE80] print:text-emerald-700 font-semibold flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Verified Payment Ledger ({invoicePayments.length})</span>
+                </p>
+                <div className="divide-y divide-[#1E3A5F] print:divide-slate-200 text-xs">
+                  {invoicePayments.map((pay) => (
+                    <div
+                      key={pay.id}
+                      className="py-2 flex flex-wrap items-center justify-between gap-2"
+                    >
+                      <div>
+                        <span className="font-semibold text-[#F8FAFC] print:text-slate-900">
+                          {pay.paymentDate}
+                        </span>
+                        <span className="text-[#94A3B8] print:text-slate-600">
+                          {' '}
+                          · {pay.method}
+                        </span>
+                        {pay.transactionReference && (
+                          <span className="ml-2 font-mono text-[11px] px-2 py-0.5 rounded bg-[#132A4A] print:bg-slate-200 text-[#2DD4BF] print:text-slate-800">
+                            UTR/Ref: {pay.transactionReference}
+                          </span>
+                        )}
+                      </div>
+                      <span className="font-mono font-bold text-[#4ADE80] print:text-emerald-700">
+                        +{formatINR(pay.amount)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {invoice.notes && (
+              <div className="p-4 rounded-xl bg-[#0D1F38]/80 print:bg-slate-50 border border-[#1E3A5F] print:border-slate-200 text-xs space-y-1">
+                <p className="font-mono text-[10px] uppercase tracking-wider text-[#94A3B8] print:text-slate-500 font-semibold">
+                  INVOICE NOTES &amp; DELIVERABLE TERMS
+                </p>
+                <p className="text-[#CBD5E1] print:text-slate-700 whitespace-pre-line leading-relaxed">
+                  {invoice.notes}
+                </p>
+              </div>
+            )}
+
+            <div className="p-4 rounded-xl bg-[#0D1F38]/50 print:bg-slate-50 border border-[#1E3A5F]/70 print:border-slate-200 text-[11px] text-[#94A3B8] print:text-slate-600 space-y-1">
+              <p className="font-semibold text-[#F8FAFC] print:text-slate-900">
+                Master File Unlock &amp; License Policy:
+              </p>
+              <p>
+                Unwatermarked high-resolution master deliverables (4K Video / Layered PSD / Vector
+                Master Pack) unlock automatically in the Prithvi Editify Client Portal once the
+                invoice balance due reaches ₹0.
+              </p>
+            </div>
+          </div>
+
+          {/* Right 5 Cols: Financial Totals Breakdown */}
+          <div className="lg:col-span-5 bg-[#0D1F38] print:bg-slate-50 border border-[#1E3A5F] print:border-slate-300 rounded-xl p-5 space-y-2.5 text-xs">
+            <div className="flex justify-between text-[#94A3B8] print:text-slate-600">
+              <span>Itemized Subtotal</span>
+              <span className="font-mono font-medium text-[#F8FAFC] print:text-slate-900">
+                {formatINR(invoice.subtotal)}
+              </span>
+            </div>
+
+            {invoice.discount > 0 && (
+              <div className="flex justify-between text-[#4ADE80] print:text-emerald-700">
+                <span>Studio Package Discount</span>
+                <span className="font-mono font-semibold">-{formatINR(invoice.discount)}</span>
+              </div>
+            )}
+
+            {invGstBreakdown.mode === 'CGST_SGST_18' ? (
+              <>
+                <div className="flex justify-between text-[#94A3B8] print:text-slate-600">
+                  <span>CGST (9% · SAC {sacCode})</span>
+                  <span className="font-mono text-[#F8FAFC] print:text-slate-900">
+                    {formatINR(invGstBreakdown.cgstAmount)}
+                  </span>
+                </div>
+                <div className="flex justify-between text-[#94A3B8] print:text-slate-600">
+                  <span>SGST (9% · SAC {sacCode})</span>
+                  <span className="font-mono text-[#F8FAFC] print:text-slate-900">
+                    {formatINR(invGstBreakdown.sgstAmount)}
+                  </span>
+                </div>
+              </>
+            ) : invGstBreakdown.mode === 'IGST_18' ? (
+              <div className="flex justify-between text-[#94A3B8] print:text-slate-600">
+                <span>IGST (18% · SAC {sacCode})</span>
+                <span className="font-mono text-[#F8FAFC] print:text-slate-900">
+                  {formatINR(invGstBreakdown.igstAmount)}
+                </span>
+              </div>
+            ) : (
+              invoice.taxRate > 0 && (
+                <div className="flex justify-between text-[#94A3B8] print:text-slate-600">
+                  <span>Tax ({invoice.taxRate}%)</span>
+                  <span className="font-mono text-[#F8FAFC] print:text-slate-900">
+                    {formatINR(invoice.taxAmount)}
+                  </span>
+                </div>
+              )
+            )}
+
+            <div className="pt-3 border-t border-[#1E3A5F] print:border-slate-300 flex justify-between items-baseline text-sm font-bold text-[#F8FAFC] print:text-slate-900">
+              <span>Invoice Grand Total (INR)</span>
+              <span className="font-mono text-base">{formatINR(invoice.total)}</span>
+            </div>
+
+            <div className="flex justify-between text-[#4ADE80] print:text-emerald-700 font-medium">
+              <span>Amount Paid to Date</span>
+              <span className="font-mono">{formatINR(invoice.amountPaid)}</span>
+            </div>
+
+            <div
+              className={`mt-2 p-3.5 rounded-lg border flex justify-between items-center ${
+                invoice.balanceDue > 0
+                  ? 'bg-[#F59E0B]/12 border-[#F59E0B]/40 text-[#FBBF24] print:bg-amber-50 print:text-amber-900 print:border-amber-300'
+                  : 'bg-[#16A34A]/15 border-[#16A34A]/40 text-[#4ADE80] print:bg-emerald-50 print:text-emerald-900 print:border-emerald-300'
+              }`}
+            >
+              <span className="font-bold uppercase tracking-wider text-[11px] font-mono">
+                {invoice.balanceDue > 0 ? 'Balance Due (INR)' : 'Balance Settled'}
+              </span>
+              <span className="font-mono text-lg font-extrabold">
+                {formatINR(invoice.balanceDue)}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* 5. Dynamic UPI QR Code + Authorized Studio Signatory Footer */}
+        <div className="pt-6 border-t border-[#1E3A5F] print:border-slate-200 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+          <div className="lg:col-span-8">
+            <UpiQrCodeCard
+              amount={invoice.balanceDue}
+              referenceNumber={invoice.invoiceNumber}
+              clientName={invoice.clientName}
+              onSubmitUtrClick={onSubmitUtrClick}
+            />
+          </div>
+
+          <div className="lg:col-span-4 flex flex-col items-start lg:items-end justify-between text-left lg:text-right p-4 rounded-xl bg-[#0D1F38]/60 print:bg-slate-50 border border-[#1E3A5F] print:border-slate-200 space-y-2">
+            <div className="flex items-center gap-2.5">
+              <img
+                src={effectiveLogo}
+                alt={businessName}
+                className="w-7 h-7 rounded-md bg-white p-0.5 object-contain border border-[#1E3A5F]"
+              />
+              <span className="text-[10px] font-mono uppercase tracking-widest text-[#10B981] print:text-emerald-700 font-semibold">
+                AUTHORIZED SIGNATORY
+              </span>
+            </div>
+            <div className="pt-2">
+              <p className="font-editorial italic text-lg text-[#F8FAFC] print:text-slate-900 font-semibold">
+                {ownerName}
+              </p>
+              <p className="text-[11px] font-semibold text-[#CBD5E1] print:text-slate-800">
+                Founder &amp; Creative Director, {businessName}
+              </p>
+              <p className="text-[10px] font-mono text-[#94A3B8] print:text-slate-500 mt-0.5">
+                Verified Digital Studio Invoice · {invoice.invoiceNumber}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 
 

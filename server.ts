@@ -17,7 +17,24 @@ interface SharedCrmStoreData {
   tables: Record<string, Record<string, any>[]>;
   deletedIds: Record<string, string[]>;
   updatedAt: string;
+  resetAt?: string;
 }
+
+const CRM_OPERATIONAL_TABLES = new Set<string>([
+  'inquiries',
+  'clients',
+  'projects',
+  'project_internal_notes',
+  'tasks',
+  'files',
+  'invoices',
+  'invoice_line_items',
+  'payments',
+  'project_messages',
+  'notifications',
+  'activity_logs',
+  'quotations',
+]);
 
 const SHARED_CRM_STORE_DIR = path.resolve(__dirname, '.data');
 const SHARED_CRM_STORE_FILE = path.join(SHARED_CRM_STORE_DIR, 'crm_shared_store.json');
@@ -36,6 +53,7 @@ function loadSharedCrmStore(): SharedCrmStoreData {
           deletedIds:
             parsed.deletedIds && typeof parsed.deletedIds === 'object' ? parsed.deletedIds : {},
           updatedAt: parsed.updatedAt || new Date().toISOString(),
+          resetAt: parsed.resetAt ? String(parsed.resetAt) : undefined,
         };
         return sharedCrmStoreCache;
       }
@@ -62,6 +80,23 @@ function persistSharedCrmStore(store: SharedCrmStoreData): void {
   } catch {
     // Non-fatal if filesystem is read-only
   }
+}
+
+function truncateSharedCrmStoreOperationalTables(): SharedCrmStoreData {
+  const store = loadSharedCrmStore();
+  const nowIso = new Date().toISOString();
+  store.resetAt = nowIso;
+  for (const tbl of CRM_OPERATIONAL_TABLES) {
+    store.tables[tbl] = [];
+    store.deletedIds[tbl] = [];
+  }
+  if (Array.isArray(store.tables.media_assets)) {
+    store.tables.media_assets = store.tables.media_assets.filter(
+      (m) => m && m.original_filename !== '__quotations_registry_json__'
+    );
+  }
+  persistSharedCrmStore(store);
+  return store;
 }
 
 function upsertRowInSharedStore(table: string, row: Record<string, any>): Record<string, any> {
@@ -102,10 +137,31 @@ function deleteRowInSharedStore(table: string, id: string): void {
 
 function mergeIncomingTablesIntoSharedStore(
   incomingTables?: Record<string, Record<string, any>[]>,
-  incomingDeletedIds?: Record<string, string[]>
+  incomingDeletedIds?: Record<string, string[]>,
+  incomingResetAt?: string
 ): SharedCrmStoreData {
   const store = loadSharedCrmStore();
   let modified = false;
+
+  if (incomingResetAt) {
+    const incResetMs = new Date(incomingResetAt).getTime();
+    const curResetMs = store.resetAt ? new Date(store.resetAt).getTime() : 0;
+    if (!Number.isNaN(incResetMs) && incResetMs > curResetMs) {
+      store.resetAt = incomingResetAt;
+      for (const tbl of CRM_OPERATIONAL_TABLES) {
+        store.tables[tbl] = [];
+        store.deletedIds[tbl] = [];
+      }
+      if (Array.isArray(store.tables.media_assets)) {
+        store.tables.media_assets = store.tables.media_assets.filter(
+          (m) => m && m.original_filename !== '__quotations_registry_json__'
+        );
+      }
+      modified = true;
+    }
+  }
+
+  const storeResetMs = store.resetAt ? new Date(store.resetAt).getTime() : 0;
 
   if (incomingDeletedIds && typeof incomingDeletedIds === 'object') {
     for (const [table, ids] of Object.entries(incomingDeletedIds)) {
@@ -152,6 +208,17 @@ function mergeIncomingTablesIntoSharedStore(
         ) {
           continue;
         }
+
+        // Ignore stale rows from browsers that were created/updated prior to the last CRM database reset
+        if (storeResetMs > 0 && CRM_OPERATIONAL_TABLES.has(table)) {
+          const rowTime = new Date(
+            inc.updated_at || inc.updatedAt || inc.created_at || inc.createdAt || 0
+          ).getTime();
+          if (!Number.isNaN(rowTime) && rowTime < storeResetMs) {
+            continue;
+          }
+        }
+
         const existing = byId.get(incId);
         if (!existing) {
           byId.set(incId, inc);
@@ -1275,10 +1342,23 @@ async function startServer() {
   app.post('/api/crm/sync', (req: Request, res: Response) => {
     try {
       const body = req.body || {};
-      const store = mergeIncomingTablesIntoSharedStore(body.tables, body.deletedIds);
+      const store = mergeIncomingTablesIntoSharedStore(
+        body.tables,
+        body.deletedIds,
+        body.resetAt
+      );
       res.json(store);
     } catch {
       res.json(loadSharedCrmStore());
+    }
+  });
+
+  app.post('/api/crm/truncate', (_req: Request, res: Response) => {
+    try {
+      const store = truncateSharedCrmStoreOperationalTables();
+      res.json({ ok: true, ...store });
+    } catch {
+      res.status(200).json({ ok: false });
     }
   });
 

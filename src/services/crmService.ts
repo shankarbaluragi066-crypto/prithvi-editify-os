@@ -112,6 +112,7 @@ export function isRlsOrPermissionError(error: unknown): boolean {
 
 const LOCAL_CRM_TABLE_PREFIX = 'pe_crm_table_rows_v1_';
 const LOCAL_CRM_DELETED_PREFIX = 'pe_crm_table_deleted_v1_';
+export const LOCAL_CRM_RESET_AT_KEY = 'pe_crm_reset_at_v1';
 
 const SHARED_SYNC_TABLES = [
   'inquiries',
@@ -133,6 +134,62 @@ const SHARED_SYNC_TABLES = [
   'quotations',
   'media_assets',
 ] as const;
+
+const CRM_OPERATIONAL_TABLES = new Set<string>([
+  'inquiries',
+  'clients',
+  'projects',
+  'project_internal_notes',
+  'tasks',
+  'files',
+  'invoices',
+  'invoice_line_items',
+  'payments',
+  'project_messages',
+  'notifications',
+  'activity_logs',
+  'quotations',
+]);
+
+function getLocalResetAtMs(): number {
+  if (typeof window === 'undefined') return 0;
+  try {
+    const raw = window.localStorage.getItem(LOCAL_CRM_RESET_AT_KEY);
+    if (!raw) return 0;
+    const ms = new Date(raw).getTime();
+    return Number.isNaN(ms) ? 0 : ms;
+  } catch {
+    return 0;
+  }
+}
+
+function wipeLocalOperationalCrmStorage(newResetAtIso: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(LOCAL_CRM_RESET_AT_KEY, newResetAtIso);
+    for (const tbl of CRM_OPERATIONAL_TABLES) {
+      window.localStorage.removeItem(`${LOCAL_CRM_TABLE_PREFIX}${tbl}`);
+      window.localStorage.removeItem(`${LOCAL_CRM_DELETED_PREFIX}${tbl}`);
+    }
+    const extraOperationalKeys = [
+      'pe_local_inquiries_backup_v1',
+      'pe_crm_quotations_v1',
+      'pe_admin_quotations_v1',
+      'pe_crm_client_payment_proofs_v1',
+      'pe_crm_proofing_pins_v1',
+      'pe_crm_unlocked_projects_v1',
+      'pe_crm_retainer_plans_v1',
+      'pe_crm_project_testimonials_v1',
+      'pe_milestone_signoffs_v1',
+      'pe_invoice_gst_meta_v1',
+    ];
+    for (const k of extraOperationalKeys) {
+      window.localStorage.removeItem(k);
+    }
+  } catch {
+    // Ignore storage error
+  }
+}
 
 function readLocalTableRows(table: string): Record<string, any>[] {
   if (typeof window === 'undefined') return [];
@@ -225,6 +282,7 @@ let lastLoadedCloudSnapshotName = '';
 function buildCurrentLocalSyncPayload(): {
   tables: Record<string, Record<string, any>[]>;
   deletedIds: Record<string, string[]>;
+  resetAt?: string;
 } {
   const payloadTables: Record<string, Record<string, any>[]> = {};
   const payloadDeleted: Record<string, string[]> = {};
@@ -233,8 +291,19 @@ function buildCurrentLocalSyncPayload(): {
     return { tables: payloadTables, deletedIds: payloadDeleted };
   }
 
+  const resetAtIso = window.localStorage.getItem(LOCAL_CRM_RESET_AT_KEY) || undefined;
+  const resetAtMs = getLocalResetAtMs();
+
   for (const tbl of SHARED_SYNC_TABLES) {
-    const rows = readLocalTableRows(tbl);
+    let rows = readLocalTableRows(tbl);
+    if (resetAtMs > 0 && CRM_OPERATIONAL_TABLES.has(tbl)) {
+      rows = rows.filter((r) => {
+        const t = new Date(
+          r?.updated_at || r?.updatedAt || r?.created_at || r?.createdAt || 0
+        ).getTime();
+        return !Number.isNaN(t) && t >= resetAtMs;
+      });
+    }
     if (rows.length > 0) {
       payloadTables[tbl] = rows;
     }
@@ -251,12 +320,22 @@ function buildCurrentLocalSyncPayload(): {
       const parsedBackup = JSON.parse(rawBackup);
       if (Array.isArray(parsedBackup) && parsedBackup.length > 0) {
         const convertedRows = parsedBackup
-          .filter(
-            (item: any) =>
-              item &&
-              item.id &&
-              String(item.email || '').toLowerCase() !== 'sync-check@example.com'
-          )
+          .filter((item: any) => {
+            if (
+              !item ||
+              !item.id ||
+              String(item.email || '').toLowerCase() === 'sync-check@example.com'
+            ) {
+              return false;
+            }
+            if (resetAtMs > 0) {
+              const t = new Date(
+                item.updatedAt || item.updated_at || item.createdAt || item.created_at || 0
+              ).getTime();
+              if (Number.isNaN(t) || t < resetAtMs) return false;
+            }
+            return true;
+          })
           .map((item: any) => ({
             id: item.id,
             full_name: item.fullName || item.full_name || 'Client Inquiry',
@@ -275,12 +354,14 @@ function buildCurrentLocalSyncPayload(): {
             created_at: item.createdAt || item.created_at || new Date().toISOString(),
             updated_at: item.updatedAt || item.updated_at || new Date().toISOString(),
           }));
-        const existingInq = payloadTables.inquiries || [];
-        const byId = new Map<string, Record<string, any>>();
-        for (const r of [...convertedRows, ...existingInq]) {
-          if (r && r.id) byId.set(String(r.id), r);
+        if (convertedRows.length > 0) {
+          const existingInq = payloadTables.inquiries || [];
+          const byId = new Map<string, Record<string, any>>();
+          for (const r of [...convertedRows, ...existingInq]) {
+            if (r && r.id) byId.set(String(r.id), r);
+          }
+          payloadTables.inquiries = Array.from(byId.values());
         }
-        payloadTables.inquiries = Array.from(byId.values());
       }
     }
   } catch {
@@ -293,26 +374,49 @@ function buildCurrentLocalSyncPayload(): {
     if (rawQuotes) {
       const parsedQuotes = JSON.parse(rawQuotes);
       if (Array.isArray(parsedQuotes) && parsedQuotes.length > 0) {
-        const existingQuotes = payloadTables.quotations || [];
-        const byId = new Map<string, Record<string, any>>();
-        for (const q of [...existingQuotes, ...parsedQuotes]) {
-          if (q && q.id) byId.set(String(q.id), q);
+        const validQuotes = parsedQuotes.filter((q: any) => {
+          if (!q || !q.id) return false;
+          if (resetAtMs > 0) {
+            const t = new Date(
+              q.updatedAt || q.updated_at || q.createdAt || q.created_at || 0
+            ).getTime();
+            if (Number.isNaN(t) || t < resetAtMs) return false;
+          }
+          return true;
+        });
+        if (validQuotes.length > 0) {
+          const existingQuotes = payloadTables.quotations || [];
+          const byId = new Map<string, Record<string, any>>();
+          for (const q of [...existingQuotes, ...validQuotes]) {
+            if (q && q.id) byId.set(String(q.id), q);
+          }
+          payloadTables.quotations = Array.from(byId.values());
         }
-        payloadTables.quotations = Array.from(byId.values());
       }
     }
   } catch {
     // Ignore quotation parse error
   }
 
-  return { tables: payloadTables, deletedIds: payloadDeleted };
+  return { tables: payloadTables, deletedIds: payloadDeleted, resetAt: resetAtIso };
 }
 
 function applyIncomingSyncPayload(data: {
   tables?: Record<string, Record<string, any>[]>;
   deletedIds?: Record<string, string[]>;
+  resetAt?: string;
 } | null): void {
   if (typeof window === 'undefined' || !data) return;
+
+  if (data.resetAt) {
+    const incResetMs = new Date(data.resetAt).getTime();
+    const curResetMs = getLocalResetAtMs();
+    if (!Number.isNaN(incResetMs) && incResetMs > curResetMs) {
+      wipeLocalOperationalCrmStorage(data.resetAt);
+    }
+  }
+
+  const effectiveResetMs = getLocalResetAtMs();
 
   if (data.deletedIds && typeof data.deletedIds === 'object') {
     for (const [tbl, delArr] of Object.entries(data.deletedIds)) {
@@ -351,6 +455,12 @@ function applyIncomingSyncPayload(data: {
         ) {
           continue;
         }
+        if (effectiveResetMs > 0 && CRM_OPERATIONAL_TABLES.has(tbl)) {
+          const locTime = new Date(
+            loc.updated_at || loc.updatedAt || loc.created_at || loc.createdAt || 0
+          ).getTime();
+          if (Number.isNaN(locTime) || locTime < effectiveResetMs) continue;
+        }
         byId.set(id, loc);
       }
 
@@ -363,6 +473,12 @@ function applyIncomingSyncPayload(data: {
           String(inc.email || '').trim().toLowerCase() === 'sync-check@example.com'
         ) {
           continue;
+        }
+        if (effectiveResetMs > 0 && CRM_OPERATIONAL_TABLES.has(tbl)) {
+          const incTime = new Date(
+            inc.updated_at || inc.updatedAt || inc.created_at || inc.createdAt || 0
+          ).getTime();
+          if (Number.isNaN(incTime) || incTime < effectiveResetMs) continue;
         }
         const prev = byId.get(id);
         if (!prev) {
@@ -381,7 +497,7 @@ function applyIncomingSyncPayload(data: {
       const mergedList = Array.from(byId.values());
       writeLocalTableRows(tbl, mergedList);
 
-      if (tbl === 'quotations' && mergedList.length > 0) {
+      if (tbl === 'quotations') {
         try {
           window.localStorage.setItem('pe_admin_quotations_v1', JSON.stringify(mergedList));
         } catch {
@@ -397,12 +513,15 @@ export async function uploadCloudCrmSnapshotNow(): Promise<void> {
   try {
     const payload = buildCurrentLocalSyncPayload();
     const hasData =
-      Object.keys(payload.tables).length > 0 || Object.keys(payload.deletedIds).length > 0;
+      Boolean(payload.resetAt) ||
+      Object.keys(payload.tables).length > 0 ||
+      Object.keys(payload.deletedIds).length > 0;
     if (!hasData) return;
 
     const snapshotName = `state_${Date.now()}_${Math.random().toString(36).slice(2, 7)}.json`;
     const serialized = JSON.stringify({
       updatedAt: new Date().toISOString(),
+      resetAt: payload.resetAt,
       tables: payload.tables,
       deletedIds: payload.deletedIds,
     });
@@ -577,7 +696,20 @@ function mergeRemoteAndLocalRows<T = Record<string, any>>(
   mapper?: (row: Record<string, any>, idx: number) => T
 ): T[] | Record<string, any>[] {
   const deletedIds = readLocalDeletedIds(table);
-  const localRows = readLocalTableRows(table).filter((r) => !deletedIds.has(String(r.id)));
+  const resetAtMs = getLocalResetAtMs();
+  const isOperational = CRM_OPERATIONAL_TABLES.has(table);
+
+  const isRowAfterReset = (row: Record<string, any>): boolean => {
+    if (!isOperational || resetAtMs <= 0) return true;
+    const t = new Date(
+      row?.updated_at || row?.updatedAt || row?.created_at || row?.createdAt || 0
+    ).getTime();
+    return !Number.isNaN(t) && t >= resetAtMs;
+  };
+
+  const localRows = readLocalTableRows(table).filter(
+    (r) => r && !deletedIds.has(String(r.id)) && isRowAfterReset(r)
+  );
   const localById = new Map<string, Record<string, any>>();
   for (const l of localRows) {
     if (l && l.id) {
@@ -591,7 +723,7 @@ function mergeRemoteAndLocalRows<T = Record<string, any>>(
 
   for (const rem of remoteRows || []) {
     const remId = String(rem.id || '');
-    if (!remId || deletedIds.has(remId)) continue;
+    if (!remId || deletedIds.has(remId) || !isRowAfterReset(rem)) continue;
     if (
       table === 'inquiries' &&
       String(rem.email || '').trim().toLowerCase() === 'sync-check@example.com'
@@ -1324,49 +1456,85 @@ function mapMessageRow(row: Record<string, any>): ProjectMessage {
 // ============================================================================
 // ACTIVITY AUDIT LOGGING
 // ============================================================================
-export async function logAdminActivity(
-  action: string,
-  entityType: string,
-  entityId: string,
-  details: string
-): Promise<void> {
-  const user = await getCurrentUser();
-  if (!user) return;
-  try {
-    await supabase.from('activity_logs').insert({
-      actor_uid: toNullableUuid(user.id),
-      actor_email: truncate(user.email || '', 254),
-      action: truncate(action, 160),
-      entity_type: truncate(entityType, 60),
-      entity_id: truncate(entityId, 128),
-      details: truncate(details, 1000),
-    });
-  } catch {
-    // Non-fatal audit log
-  }
-}
-
-export async function fetchActivityLogs(): Promise<ActivityLog[]> {
-  if (!isSupabaseConfigured) return [];
-  const { data, error } = await supabase
-    .from('activity_logs')
-    .select('*')
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    if (isMissingSchemaError(error)) return [];
-    handleSupabaseError(error, 'fetchActivityLogs');
-  }
-  return (data || []).map((row) => ({
-    id: String(row.id),
+function mapActivityLogRow(row: Record<string, any>): ActivityLog {
+  return {
+    id: String(row.id || crypto.randomUUID()),
     actorUid: String(row.actor_uid || ''),
     actorEmail: String(row.actor_email || ''),
     action: String(row.action || ''),
     entityType: String(row.entity_type || ''),
     entityId: String(row.entity_id || ''),
     details: String(row.details || ''),
-    createdAt: row.created_at,
-  }));
+    createdAt: row.created_at || new Date().toISOString(),
+  };
+}
+
+export async function logAdminActivity(
+  action: string,
+  entityType: string,
+  entityId: string,
+  details: string,
+  actorEmailOverride?: string
+): Promise<void> {
+  const user = await getCurrentUser().catch(() => null);
+  const actorEmail = truncate(
+    actorEmailOverride || user?.email || 'studio@prithvieditify.com',
+    254
+  );
+  const nowIso = new Date().toISOString();
+  const logId = crypto.randomUUID();
+
+  const rowPayload = {
+    id: logId,
+    actor_uid: toNullableUuid(user?.id),
+    actor_email: actorEmail,
+    action: truncate(action, 160),
+    entity_type: truncate(entityType, 60),
+    entity_id: truncate(entityId, 128),
+    details: truncate(details, 1000),
+    created_at: nowIso,
+    updated_at: nowIso,
+  };
+
+  upsertLocalTableRow('activity_logs', rowPayload);
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('pe-crm-activity-logged', { detail: rowPayload }));
+  }
+
+  if (!isSupabaseConfigured) return;
+  try {
+    await supabase.from('activity_logs').insert({
+      id: logId,
+      actor_uid: rowPayload.actor_uid,
+      actor_email: rowPayload.actor_email,
+      action: rowPayload.action,
+      entity_type: rowPayload.entity_type,
+      entity_id: rowPayload.entity_id,
+      details: rowPayload.details,
+    });
+  } catch {
+    // Non-fatal audit log — already persisted in shared CRM store
+  }
+}
+
+export async function fetchActivityLogs(): Promise<ActivityLog[]> {
+  await syncSharedCrmStoreWithServer();
+  if (!isSupabaseConfigured) {
+    return mergeRemoteAndLocalRows('activity_logs', [], mapActivityLogRow);
+  }
+  const { data, error } = await supabase
+    .from('activity_logs')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    if (isMissingSchemaError(error) || isRlsOrPermissionError(error)) {
+      return mergeRemoteAndLocalRows('activity_logs', [], mapActivityLogRow);
+    }
+    handleSupabaseError(error, 'fetchActivityLogs');
+  }
+  return mergeRemoteAndLocalRows('activity_logs', data || [], mapActivityLogRow);
 }
 
 // ============================================================================
@@ -2538,6 +2706,14 @@ export async function submitInquiryRecord(input: {
     // Non-blocking project sync
   }
 
+  await logAdminActivity(
+    'New Service Inquiry Booked',
+    'inquiry',
+    referenceId,
+    `${localRecord.fullName} — ${localRecord.serviceRequired} (${localRecord.budgetRange})`,
+    localRecord.email
+  ).catch(() => {});
+
   // Immediately push the newly booked order, client, and project to the cloud CRM sync bucket
   await uploadCloudCrmSnapshotNow().catch(() => {});
 
@@ -2547,13 +2723,22 @@ export async function submitInquiryRecord(input: {
 export async function fetchAllInquiriesAdmin(): Promise<InquiryRecord[]> {
   await syncSharedCrmStoreWithServer();
   const deletedIds = readLocalDeletedIds('inquiries');
-  const localBackup = readLocalInquiriesBackup().filter(
-    (item) =>
-      item &&
-      item.id &&
-      !deletedIds.has(item.id) &&
-      String(item.email || '').trim().toLowerCase() !== 'sync-check@example.com'
-  );
+  const resetAtMs = getLocalResetAtMs();
+  const localBackup = readLocalInquiriesBackup().filter((item) => {
+    if (
+      !item ||
+      !item.id ||
+      deletedIds.has(item.id) ||
+      String(item.email || '').trim().toLowerCase() !== 'sync-check@example.com' === false
+    ) {
+      return false;
+    }
+    if (resetAtMs > 0) {
+      const t = new Date(item.updatedAt || item.createdAt || 0).getTime();
+      if (Number.isNaN(t) || t < resetAtMs) return false;
+    }
+    return true;
+  });
 
   let remoteRows: Record<string, any>[] = [];
   if (isSupabaseConfigured) {
@@ -5105,3 +5290,200 @@ export async function seedInitialStudioCatalog(): Promise<{
 
   return { servicesSeeded, portfolioSeeded };
 }
+
+// ============================================================================
+// ADMIN DATABASE CLEANUP UTILITY (TRUNCATE CRM TABLES WHILE KEEPING SYSTEM TABLES)
+// ============================================================================
+export interface CrmDatabaseTableCounts {
+  clients: number;
+  projects: number;
+  inquiries: number;
+  quotations: number;
+  invoices: number;
+  payments: number;
+  tasks: number;
+  files: number;
+  totalCrmRecords: number;
+  servicesPreserved: number;
+  portfolioPreserved: number;
+  lastResetAt: string | null;
+}
+
+export async function fetchCrmDatabaseCountsAdmin(): Promise<CrmDatabaseTableCounts> {
+  const [
+    clients,
+    projects,
+    inquiries,
+    invoices,
+    payments,
+    tasks,
+    files,
+    services,
+    portfolio,
+  ] = await Promise.all([
+    fetchAllClientsAdmin().catch(() => []),
+    fetchAllProjectsAdmin().catch(() => []),
+    fetchAllInquiriesAdmin().catch(() => []),
+    fetchAllInvoicesAdmin().catch(() => []),
+    fetchAllPaymentsAdmin().catch(() => []),
+    fetchAllTasksAdmin().catch(() => []),
+    fetchAllFilesAdmin().catch(() => []),
+    fetchAllServicesAdmin().catch(() => []),
+    fetchAllPortfolioAdmin().catch(() => []),
+  ]);
+
+  let quotationsCount = 0;
+  if (typeof window !== 'undefined') {
+    try {
+      const rawQ =
+        window.localStorage.getItem('pe_crm_table_rows_v1_quotations') ||
+        window.localStorage.getItem('pe_admin_quotations_v1') ||
+        window.localStorage.getItem('pe_crm_quotations_v1');
+      if (rawQ) {
+        const parsed = JSON.parse(rawQ);
+        if (Array.isArray(parsed)) quotationsCount = parsed.length;
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  const totalCrmRecords =
+    clients.length +
+    projects.length +
+    inquiries.length +
+    quotationsCount +
+    invoices.length +
+    payments.length +
+    tasks.length +
+    files.length;
+
+  const lastResetAt =
+    typeof window !== 'undefined'
+      ? window.localStorage.getItem(LOCAL_CRM_RESET_AT_KEY)
+      : null;
+
+  return {
+    clients: clients.length,
+    projects: projects.length,
+    inquiries: inquiries.length,
+    quotations: quotationsCount,
+    invoices: invoices.length,
+    payments: payments.length,
+    tasks: tasks.length,
+    files: files.length,
+    totalCrmRecords,
+    servicesPreserved: services.length,
+    portfolioPreserved: portfolio.length,
+    lastResetAt,
+  };
+}
+
+export async function truncateAllCrmDataAdmin(): Promise<{
+  resetAt: string;
+  tablesTruncated: string[];
+  systemTablesPreserved: string[];
+}> {
+  const nowIso = new Date().toISOString();
+
+  // 1. Wipe all local browser CRM operational tables and set resetAt epoch
+  wipeLocalOperationalCrmStorage(nowIso);
+
+  // 2. Truncate on Express backend shared store (/api/crm/truncate)
+  if (typeof window !== 'undefined') {
+    try {
+      await fetch('/api/crm/truncate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+    } catch {
+      // Non-blocking if running on static host
+    }
+  }
+
+  // 3. Truncate operational tables in Supabase PostgreSQL & clean cloud sync snapshots
+  if (isSupabaseConfigured) {
+    // Delete rows in FK-safe child-to-parent order
+    const remoteTablesToTruncate = [
+      'payments',
+      'invoice_line_items',
+      'invoices',
+      'project_messages',
+      'project_internal_notes',
+      'tasks',
+      'files',
+      'projects',
+      'clients',
+      'inquiries',
+      'notifications',
+      'activity_logs',
+    ];
+
+    for (const tbl of remoteTablesToTruncate) {
+      try {
+        await supabase
+          .from(tbl)
+          .delete()
+          .neq('id', '00000000-0000-0000-0000-000000000000');
+      } catch {
+        // Ignore if table has RLS restriction; resetAt epoch guarantees older rows are ignored
+      }
+    }
+
+    // Delete quotations registry rows in media_assets while keeping __site_customization_json__ and portfolio assets
+    try {
+      await supabase
+        .from('media_assets')
+        .delete()
+        .eq('original_filename', '__quotations_registry_json__');
+    } catch {
+      // Ignore
+    }
+
+    // Remove previous cloud sync snapshots and upload a clean reset epoch snapshot
+    try {
+      const { data: existingSnapshots } = await supabase.storage
+        .from(CLOUD_SYNC_BUCKET)
+        .list(CLOUD_SYNC_FOLDER, { limit: 100 });
+      if (Array.isArray(existingSnapshots) && existingSnapshots.length > 0) {
+        const pathsToRemove = existingSnapshots
+          .filter((f) => f && f.name && f.name.endsWith('.json'))
+          .map((f) => `${CLOUD_SYNC_FOLDER}/${f.name}`);
+        if (pathsToRemove.length > 0) {
+          await supabase.storage.from(CLOUD_SYNC_BUCKET).remove(pathsToRemove);
+        }
+      }
+    } catch {
+      // Ignore storage cleanup error
+    }
+
+    await uploadCloudCrmSnapshotNow().catch(() => {});
+  }
+
+  return {
+    resetAt: nowIso,
+    tablesTruncated: [
+      'clients',
+      'projects',
+      'inquiries',
+      'quotations',
+      'invoices',
+      'invoice_line_items',
+      'payments',
+      'tasks',
+      'files',
+      'project_messages',
+      'project_internal_notes',
+      'notifications',
+      'activity_logs',
+    ],
+    systemTablesPreserved: [
+      'services',
+      'portfolio',
+      'public_settings',
+      'private_settings',
+      'profiles',
+    ],
+  };
+}
+

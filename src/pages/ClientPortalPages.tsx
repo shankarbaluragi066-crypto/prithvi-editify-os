@@ -21,6 +21,8 @@ import {
   fetchClientVisibleTasks,
   fetchClientFiles,
   fetchClientInvoices,
+  fetchInvoiceLineItems,
+  fetchClientPayments,
   fetchProjectMessages,
   postProjectMessage,
   clientRequestRevisionOrApprove,
@@ -35,9 +37,12 @@ import {
   TaskRecord,
   DeliverableFile,
   InvoiceRecord,
+  InvoiceLineItem,
+  PaymentRecord,
   ProjectMessage,
   QuotationRecord,
 } from '../types/crm';
+import { DEFAULT_STUDIO_LOGO_URL } from '../utils/seedData';
 import {
   fetchClientQuotations,
   clientRespondToQuotation,
@@ -62,6 +67,7 @@ import {
   UpiQrCodeCard,
   CrmStatusBadge,
   ProjectLifecycleStepper,
+  BrandedStudioInvoiceDocument,
 } from '../components/StudioEnhancements';
 import { formatINR, formatDate, formatFileSize } from '../utils/formatters';
 import { useAuth } from '../contexts/AuthContext';
@@ -1248,8 +1254,10 @@ export const ClientInvoicesPage: React.FC = () => {
   const { showToast } = useToast();
   const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
   const [quotations, setQuotations] = useState<QuotationRecord[]>([]);
+  const [clientPayments, setClientPayments] = useState<PaymentRecord[]>([]);
   const [paymentProofs, setPaymentProofs] = useState<ClientPaymentProofSubmission[]>([]);
   const [selected, setSelected] = useState<InvoiceRecord | null>(null);
+  const [selectedLineItems, setSelectedLineItems] = useState<InvoiceLineItem[]>([]);
   const [selectedQuote, setSelectedQuote] = useState<QuotationRecord | null>(null);
   const [proofModalInvoice, setProofModalInvoice] = useState<InvoiceRecord | null>(null);
   const [proofForm, setProofForm] = useState({
@@ -1263,18 +1271,30 @@ export const ClientInvoicesPage: React.FC = () => {
   const loadClientBilling = useCallback(async () => {
     if (!user) return;
     const clientEmail = profile?.email || user.email || undefined;
-    const [invList, quoteList] = await Promise.all([
+    const [invList, quoteList, payList] = await Promise.all([
       fetchClientInvoices(user.uid, clientEmail).catch(() => []),
       fetchClientQuotations(user.uid, clientEmail).catch(() => []),
+      fetchClientPayments(user.uid, clientEmail).catch(() => []),
     ]);
     setInvoices(invList);
     setQuotations(quoteList);
+    setClientPayments(payList);
     setPaymentProofs(getClientPaymentProofs(user.uid));
   }, [user, profile?.email]);
 
   useEffect(() => {
     loadClientBilling();
   }, [loadClientBilling]);
+
+  useEffect(() => {
+    if (!selected) {
+      setSelectedLineItems([]);
+      return;
+    }
+    fetchInvoiceLineItems(selected.id)
+      .then(setSelectedLineItems)
+      .catch(() => setSelectedLineItems([]));
+  }, [selected]);
 
   const handleDecisionOnQuote = async (
     q: QuotationRecord,
@@ -1341,18 +1361,31 @@ export const ClientInvoicesPage: React.FC = () => {
         </p>
       </div>
 
-      {/* Selected Quotation Printable Preview */}
+      {/* Selected Quotation Printable Preview (With Official Prithvi Editify Logo) */}
       {selectedQuote && (
-        <div className="bg-[#0D1F38] border border-[#10B981] rounded-lg p-8 space-y-5">
-          <div className="flex justify-between border-b border-[#1E3A5F] pb-4">
-            <div>
-              <p className="text-[11px] font-semibold text-[#10B981]">PROJECT QUOTATION · SAC 9983</p>
-              <h2 className="font-editorial text-xl font-semibold text-[#F8FAFC]">
-                {selectedQuote.projectTitle}
-              </h2>
-              <p className="text-xs text-[#94A3B8]">
-                Prepared for {selectedQuote.clientName} · Timeline: {selectedQuote.estimatedTimeline}
-              </p>
+        <div className="bg-[#081528] border-2 border-[#10B981] rounded-2xl p-6 sm:p-8 space-y-5 shadow-xl">
+          <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[#1E3A5F] pb-5">
+            <div className="flex items-start gap-4">
+              <div className="w-14 h-14 rounded-xl bg-white p-1.5 border border-[#10B981]/50 shadow-md shrink-0 flex items-center justify-center">
+                <img
+                  src={DEFAULT_STUDIO_LOGO_URL}
+                  alt="Prithvi Editify Official Logo"
+                  className="w-full h-full object-contain"
+                />
+              </div>
+              <div>
+                <p className="text-[11px] font-mono uppercase tracking-wider font-semibold text-[#10B981]">
+                  OFFICIAL STUDIO QUOTATION · SAC 9983
+                </p>
+                <h2 className="font-editorial text-xl sm:text-2xl font-bold text-[#F8FAFC]">
+                  {selectedQuote.projectTitle}
+                </h2>
+                <p className="text-xs text-[#94A3B8]">
+                  Prepared by <strong>Prithvi Editify (Shankar Baluragi)</strong> for{' '}
+                  <strong className="text-[#F8FAFC]">{selectedQuote.clientName}</strong> · Timeline:{' '}
+                  {selectedQuote.estimatedTimeline}
+                </p>
+              </div>
             </div>
             <div className="text-right font-mono text-xs">
               <p className="text-base font-semibold">{selectedQuote.quotationNumber}</p>
@@ -1502,57 +1535,15 @@ export const ClientInvoicesPage: React.FC = () => {
       )}
 
       {selected && (
-        <div className="bg-[#0D1F38] border border-[#10B981] rounded-lg p-8 space-y-5">
-          <div className="flex justify-between border-b border-[#1E3A5F] pb-4">
-            <div>
-              <p className="text-[11px] font-semibold text-[#10B981]">OFFICIAL TAX / STUDIO INVOICE · SAC 9983</p>
-              <h2 className="font-editorial text-xl font-semibold">Prithvi Editify Invoice</h2>
-              <p className="text-xs text-[#94A3B8]">{selected.projectTitle}</p>
-            </div>
-            <div className="text-right font-mono text-xs">
-              <p className="text-base font-semibold">{selected.invoiceNumber}</p>
-              <p>Due: {selected.dueDate}</p>
-              <p className="font-sans font-semibold mt-0.5">Status: {selected.status}</p>
-            </div>
-          </div>
-          <p className="text-xs text-[#F8FAFC]">{selected.itemsSummary}</p>
-          <div className="flex flex-wrap justify-between gap-4 text-sm font-mono font-semibold pt-3 border-t border-[#1E3A5F]">
-            <span>Subtotal: {formatINR(selected.subtotal)}</span>
-            {selected.taxRate > 0 && (
-              <span>GST/Tax ({selected.taxRate}%): {formatINR(selected.taxAmount)}</span>
-            )}
-            <span>Total: {formatINR(selected.total)}</span>
-            <span className={selected.balanceDue > 0 ? 'text-[#DC2626]' : 'text-[#16A34A]'}>
-              Balance Due: {formatINR(selected.balanceDue)}
-            </span>
-          </div>
-
-          {/* Dynamic Scannable UPI QR Code with Exact Balance Due + 1-Click UTR Submission */}
-          <UpiQrCodeCard
-            amount={selected.balanceDue}
-            referenceNumber={selected.invoiceNumber}
-            onSubmitUtrClick={
-              selected.balanceDue > 0
-                ? () => {
-                    setProofModalInvoice(selected);
-                    setProofForm({
-                      amount: selected.balanceDue,
-                      method: 'UPI',
-                      utrNumber: '',
-                      receiptScreenshotDataUrl: '',
-                      notes: '',
-                    });
-                  }
-                : undefined
-            }
-          />
-
-          <p className="text-xs text-[#94A3B8]">{selected.paymentInstructions}</p>
-          <div className="flex flex-wrap gap-3 no-print">
-            {selected.balanceDue > 0 && (
-              <button
-                type="button"
-                onClick={() => {
+        <BrandedStudioInvoiceDocument
+          invoice={selected}
+          lineItems={selectedLineItems}
+          payments={clientPayments}
+          clientPhone={profile?.phone}
+          clientCompany={profile?.companyName}
+          onSubmitUtrClick={
+            selected.balanceDue > 0
+              ? () => {
                   setProofModalInvoice(selected);
                   setProofForm({
                     amount: selected.balanceDue,
@@ -1561,28 +1552,55 @@ export const ClientInvoicesPage: React.FC = () => {
                     receiptScreenshotDataUrl: '',
                     notes: '',
                   });
-                }}
-                className="px-4 py-2 text-xs font-semibold text-white bg-[#16A34A] hover:bg-[#15803D] rounded-lg"
-              >
-                Submit UTR / Payment Proof
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => window.print()}
-              className="px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg"
-            >
-              Print / Save PDF
-            </button>
-            <button
-              type="button"
-              onClick={() => setSelected(null)}
-              className="px-4 py-2 text-xs font-semibold bg-[#132A4A] rounded-lg"
-            >
-              Close
-            </button>
-          </div>
-        </div>
+                }
+              : undefined
+          }
+          headerActions={
+            <>
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-1 rounded bg-[#10B981]/15 text-[#2DD4BF] text-[11px] font-mono font-semibold">
+                  OFFICIAL STUDIO INVOICE
+                </span>
+                <span className="text-xs font-mono text-[#94A3B8]">{selected.invoiceNumber}</span>
+              </div>
+              <div className="flex flex-wrap items-center gap-2.5">
+                {selected.balanceDue > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProofModalInvoice(selected);
+                      setProofForm({
+                        amount: selected.balanceDue,
+                        method: 'UPI',
+                        utrNumber: '',
+                        receiptScreenshotDataUrl: '',
+                        notes: '',
+                      });
+                    }}
+                    className="px-4 py-2 text-xs font-semibold text-white bg-[#16A34A] hover:bg-[#15803D] rounded-lg"
+                  >
+                    Submit UTR / Payment Proof
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Print / Save PDF</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelected(null)}
+                  className="px-3.5 py-2 text-xs font-semibold text-[#94A3B8] hover:text-white bg-[#132A4A] rounded-lg"
+                >
+                  Close
+                </button>
+              </div>
+            </>
+          }
+        />
       )}
 
       <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg overflow-x-auto no-print">

@@ -666,12 +666,26 @@ async function syncQuotationsRegistryToSupabase(list: QuotationRecord[]): Promis
 export async function fetchAllQuotationsAdmin(): Promise<QuotationRecord[]> {
   await syncSharedCrmStoreWithServer();
 
+  const resetAtRaw =
+    typeof window !== 'undefined' ? window.localStorage.getItem('pe_crm_reset_at_v1') : null;
+  const resetAtMs = resetAtRaw ? new Date(resetAtRaw).getTime() : 0;
+
+  const isAfterReset = (itemTimeStr?: string | null): boolean => {
+    if (!resetAtMs || Number.isNaN(resetAtMs)) return true;
+    if (!itemTimeStr) return false;
+    const t = new Date(itemTimeStr).getTime();
+    return !Number.isNaN(t) && t >= resetAtMs;
+  };
+
   const localList = getLocalQuotations();
   const mergedMap = new Map<string, QuotationRecord>();
 
   for (const item of localList) {
     if (item && item.id) {
       const normalized = normalizeQuotationRecord(item);
+      if (!isAfterReset(normalized.updatedAt || normalized.createdAt || normalized.issueDate)) {
+        continue;
+      }
       mergedMap.set(normalized.id, normalized);
     }
   }
@@ -686,6 +700,13 @@ export async function fetchAllQuotationsAdmin(): Promise<QuotationRecord[]> {
           for (const rawItem of parsedSynced) {
             if (rawItem && typeof rawItem === 'object' && rawItem.id) {
               const syncedItem = normalizeQuotationRecord(rawItem);
+              if (
+                !isAfterReset(
+                  syncedItem.updatedAt || syncedItem.createdAt || syncedItem.issueDate
+                )
+              ) {
+                continue;
+              }
               const existingLocal = mergedMap.get(syncedItem.id);
               if (
                 !existingLocal ||
@@ -715,12 +736,20 @@ export async function fetchAllQuotationsAdmin(): Promise<QuotationRecord[]> {
       if (!error && Array.isArray(rows)) {
         for (const row of rows) {
           if (!row?.description) continue;
+          if (!isAfterReset(row.updated_at)) continue;
           try {
             const parsed = JSON.parse(row.description);
             if (Array.isArray(parsed)) {
               for (const rawItem of parsed) {
                 if (rawItem && typeof rawItem === 'object' && rawItem.id) {
                   const cloudItem = normalizeQuotationRecord(rawItem);
+                  if (
+                    !isAfterReset(
+                      cloudItem.updatedAt || cloudItem.createdAt || row.updated_at
+                    )
+                  ) {
+                    continue;
+                  }
                   const existingLocal = mergedMap.get(cloudItem.id);
                   if (
                     !existingLocal ||

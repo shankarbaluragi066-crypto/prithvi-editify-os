@@ -55,6 +55,9 @@ import {
   fetchUserNotifications,
   markNotificationRead,
   updateUserProfileDetails,
+  fetchCrmDatabaseCountsAdmin,
+  truncateAllCrmDataAdmin,
+  CrmDatabaseTableCounts,
 } from '../services/crmService';
 import {
   DependencySafeDeleteModal,
@@ -65,7 +68,11 @@ import {
 import { MediaLibraryManager } from '../components/MediaLibraryManager';
 import { MediaPreviewModal, PreviewableMediaItem } from '../components/MediaPreviewModal';
 import { MediaSearchFilterState } from '../components/MediaSearchFilterBar';
-import { UpiQrCodeCard, CrmStatusBadge } from '../components/StudioEnhancements';
+import {
+  UpiQrCodeCard,
+  CrmStatusBadge,
+  BrandedStudioInvoiceDocument,
+} from '../components/StudioEnhancements';
 import {
   GstTaxMode,
   computeGstBreakdown,
@@ -2432,229 +2439,81 @@ export const AdminInvoicesPage: React.FC = () => {
         </form>
       )}
 
-      {/* Printable / Inspector Invoice Preview */}
+      {/* Printable / Inspector Invoice Preview (With Official Prithvi Editify Logo) */}
       {printInvoice && (
-        <div className="bg-[#0D1F38] border border-[#10B981] rounded-lg p-8 space-y-6">
-          <div className="flex items-start justify-between border-b border-[#1E3A5F] pb-6">
-            <div>
-              <span className="text-[11px] font-semibold text-[#10B981]">
-                OFFICIAL STUDIO INVOICE · SAC 9983
-              </span>
-              <h2 className="font-editorial text-2xl font-semibold text-[#F8FAFC]">
-                Prithvi Editify
-              </h2>
-              <p className="text-xs text-[#94A3B8]">
-                Shankar Baluragi · Creative Design & Video Studio
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="font-mono text-lg font-semibold text-[#F8FAFC]">
-                {printInvoice.invoiceNumber}
-              </p>
-              <p className="text-xs text-[#94A3B8]">
-                Issued: {printInvoice.issueDate} · Due: {printInvoice.dueDate}
-              </p>
-              <p
-                className={`text-xs font-semibold mt-1 ${
-                  printInvoice.status === 'Paid'
-                    ? 'text-[#16A34A]'
-                    : printInvoice.status === 'Void'
-                    ? 'text-[#DC2626]'
-                    : 'text-[#F8FAFC]'
-                }`}
-              >
-                Status: {printInvoice.status}
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-6 text-xs">
-            <div>
-              <p className="font-semibold text-[#94A3B8]">Billed To:</p>
-              <p className="text-sm font-semibold text-[#F8FAFC] mt-0.5">
-                {printInvoice.clientName}
-              </p>
-              <p className="text-[#94A3B8]">{printInvoice.clientEmail}</p>
-            </div>
-            <div className="text-right">
-              <p className="font-semibold text-[#94A3B8]">Project Scope (SAC 9983):</p>
-              <p className="text-[#F8FAFC] font-medium mt-0.5">{printInvoice.projectTitle}</p>
-            </div>
-          </div>
-
-          {/* Itemized Line Items Table */}
-          {printLineItems.length > 0 ? (
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="border-b border-[#1E3A5F] text-[#94A3B8]">
-                  <th className="py-2">Description</th>
-                  <th className="py-2 text-right">Qty</th>
-                  <th className="py-2 text-right">Unit Price</th>
-                  <th className="py-2 text-right">Amount</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#1E3A5F]">
-                {printLineItems.map((li, i) => (
-                  <tr key={li.id || i}>
-                    <td className="py-2.5 font-medium text-[#F8FAFC]">{li.description}</td>
-                    <td className="py-2.5 text-right font-mono">{li.quantity}</td>
-                    <td className="py-2.5 text-right font-mono">{formatINR(li.unitPrice)}</td>
-                    <td className="py-2.5 text-right font-mono font-semibold">
-                      {formatINR(li.amount)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
-            <div className="p-4 bg-[#132A4A] rounded-lg text-xs">
-              <p className="font-semibold text-[#F8FAFC] mb-1">Line Items Summary:</p>
-              <p className="text-[#94A3B8]">{printInvoice.itemsSummary}</p>
-            </div>
-          )}
-
-          <div className="flex justify-end">
-            <div className="w-72 space-y-1.5 text-xs">
-              <div className="flex justify-between">
-                <span className="text-[#94A3B8]">Subtotal:</span>
-                <span className="font-mono tabular-nums">{formatINR(printInvoice.subtotal)}</span>
+        <BrandedStudioInvoiceDocument
+          invoice={printInvoice}
+          lineItems={printLineItems}
+          payments={payments}
+          clientPhone={clients.find((c) => c.id === printInvoice.clientId)?.phone}
+          clientCompany={clients.find((c) => c.id === printInvoice.clientId)?.companyName}
+          headerActions={
+            <>
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-1 rounded bg-[#10B981]/15 text-[#2DD4BF] text-[11px] font-mono font-semibold">
+                  OFFICIAL BRANDED INVOICE PREVIEW
+                </span>
+                <span className="text-xs text-[#94A3B8] font-mono">
+                  {printInvoice.invoiceNumber}
+                </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-[#94A3B8]">Discount:</span>
-                <span className="font-mono tabular-nums">-{formatINR(printInvoice.discount)}</span>
-              </div>
-              {printInvoice.taxRate === 18 && !printInvoice.notes?.includes('IGST') ? (
-                <>
-                  <div className="flex justify-between">
-                    <span className="text-[#94A3B8]">CGST (9% · SAC 9983):</span>
-                    <span className="font-mono tabular-nums">
-                      {formatINR(Math.round(printInvoice.taxAmount / 2))}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-[#94A3B8]">SGST (9% · SAC 9983):</span>
-                    <span className="font-mono tabular-nums">
-                      {formatINR(printInvoice.taxAmount - Math.round(printInvoice.taxAmount / 2))}
-                    </span>
-                  </div>
-                </>
-              ) : (
-                <div className="flex justify-between">
-                  <span className="text-[#94A3B8]">
-                    {printInvoice.notes?.includes('IGST') ? 'IGST' : 'Tax'} ({printInvoice.taxRate}% · SAC 9983):
-                  </span>
-                  <span className="font-mono tabular-nums">{formatINR(printInvoice.taxAmount)}</span>
-                </div>
-              )}
-              <div className="flex justify-between pt-2 border-t border-[#1E3A5F] font-semibold text-sm">
-                <span>Total (INR):</span>
-                <span className="font-mono tabular-nums">{formatINR(printInvoice.total)}</span>
-              </div>
-              <div className="flex justify-between text-[#16A34A]">
-                <span>Amount Paid:</span>
-                <span className="font-mono tabular-nums">{formatINR(printInvoice.amountPaid)}</span>
-              </div>
-              <div className="flex justify-between font-semibold text-[#DC2626]">
-                <span>Balance Due:</span>
-                <span className="font-mono tabular-nums">{formatINR(printInvoice.balanceDue)}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Payment History for this Invoice */}
-          {(() => {
-            const invPayments = payments.filter((p) => p.invoiceId === printInvoice.id);
-            if (invPayments.length === 0) return null;
-            return (
-              <div className="p-4 bg-[#132A4A] rounded-lg space-y-2 text-xs">
-                <p className="font-semibold text-[#F8FAFC]">
-                  Verified Payment History ({invPayments.length})
-                </p>
-                <div className="divide-y divide-[#1E3A5F]">
-                  {invPayments.map((p) => (
-                    <div key={p.id} className="py-1.5 flex items-center justify-between">
-                      <span>
-                        {p.paymentDate} · {p.method} (UTR: {p.transactionReference || 'N/A'})
-                      </span>
-                      <span className="font-mono font-semibold text-[#16A34A]">
-                        {formatINR(p.amount)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* Scannable UPI QR Code on Printable Invoice */}
-          {printInvoice.status !== 'Void' && printInvoice.balanceDue > 0 && (
-            <UpiQrCodeCard
-              amount={printInvoice.balanceDue}
-              referenceNumber={printInvoice.invoiceNumber}
-            />
-          )}
-
-          <div className="pt-4 border-t border-[#1E3A5F] text-xs text-[#94A3B8]">
-            <p className="font-semibold text-[#F8FAFC]">Payment Instructions & Notes:</p>
-            <p className="mt-1">{printInvoice.paymentInstructions}</p>
-            {printInvoice.notes && <p className="mt-1">{printInvoice.notes}</p>}
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3 no-print">
-            <button
-              type="button"
-              onClick={() => window.print()}
-              className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg"
-            >
-              <Printer className="w-3.5 h-3.5" />
-              <span>Print / Save as PDF</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                const target = printInvoice;
-                setPrintInvoice(null);
-                handleOpenEditInvoice(target);
-              }}
-              className="px-4 py-2 text-xs font-semibold text-[#F8FAFC] bg-[#132A4A] hover:bg-[#1E3A5F] rounded-lg"
-            >
-              Edit Invoice
-            </button>
-            <a
-              href={buildWhatsAppInvoiceReminderLink(
-                printInvoice,
-                'summary',
-                clients.find((c) => c.id === printInvoice.clientId)?.phone
-              )}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg"
-            >
-              WhatsApp Invoice Summary →
-            </a>
-            {printInvoice.balanceDue > 0 && printInvoice.status !== 'Void' && (
-              <a
-                href={buildWhatsAppInvoiceReminderLink(
-                  printInvoice,
-                  'polite_reminder',
-                  clients.find((c) => c.id === printInvoice.clientId)?.phone
+              <div className="flex flex-wrap items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Print / Save as PDF</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const target = printInvoice;
+                    setPrintInvoice(null);
+                    handleOpenEditInvoice(target);
+                  }}
+                  className="px-3.5 py-2 text-xs font-semibold text-[#F8FAFC] bg-[#132A4A] hover:bg-[#1E3A5F] border border-[#1E3A5F] rounded-lg"
+                >
+                  Edit Invoice
+                </button>
+                <a
+                  href={buildWhatsAppInvoiceReminderLink(
+                    printInvoice,
+                    'summary',
+                    clients.find((c) => c.id === printInvoice.clientId)?.phone
+                  )}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3.5 py-2 text-xs font-semibold text-white bg-[#16A34A] hover:bg-[#15803D] rounded-lg"
+                >
+                  WhatsApp Invoice Summary →
+                </a>
+                {printInvoice.balanceDue > 0 && printInvoice.status !== 'Void' && (
+                  <a
+                    href={buildWhatsAppInvoiceReminderLink(
+                      printInvoice,
+                      'polite_reminder',
+                      clients.find((c) => c.id === printInvoice.clientId)?.phone
+                    )}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3.5 py-2 text-xs font-semibold text-[#2DD4BF] bg-[#132A4A] hover:bg-[#1E3A5F] border border-[#10B981]/40 rounded-lg"
+                  >
+                    WhatsApp Polite Reminder →
+                  </a>
                 )}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-4 py-2 text-xs font-semibold text-[#2DD4BF] bg-[#132A4A] hover:bg-[#1E3A5F] border border-[#10B981]/40 rounded-lg"
-              >
-                WhatsApp Polite Payment Reminder →
-              </a>
-            )}
-            <button
-              type="button"
-              onClick={() => setPrintInvoice(null)}
-              className="px-4 py-2 text-xs font-semibold text-[#94A3B8] hover:text-[#F8FAFC]"
-            >
-              Close Preview
-            </button>
-          </div>
-        </div>
+                <button
+                  type="button"
+                  onClick={() => setPrintInvoice(null)}
+                  className="px-3 py-2 text-xs font-semibold text-[#94A3B8] hover:text-[#F8FAFC]"
+                >
+                  Close Preview
+                </button>
+              </div>
+            </>
+          }
+        />
       )}
 
       {/* Search & Status Filter Bar */}
@@ -3606,12 +3465,52 @@ export const AdminSettingsPage: React.FC = () => {
     getEmailDeliveryAuditLogs()
   );
 
+  const [dbCounts, setDbCounts] = useState<CrmDatabaseTableCounts | null>(null);
+  const [loadingCounts, setLoadingCounts] = useState(false);
+  const [showTruncateConfirm, setShowTruncateConfirm] = useState(false);
+  const [truncatingCrm, setTruncatingCrm] = useState(false);
+
+  const loadDbCounts = useCallback(async () => {
+    setLoadingCounts(true);
+    try {
+      const counts = await fetchCrmDatabaseCountsAdmin();
+      setDbCounts(counts);
+    } catch {
+      // ignore
+    } finally {
+      setLoadingCounts(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchPublicSettings().then(setPub).catch(() => {});
     fetchPrivateSettings().then(setPriv).catch(() => {});
     setEmailPrefs(getAdminEmailNotificationSettings());
     setAuditLogs(getEmailDeliveryAuditLogs());
-  }, []);
+    loadDbCounts();
+  }, [loadDbCounts]);
+
+  const handleTruncateAllCrmTables = async () => {
+    setTruncatingCrm(true);
+    try {
+      const result = await truncateAllCrmDataAdmin();
+      await loadDbCounts();
+      setShowTruncateConfirm(false);
+      showToast(
+        'success',
+        'CRM Database Tables Truncated',
+        `Cleared ${result.tablesTruncated.length} operational CRM tables (clients, projects, invoices, payments, inquiries, quotations, tasks & files) while keeping system tables intact.`
+      );
+    } catch (err) {
+      showToast(
+        'error',
+        'Database Cleanup Failed',
+        err instanceof Error ? err.message : 'Unable to truncate CRM tables'
+      );
+    } finally {
+      setTruncatingCrm(false);
+    }
+  };
 
   const privateAdminLoginUrl =
     typeof window !== 'undefined'
@@ -3688,6 +3587,152 @@ export const AdminSettingsPage: React.FC = () => {
         >
           <span>Open A–Z Website Customizer</span>
         </Link>
+      </div>
+
+      {/* ==================================================================== */}
+      {/* ADMIN DATABASE CLEANUP UTILITY (ONE-CLICK CRM TABLE TRUNCATION)      */}
+      {/* ==================================================================== */}
+      <div className="bg-[#0D1F38] border border-[#DC2626]/50 rounded-xl p-6 space-y-5 shadow-[0_4px_20px_rgba(220,38,38,0.12)]">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-[#1E3A5F] pb-4">
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-[#DC2626]/15 border border-[#DC2626]/40 text-[#F87171] text-[10px] font-mono uppercase tracking-wider font-semibold">
+              <AlertTriangle className="w-3.5 h-3.5" />
+              <span>ADMIN DATABASE CLEANUP UTILITY</span>
+            </div>
+            <h2 className="font-editorial text-lg font-semibold text-[#F8FAFC]">
+              One-Click CRM Data Truncation (Clean Studio Restart)
+            </h2>
+            <p className="text-xs text-[#94A3B8] max-w-2xl leading-relaxed">
+              Truncate all operational CRM data tables (<code className="font-mono text-[#F8FAFC]">clients</code>,{' '}
+              <code className="font-mono text-[#F8FAFC]">projects</code>,{' '}
+              <code className="font-mono text-[#F8FAFC]">invoices</code>,{' '}
+              <code className="font-mono text-[#F8FAFC]">payments</code>,{' '}
+              <code className="font-mono text-[#F8FAFC]">inquiries</code>,{' '}
+              <code className="font-mono text-[#F8FAFC]">quotations</code>,{' '}
+              <code className="font-mono text-[#F8FAFC]">tasks</code>, and{' '}
+              <code className="font-mono text-[#F8FAFC]">files</code>) for a clean restart while keeping all system tables (Services Catalog, Portfolio Showcase, Studio Settings, Website Customizer &amp; Admin Profiles) 100% intact.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={loadDbCounts}
+              disabled={loadingCounts || truncatingCrm}
+              className="px-3.5 py-2 text-xs font-semibold text-[#CBD5E1] bg-[#132A4A] hover:bg-[#1E3A5F] border border-[#1E3A5F] rounded-lg transition-colors"
+            >
+              {loadingCounts ? 'Checking...' : 'Refresh Counts'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowTruncateConfirm(true)}
+              disabled={truncatingCrm}
+              className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-[#DC2626] hover:bg-[#B91C1C] rounded-lg transition-colors shadow-xs"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Truncate All CRM Data Tables</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Live Record Count Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
+          <div className="p-3 rounded-lg bg-[#132A4A]/70 border border-[#1E3A5F]">
+            <span className="text-[10px] font-mono uppercase text-[#94A3B8]">Clients</span>
+            <p className="text-lg font-mono font-bold text-[#F8FAFC] mt-0.5">
+              {dbCounts ? dbCounts.clients : '—'}
+            </p>
+          </div>
+          <div className="p-3 rounded-lg bg-[#132A4A]/70 border border-[#1E3A5F]">
+            <span className="text-[10px] font-mono uppercase text-[#94A3B8]">Projects</span>
+            <p className="text-lg font-mono font-bold text-[#F8FAFC] mt-0.5">
+              {dbCounts ? dbCounts.projects : '—'}
+            </p>
+          </div>
+          <div className="p-3 rounded-lg bg-[#132A4A]/70 border border-[#1E3A5F]">
+            <span className="text-[10px] font-mono uppercase text-[#94A3B8]">Inquiries / Leads</span>
+            <p className="text-lg font-mono font-bold text-[#F8FAFC] mt-0.5">
+              {dbCounts ? dbCounts.inquiries : '—'}
+            </p>
+          </div>
+          <div className="p-3 rounded-lg bg-[#132A4A]/70 border border-[#1E3A5F]">
+            <span className="text-[10px] font-mono uppercase text-[#94A3B8]">Invoices</span>
+            <p className="text-lg font-mono font-bold text-[#F8FAFC] mt-0.5">
+              {dbCounts ? dbCounts.invoices : '—'}
+            </p>
+          </div>
+          <div className="p-3 rounded-lg bg-[#132A4A]/70 border border-[#1E3A5F]">
+            <span className="text-[10px] font-mono uppercase text-[#94A3B8]">Payments</span>
+            <p className="text-lg font-mono font-bold text-[#F8FAFC] mt-0.5">
+              {dbCounts ? dbCounts.payments : '—'}
+            </p>
+          </div>
+          <div className="p-3 rounded-lg bg-[#132A4A]/70 border border-[#1E3A5F]">
+            <span className="text-[10px] font-mono uppercase text-[#94A3B8]">Quotes &amp; Tasks</span>
+            <p className="text-lg font-mono font-bold text-[#F8FAFC] mt-0.5">
+              {dbCounts ? dbCounts.quotations + dbCounts.tasks + dbCounts.files : '—'}
+            </p>
+          </div>
+        </div>
+
+        {/* System Tables Preserved Status Bar */}
+        <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-lg bg-[#16A34A]/10 border border-[#16A34A]/30 text-xs">
+          <div className="flex items-center gap-2 text-[#4ADE80]">
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            <span>
+              <strong>System Tables Protected:</strong> Services ({dbCounts?.servicesPreserved ?? 10}), Portfolio ({dbCounts?.portfolioPreserved ?? 12}), Public/Private Settings, and Admin Profiles are never touched by CRM cleanup.
+            </span>
+          </div>
+          {dbCounts?.lastResetAt && (
+            <span className="font-mono text-[11px] text-[#94A3B8]">
+              Last Clean Reset: {new Date(dbCounts.lastResetAt).toLocaleString()}
+            </span>
+          )}
+        </div>
+
+        {/* Confirmation Modal / Inline Drawer for Truncate Action */}
+        {showTruncateConfirm && (
+          <div className="p-5 rounded-xl bg-[#040D1A] border-2 border-[#DC2626] space-y-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-[#F87171] shrink-0 mt-0.5" />
+              <div className="space-y-1 text-xs">
+                <h3 className="text-sm font-bold text-white">
+                  Confirm One-Click CRM Database Truncation?
+                </h3>
+                <p className="text-[#CBD5E1] leading-relaxed">
+                  This will permanently clear all rows in{' '}
+                  <strong className="text-white">
+                    clients, projects, invoices, invoice_line_items, payments, inquiries, quotations, tasks, files, project_messages, notifications, and activity_logs
+                  </strong>{' '}
+                  across both admin accounts and cloud storage. Your Services, Portfolio, Website Customizer, and Admin Accounts will remain untouched.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-3 pt-1">
+              <button
+                type="button"
+                disabled={truncatingCrm}
+                onClick={handleTruncateAllCrmTables}
+                className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-[#DC2626] hover:bg-[#B91C1C] rounded-lg transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>
+                  {truncatingCrm
+                    ? 'Truncating All CRM Tables...'
+                    : 'Yes, Truncate All CRM Data Now'}
+                </span>
+              </button>
+              <button
+                type="button"
+                disabled={truncatingCrm}
+                onClick={() => setShowTruncateConfirm(false)}
+                className="px-4 py-2 text-xs font-semibold text-[#94A3B8] hover:text-white bg-[#132A4A] rounded-lg"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Private Studio Administrator Security & Authorized Admin Accounts */}

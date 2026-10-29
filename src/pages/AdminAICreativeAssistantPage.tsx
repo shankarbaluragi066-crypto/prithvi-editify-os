@@ -98,6 +98,7 @@ import { MediaPreviewModal, PreviewableMediaItem } from '../components/MediaPrev
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
 import { formatINR, calculateInvoiceTotals } from '../utils/formatters';
+import { DEFAULT_STUDIO_LOGO_URL } from '../utils/seedData';
 
 // ============================================================================
 // CONSTANTS & SUPPORTED OPTIONS
@@ -3582,22 +3583,34 @@ export const AdminQuotationsPage: React.FC<{
         </form>
       )}
 
-      {/* Printable Quotation / Estimate View */}
+      {/* Printable Quotation / Estimate View (With Official Prithvi Editify Logo) */}
       {printQuotation && (
-        <div className="bg-[#0D1F38] border border-[#10B981] rounded-lg p-8 space-y-6">
-          <div className="flex items-start justify-between border-b border-[#1E3A5F] pb-6">
-            <div>
-              <p className="text-xs font-semibold text-[#10B981]">
-                {inferQuotationDocumentType(printQuotation) === 'Estimate'
-                  ? 'PROJECT COST ESTIMATE · SAC 9983'
-                  : 'OFFICIAL PROJECT QUOTATION · SAC 9983'}
-              </p>
-              <h2 className="font-editorial text-2xl font-semibold text-[#F8FAFC] mt-0.5">
-                Prithvi Editify
-              </h2>
-              <p className="text-xs text-[#94A3B8]">
-                Shankar Baluragi · Creative Design & Video Studio
-              </p>
+        <div className="bg-[#081528] border-2 border-[#10B981] rounded-2xl p-6 sm:p-8 space-y-6 shadow-xl">
+          <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[#1E3A5F] pb-6">
+            <div className="flex items-start gap-4">
+              <div className="w-16 h-16 rounded-2xl bg-white p-2 border-2 border-[#10B981]/50 shadow-md shrink-0 flex items-center justify-center">
+                <img
+                  src={DEFAULT_STUDIO_LOGO_URL}
+                  alt="Prithvi Editify Official Logo"
+                  className="w-full h-full object-contain"
+                />
+              </div>
+              <div>
+                <p className="text-[11px] font-mono uppercase tracking-wider font-semibold text-[#10B981]">
+                  {inferQuotationDocumentType(printQuotation) === 'Estimate'
+                    ? 'PROJECT COST ESTIMATE · SAC 9983'
+                    : 'OFFICIAL PROJECT QUOTATION · SAC 9983'}
+                </p>
+                <h2 className="font-editorial text-2xl font-bold text-[#F8FAFC] mt-0.5">
+                  Prithvi Editify
+                </h2>
+                <p className="text-xs text-[#94A3B8]">
+                  Shankar Baluragi · Creative Design, Video Editing &amp; Visual Production Studio
+                </p>
+                <p className="text-[11px] font-mono text-[#64748B] mt-0.5">
+                  shankarbaluragi066@gmail.com · prithvieditify.official@gmail.com · +91 63619 02619
+                </p>
+              </div>
             </div>
             <div className="text-right">
               <div className="flex items-center justify-end gap-2">

@@ -22,6 +22,10 @@ import {
   MapPin,
   MessageSquare,
   TrendingUp,
+  Activity,
+  RefreshCw,
+  CreditCard,
+  Mail,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -62,6 +66,7 @@ import {
   deleteProjectAdmin,
   duplicateProjectAdmin,
   buildOrderNotificationLinks,
+  fetchActivityLogs,
 } from '../services/crmService';
 import {
   fetchAllQuotationsAdmin,
@@ -76,6 +81,7 @@ import {
   checkProjectMasterUnlockStatus,
   buildWhatsAppProjectStatusTemplateLink,
   buildPublicProjectTrackerUrl,
+  getClientPaymentProofs,
 } from '../services/workflowEnhancementsService';
 import { CrmStatusBadge } from '../components/StudioEnhancements';
 import {
@@ -98,10 +104,42 @@ import {
   ProjectMessage,
   QuotationRecord,
   DeliverableFile,
+  ActivityLog,
 } from '../types/crm';
 import { formatINR, formatDate } from '../utils/formatters';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
+
+type DashboardActivityCategory = 'all' | 'billing' | 'inquiries' | 'projects' | 'clients';
+
+interface UnifiedCrmActivityItem {
+  id: string;
+  category: Exclude<DashboardActivityCategory, 'all'>;
+  title: string;
+  subtitle: string;
+  statusBadge?: string;
+  amountINR?: number;
+  actorLabel: string;
+  timestamp: string;
+  linkTo: string;
+  linkLabel: string;
+  tone: 'emerald' | 'sky' | 'amber' | 'violet';
+}
+
+function formatRelativeActivityTime(isoDate: string): string {
+  if (!isoDate) return 'Just now';
+  const targetMs = new Date(isoDate).getTime();
+  if (Number.isNaN(targetMs)) return isoDate;
+  const diffSec = Math.max(0, Math.floor((Date.now() - targetMs) / 1000));
+  if (diffSec < 60) return 'Just now';
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+  const diffDays = Math.floor(diffHr / 24);
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return formatDate(isoDate);
+}
 
 // ============================================================================
 // 1. ADMIN DASHBOARD PAGE
@@ -114,19 +152,24 @@ export const AdminDashboardPage: React.FC = () => {
   const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [quotations, setQuotations] = useState<QuotationRecord[]>([]);
+  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
+  const [activityCategory, setActivityCategory] = useState<DashboardActivityCategory>('all');
+  const [activitySearch, setActivitySearch] = useState('');
+  const [showAllActivity, setShowAllActivity] = useState(false);
   const [loading, setLoading] = useState(true);
   const [seeding, setSeeding] = useState(false);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [c, inq, p, inv, pay, q] = await Promise.all([
+      const [c, inq, p, inv, pay, q, logs] = await Promise.all([
         fetchAllClientsAdmin(),
         fetchAllInquiriesAdmin(),
         fetchAllProjectsAdmin(),
         fetchAllInvoicesAdmin(),
         fetchAllPaymentsAdmin(),
         fetchAllQuotationsAdmin().catch(() => []),
+        fetchActivityLogs().catch(() => []),
       ]);
       setClients(c);
       setInquiries(inq);
@@ -134,6 +177,7 @@ export const AdminDashboardPage: React.FC = () => {
       setInvoices(inv);
       setPayments(pay);
       setQuotations(q);
+      setActivityLogs(logs);
     } catch (err) {
       showToast('error', 'Failed to load dashboard metrics', err instanceof Error ? err.message : '');
     } finally {
@@ -143,6 +187,15 @@ export const AdminDashboardPage: React.FC = () => {
 
   useEffect(() => {
     loadAll();
+    const handleLiveActivity = () => {
+      loadAll();
+    };
+    window.addEventListener('pe-new-order-booked', handleLiveActivity);
+    window.addEventListener('pe-crm-activity-logged', handleLiveActivity);
+    return () => {
+      window.removeEventListener('pe-new-order-booked', handleLiveActivity);
+      window.removeEventListener('pe-crm-activity-logged', handleLiveActivity);
+    };
   }, [loadAll]);
 
   const handleSeedCatalog = async () => {
@@ -889,6 +942,440 @@ export const AdminDashboardPage: React.FC = () => {
                 </div>
               ))}
             </div>
+          </div>
+        );
+      })()}
+
+      {/* RECENT CRM ACTIVITY WIDGET (LIVE STREAM ACROSS INVOICES, PAYMENTS, INQUIRIES, PROJECTS & CLIENTS) */}
+      {(() => {
+        const items: UnifiedCrmActivityItem[] = [];
+        const seenKeys = new Set<string>();
+
+        const pushUnique = (dedupeKey: string, item: UnifiedCrmActivityItem) => {
+          if (seenKeys.has(dedupeKey)) return;
+          seenKeys.add(dedupeKey);
+          items.push(item);
+        };
+
+        // 1. Recorded Payments (Invoice Paid / Partial Payment)
+        payments.forEach((pay) => {
+          const ts = pay.createdAt || pay.paymentDate || new Date().toISOString();
+          pushUnique(`payment:${pay.id}`, {
+            id: `act-pay-${pay.id}`,
+            category: 'billing',
+            title: `Invoice Payment Recorded — ${pay.invoiceNumber || 'Invoice'}`,
+            subtitle: `${pay.clientName || 'Client'} paid via ${pay.method}${
+              pay.transactionReference ? ` · Ref/UTR: ${pay.transactionReference}` : ''
+            }`,
+            statusBadge: 'Paid',
+            amountINR: Number(pay.amount) || 0,
+            actorLabel: pay.clientName || 'Finance Ledger',
+            timestamp: ts,
+            linkTo: '/admin/payments',
+            linkLabel: 'View Payment →',
+            tone: 'emerald',
+          });
+        });
+
+        // 2. Client UTR Payment Proofs
+        const utrProofs = getClientPaymentProofs();
+        utrProofs.forEach((proof) => {
+          pushUnique(`utr:${proof.id}`, {
+            id: `act-utr-${proof.id}`,
+            category: 'billing',
+            title: `UTR Payment Proof Submitted — ${proof.invoiceNumber}`,
+            subtitle: `${proof.clientName} submitted UTR ${proof.utrNumber} via ${proof.method}`,
+            statusBadge: proof.status === 'Approved' ? 'Paid' : proof.status,
+            amountINR: Number(proof.amount) || 0,
+            actorLabel: proof.clientEmail || proof.clientName,
+            timestamp: proof.submittedAt,
+            linkTo: '/admin/invoices',
+            linkLabel: 'Verify Invoice →',
+            tone: proof.status === 'Approved' ? 'emerald' : 'amber',
+          });
+        });
+
+        // 3. Invoices (Paid, Partially Paid, Issued, Overdue)
+        invoices.forEach((inv) => {
+          const ts = inv.updatedAt || inv.createdAt || inv.issueDate || new Date().toISOString();
+          const isPaid = inv.status === 'Paid';
+          const isPartial = inv.status === 'Partially Paid';
+          pushUnique(`invoice:${inv.id}:${inv.status}`, {
+            id: `act-inv-${inv.id}`,
+            category: 'billing',
+            title: isPaid
+              ? `Invoice Paid in Full — ${inv.invoiceNumber}`
+              : isPartial
+              ? `Partial Payment on Invoice — ${inv.invoiceNumber}`
+              : `Invoice ${inv.status} — ${inv.invoiceNumber}`,
+            subtitle: `${inv.clientName} · ${inv.projectTitle || inv.itemsSummary || 'Creative Services'}`,
+            statusBadge: inv.status,
+            amountINR: Number(inv.total) || 0,
+            actorLabel: inv.clientEmail || inv.clientName,
+            timestamp: ts,
+            linkTo: '/admin/invoices',
+            linkLabel: 'Open Invoice →',
+            tone: isPaid ? 'emerald' : inv.status === 'Overdue' ? 'amber' : 'sky',
+          });
+        });
+
+        // 4. Inquiries / Service Bookings
+        inquiries.forEach((inq) => {
+          const ts = inq.updatedAt || inq.createdAt || new Date().toISOString();
+          const isNew = inq.status === 'New';
+          pushUnique(`inquiry:${inq.id}:${inq.status}`, {
+            id: `act-inq-${inq.id}`,
+            category: 'inquiries',
+            title: isNew
+              ? `New Service Inquiry — ${inq.serviceRequired}`
+              : `Inquiry ${inq.status} — ${inq.serviceRequired}`,
+            subtitle: `${inq.fullName}${inq.companyName ? ` (${inq.companyName})` : ''} · Budget: ${
+              inq.budgetRange || 'Custom'
+            }`,
+            statusBadge: inq.status,
+            actorLabel: inq.email || inq.phone || inq.fullName,
+            timestamp: ts,
+            linkTo: '/admin/inquiries',
+            linkLabel: 'Review Lead →',
+            tone: inq.status === 'Converted' ? 'emerald' : isNew ? 'sky' : 'amber',
+          });
+        });
+
+        // 5. Projects (Updates, Milestones, Completion, Revisions)
+        projects.forEach((proj) => {
+          const ts = proj.updatedAt || proj.createdAt || new Date().toISOString();
+          const isDone = proj.status === 'Completed';
+          const isRev = proj.status === 'Revision Requested' || proj.status === 'In Review';
+          pushUnique(`project:${proj.id}:${proj.status}:${proj.progress}`, {
+            id: `act-proj-${proj.id}`,
+            category: 'projects',
+            title: isDone
+              ? `Project Completed — ${proj.title}`
+              : isRev
+              ? `Project ${proj.status} — ${proj.title}`
+              : `Project Update (${proj.progress}%) — ${proj.title}`,
+            subtitle:
+              proj.latestUpdate ||
+              `${proj.clientName} · ${proj.serviceType} · Due ${proj.deadline || 'TBD'}`,
+            statusBadge: proj.status,
+            amountINR: proj.budget > 0 ? Number(proj.budget) : undefined,
+            actorLabel: proj.clientEmail || proj.clientName,
+            timestamp: ts,
+            linkTo: `/admin/projects/${proj.id}`,
+            linkLabel: 'Open Project →',
+            tone: isDone ? 'emerald' : isRev ? 'amber' : 'sky',
+          });
+        });
+
+        // 6. Quotations & Cost Estimates
+        quotations.forEach((q) => {
+          const ts = q.updatedAt || q.createdAt || new Date().toISOString();
+          const docType = inferQuotationDocumentType(q);
+          pushUnique(`quote:${q.id}:${q.status}`, {
+            id: `act-qtn-${q.id}`,
+            category: 'clients',
+            title: `${docType} ${q.status} — ${q.quotationNumber}`,
+            subtitle: `${q.clientName} · ${q.serviceCategory || q.projectTitle}`,
+            statusBadge: q.status,
+            amountINR: Number(q.total) || 0,
+            actorLabel: q.clientEmail || q.clientName,
+            timestamp: ts,
+            linkTo: docType === 'Estimate' ? '/admin/estimates' : '/admin/quotations',
+            linkLabel: `View ${docType} →`,
+            tone: q.status === 'Accepted' ? 'emerald' : 'violet',
+          });
+        });
+
+        // 7. Client Profiles
+        clients.forEach((cl) => {
+          const ts = cl.updatedAt || cl.createdAt || new Date().toISOString();
+          pushUnique(`client:${cl.id}`, {
+            id: `act-cl-${cl.id}`,
+            category: 'clients',
+            title: `Client Profile Active — ${cl.fullName}`,
+            subtitle: `${cl.companyName ? `${cl.companyName} · ` : ''}${cl.email}${
+              cl.phone ? ` · ${cl.phone}` : ''
+            }`,
+            statusBadge: 'Active',
+            actorLabel: cl.email,
+            timestamp: ts,
+            linkTo: '/admin/clients',
+            linkLabel: 'View Client →',
+            tone: 'violet',
+          });
+        });
+
+        // 8. Explicit CRM Audit Logs (for actions not already represented above)
+        activityLogs.forEach((log) => {
+          const entity = (log.entityType || '').toLowerCase();
+          let category: Exclude<DashboardActivityCategory, 'all'> = 'projects';
+          let linkTo = '/admin';
+          let linkLabel = 'Details →';
+          let tone: UnifiedCrmActivityItem['tone'] = 'sky';
+
+          if (entity.includes('invoice') || entity.includes('payment')) {
+            category = 'billing';
+            linkTo = entity.includes('payment') ? '/admin/payments' : '/admin/invoices';
+            linkLabel = 'Open Billing →';
+            tone = 'emerald';
+          } else if (entity.includes('inquiry') || entity.includes('lead')) {
+            category = 'inquiries';
+            linkTo = '/admin/inquiries';
+            linkLabel = 'View Inquiry →';
+            tone = 'sky';
+          } else if (entity.includes('client') || entity.includes('quote')) {
+            category = 'clients';
+            linkTo = '/admin/clients';
+            linkLabel = 'View Client →';
+            tone = 'violet';
+          } else if (entity.includes('project') || entity.includes('task')) {
+            category = 'projects';
+            linkTo =
+              entity === 'project' && log.entityId
+                ? `/admin/projects/${log.entityId}`
+                : '/admin/projects';
+            linkLabel = 'Open Project →';
+            tone = 'sky';
+          } else if (entity.includes('database') || entity.includes('settings')) {
+            category = 'projects';
+            linkTo = '/admin/settings';
+            linkLabel = 'Settings →';
+            tone = 'amber';
+          }
+
+          pushUnique(`log:${log.id}`, {
+            id: `act-log-${log.id}`,
+            category,
+            title: log.action || 'CRM Activity Recorded',
+            subtitle: log.details || `${log.entityType} (${log.entityId})`,
+            actorLabel: log.actorEmail || 'Admin',
+            timestamp: log.createdAt || new Date().toISOString(),
+            linkTo,
+            linkLabel,
+            tone,
+          });
+        });
+
+        items.sort(
+          (a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime()
+        );
+
+        const counts = {
+          all: items.length,
+          billing: items.filter((i) => i.category === 'billing').length,
+          inquiries: items.filter((i) => i.category === 'inquiries').length,
+          projects: items.filter((i) => i.category === 'projects').length,
+          clients: items.filter((i) => i.category === 'clients').length,
+        };
+
+        const searchQuery = activitySearch.trim().toLowerCase();
+        const filteredActivity = items.filter((item) => {
+          if (activityCategory !== 'all' && item.category !== activityCategory) return false;
+          if (!searchQuery) return true;
+          return (
+            item.title.toLowerCase().includes(searchQuery) ||
+            item.subtitle.toLowerCase().includes(searchQuery) ||
+            item.actorLabel.toLowerCase().includes(searchQuery) ||
+            (item.statusBadge || '').toLowerCase().includes(searchQuery)
+          );
+        });
+
+        const visibleActivity = showAllActivity
+          ? filteredActivity.slice(0, 25)
+          : filteredActivity.slice(0, 8);
+
+        const categoryTabs: {
+          id: DashboardActivityCategory;
+          label: string;
+          count: number;
+        }[] = [
+          { id: 'all', label: 'All CRM Activity', count: counts.all },
+          { id: 'billing', label: 'Invoices & Payments', count: counts.billing },
+          { id: 'inquiries', label: 'Inquiries & Leads', count: counts.inquiries },
+          { id: 'projects', label: 'Projects & Updates', count: counts.projects },
+          { id: 'clients', label: 'Clients & Quotes', count: counts.clients },
+        ];
+
+        return (
+          <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-6 space-y-5">
+            {/* Widget Header */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-[#1E3A5F] pb-4">
+              <div>
+                <div className="inline-flex items-center gap-2 text-xs font-semibold text-[#10B981]">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#10B981] opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-[#10B981]" />
+                  </span>
+                  <Activity className="w-3.5 h-3.5" />
+                  <span>Live CRM Telemetry Stream</span>
+                </div>
+                <h2 className="font-editorial text-xl font-semibold text-[#F8FAFC] mt-0.5">
+                  Recent Activity Across Entire CRM
+                </h2>
+                <p className="text-xs text-[#94A3B8] mt-0.5">
+                  Real-time feed tracking invoices paid, new inquiries, project progress updates, quotations, and client actions.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2.5">
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 text-[#94A3B8] absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={activitySearch}
+                    onChange={(e) => setActivitySearch(e.target.value)}
+                    placeholder="Filter activity, client, #INV..."
+                    className="pl-8 pr-3 py-1.5 text-xs bg-[#132A4A] border border-[#1E3A5F] rounded-lg text-[#F8FAFC] placeholder-[#64748B] focus:outline-none focus:border-[#10B981] w-52 sm:w-60"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={loadAll}
+                  disabled={loading}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#F8FAFC] bg-[#132A4A] hover:bg-[#1E3A5F] border border-[#1E3A5F] rounded-lg transition-colors"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 text-[#10B981] ${loading ? 'animate-spin' : ''}`} />
+                  <span>Refresh</span>
+                </button>
+                <Link
+                  to="/admin/activity"
+                  className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-[#10B981] bg-[#10B981]/10 hover:bg-[#10B981]/20 border border-[#10B981]/30 rounded-lg transition-colors"
+                >
+                  <span>Full Audit Log →</span>
+                </Link>
+              </div>
+            </div>
+
+            {/* Category Filter Bar */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1">
+              {categoryTabs.map((tab) => {
+                const isActive = activityCategory === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActivityCategory(tab.id)}
+                    className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap border ${
+                      isActive
+                        ? 'bg-gradient-to-r from-[#0EA5E9] to-[#10B981] text-white border-transparent'
+                        : 'bg-[#132A4A] text-[#94A3B8] hover:text-[#F8FAFC] border-[#1E3A5F]'
+                    }`}
+                  >
+                    <span>{tab.label}</span>
+                    <span
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-mono tabular-nums ${
+                        isActive ? 'bg-black/25 text-white' : 'bg-[#0D1F38] text-[#94A3B8]'
+                      }`}
+                    >
+                      {tab.count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Activity Feed List */}
+            {filteredActivity.length === 0 ? (
+              <div className="py-10 px-4 text-center rounded-lg bg-[#132A4A]/50 border border-dashed border-[#1E3A5F] space-y-2">
+                <Activity className="w-6 h-6 text-[#10B981] mx-auto opacity-80" />
+                <p className="text-sm font-semibold text-[#F8FAFC]">
+                  {items.length === 0
+                    ? 'No CRM activity recorded yet'
+                    : 'No activity matches your current filter'}
+                </p>
+                <p className="text-xs text-[#94A3B8] max-w-md mx-auto">
+                  {items.length === 0
+                    ? 'As soon as a client submits an inquiry, a project milestone updates, or an invoice payment is recorded, it will appear here in real time.'
+                    : 'Try switching back to "All CRM Activity" or clearing your search query.'}
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y divide-[#1E3A5F]">
+                {visibleActivity.map((act) => {
+                  const toneStyles = {
+                    emerald: 'bg-[#10B981]/15 text-[#10B981] border-[#10B981]/30',
+                    sky: 'bg-[#0EA5E9]/15 text-[#38BDF8] border-[#0EA5E9]/30',
+                    amber: 'bg-[#F59E0B]/15 text-[#FBBF24] border-[#F59E0B]/30',
+                    violet: 'bg-[#8B5CF6]/15 text-[#A78BFA] border-[#8B5CF6]/30',
+                  }[act.tone];
+
+                  const CategoryIcon =
+                    act.category === 'billing'
+                      ? CreditCard
+                      : act.category === 'inquiries'
+                      ? Mail
+                      : act.category === 'clients'
+                      ? UserPlus
+                      : FolderKanban;
+
+                  return (
+                    <div
+                      key={act.id}
+                      className="py-3.5 first:pt-1 last:pb-1 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-[#132A4A]/40 -mx-2 px-2 rounded-lg transition-colors"
+                    >
+                      <div className="flex items-start gap-3 min-w-0">
+                        <div
+                          className={`w-9 h-9 rounded-lg border flex items-center justify-center shrink-0 mt-0.5 ${toneStyles}`}
+                        >
+                          <CategoryIcon className="w-4 h-4" />
+                        </div>
+
+                        <div className="min-w-0 space-y-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Link
+                              to={act.linkTo}
+                              className="text-sm font-semibold text-[#F8FAFC] hover:text-[#10B981] transition-colors truncate"
+                            >
+                              {act.title}
+                            </Link>
+                            {act.statusBadge && <CrmStatusBadge status={act.statusBadge} />}
+                            {typeof act.amountINR === 'number' && act.amountINR > 0 && (
+                              <span className="px-2 py-0.5 rounded bg-[#132A4A] border border-[#1E3A5F] font-mono text-[11px] font-semibold text-[#10B981] tabular-nums">
+                                {formatINR(act.amountINR)}
+                              </span>
+                            )}
+                          </div>
+
+                          <p className="text-xs text-[#94A3B8] line-clamp-1">{act.subtitle}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex sm:flex-col items-center sm:items-end justify-between gap-2 shrink-0 pl-12 sm:pl-0">
+                        <div className="flex items-center gap-2 text-[11px] text-[#94A3B8] font-mono">
+                          <span className="text-[#F8FAFC] font-medium">
+                            {formatRelativeActivityTime(act.timestamp)}
+                          </span>
+                          <span>·</span>
+                          <span className="truncate max-w-[140px]">{act.actorLabel}</span>
+                        </div>
+                        <Link
+                          to={act.linkTo}
+                          className="text-xs font-semibold text-[#38BDF8] hover:text-[#10B981] transition-colors"
+                        >
+                          {act.linkLabel}
+                        </Link>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Expand / Collapse Footer */}
+            {filteredActivity.length > 8 && (
+              <div className="pt-2 border-t border-[#1E3A5F] flex items-center justify-between text-xs">
+                <span className="text-[#94A3B8]">
+                  Showing {visibleActivity.length} of {filteredActivity.length} matching CRM events
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowAllActivity((prev) => !prev)}
+                  className="font-semibold text-[#10B981] hover:underline"
+                >
+                  {showAllActivity ? 'Show Compact Feed (Top 8)' : `Show More Activity (${Math.min(25, filteredActivity.length)})`}
+                </button>
+              </div>
+            )}
           </div>
         );
       })()}
