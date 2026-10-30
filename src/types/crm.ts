@@ -310,6 +310,8 @@ export interface ProjectMessage {
   id: string;
   projectId: string;
   clientUserId: string;
+  clientEmail?: string;
+  clientId?: string;
   senderId: string;
   senderName: string;
   senderRole: UserRole;

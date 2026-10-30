@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import {
   fetchClientProjects,
+  fetchAllProjectsAdmin,
   fetchClientInquiries,
   fetchClientVisibleTasks,
   fetchClientFiles,
@@ -515,14 +516,19 @@ export const ClientProjectDetailsPage: React.FC = () => {
 
   const loadAll = useCallback(async () => {
     if (!user || !projectId) return;
-    const [projs, tsks, fls, invs, msgs] = await Promise.all([
-      fetchClientProjects(user.uid, clientEmail),
-      fetchClientVisibleTasks(user.uid, clientEmail),
-      fetchClientFiles(user.uid, clientEmail),
+    const [projs, allProjs, tsks, fls, invs, msgs] = await Promise.all([
+      fetchClientProjects(user.uid, clientEmail).catch(() => []),
+      fetchAllProjectsAdmin().catch(() => []),
+      fetchClientVisibleTasks(user.uid, clientEmail).catch(() => []),
+      fetchClientFiles(user.uid, clientEmail).catch(() => []),
       fetchClientInvoices(user.uid, clientEmail).catch(() => []),
-      fetchProjectMessages(projectId, false, user.uid),
+      fetchProjectMessages(projectId, false, user.uid).catch(() => []),
     ]);
-    setProject(projs.find((p) => p.id === projectId) || null);
+    const matchedProj =
+      projs.find((p) => p.id === projectId) ||
+      allProjs.find((p) => p.id === projectId) ||
+      null;
+    setProject(matchedProj);
     setTasks(tsks.filter((t) => t.projectId === projectId));
     setFiles(fls.filter((f) => f.projectId === projectId));
     setInvoices(invs);
@@ -532,6 +538,38 @@ export const ClientProjectDetailsPage: React.FC = () => {
 
   useEffect(() => {
     loadAll();
+    const interval = window.setInterval(() => {
+      loadAll();
+    }, 4000);
+
+    const handleRealtime = () => {
+      void loadAll();
+    };
+    window.addEventListener('pe-crm-messages-updated', handleRealtime);
+    window.addEventListener('storage', handleRealtime);
+
+    let bc: BroadcastChannel | null = null;
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      try {
+        bc = new BroadcastChannel('pe_crm_realtime_sync_v1');
+        bc.onmessage = () => handleRealtime();
+      } catch {
+        // Ignore
+      }
+    }
+
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener('pe-crm-messages-updated', handleRealtime);
+      window.removeEventListener('storage', handleRealtime);
+      if (bc) {
+        try {
+          bc.close();
+        } catch {
+          // Ignore
+        }
+      }
+    };
   }, [loadAll]);
 
   if (!project) {

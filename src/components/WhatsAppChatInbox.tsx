@@ -67,9 +67,11 @@ type InboxFilterTab = 'all' | 'unread' | 'projects' | 'direct';
 
 interface ChatThreadItem {
   threadId: string;
+  aliasThreadIds: string[];
   kind: ThreadKind;
   title: string;
   subtitle: string;
+  clientId: string;
   clientName: string;
   clientEmail: string;
   clientPhone: string;
@@ -326,59 +328,163 @@ export const WhatsAppChatInbox: React.FC<WhatsAppChatInboxProps> = ({
           setInquiries(inqList);
           setAllMessages(msgList);
           setFiles(fileList);
-        } else if (currentUserId || clientEmail) {
-          const [projList, msgList, fileList] = await Promise.all([
-            fetchClientProjects(currentUserId, clientEmail || undefined).catch(() => []),
-            fetchAllMessagesAdmin().catch(() => []),
-            fetchClientFiles(currentUserId, clientEmail || undefined).catch(() => []),
-          ]);
-          setProjects(projList);
-          // Filter messages visible to client
-          setAllMessages(msgList.filter((m) => m.visibility === 'client'));
+        } else {
+          const [clientProjList, allProjList, cliList, inqList, msgList, fileList] =
+            await Promise.all([
+              currentUserId || clientEmail
+                ? fetchClientProjects(currentUserId, clientEmail || undefined).catch(() => [])
+                : Promise.resolve([]),
+              fetchAllProjectsAdmin().catch(() => []),
+              fetchAllClientsAdmin().catch(() => []),
+              fetchAllInquiriesAdmin().catch(() => []),
+              fetchAllMessagesAdmin().catch(() => []),
+              currentUserId || clientEmail
+                ? fetchClientFiles(currentUserId, clientEmail || undefined).catch(() => [])
+                : Promise.resolve([]),
+            ]);
+
+          const visibleMsgs = msgList.filter((m) => m.visibility === 'client');
+          const msgThreadIds = new Set(visibleMsgs.map((m) => m.projectId));
+
+          // Include client's matched projects + any project that has active client-visible messages for this client (or if previewing portal with 0 matched projects)
+          const mergedProjectsMap = new Map<string, ProjectRecord>();
+          for (const p of clientProjList) {
+            mergedProjectsMap.set(p.id, p);
+          }
+
+          const displayNameLower = (profile?.displayName || '').trim().toLowerCase();
+          for (const p of allProjList) {
+            if (mergedProjectsMap.has(p.id)) continue;
+            const pEmail = (p.clientEmail || '').trim().toLowerCase();
+            const pName = (p.clientName || '').trim().toLowerCase();
+            const hasThreadMessages =
+              msgThreadIds.has(p.id) || msgThreadIds.has(`inquiry:${p.id}`);
+            const matchesByIdentity =
+              (clientEmail && pEmail === clientEmail) ||
+              (currentUserId && p.clientUserId === currentUserId) ||
+              (displayNameLower && pName && pName === displayNameLower);
+
+            if (matchesByIdentity || (hasThreadMessages && clientProjList.length === 0)) {
+              mergedProjectsMap.set(p.id, p);
+            }
+          }
+
+          // If still 0 projects (e.g., Studio Admin previewing /portal/messages), surface all projects so admin can test & preview client view
+          if (mergedProjectsMap.size === 0 && allProjList.length > 0) {
+            for (const p of allProjList) {
+              mergedProjectsMap.set(p.id, p);
+            }
+          }
+
+          setProjects(Array.from(mergedProjectsMap.values()));
+          setClients(cliList);
+          setInquiries(inqList);
+          setAllMessages(visibleMsgs);
           setFiles(fileList);
         }
       } finally {
         if (!silent) setLoading(false);
       }
     },
-    [isAdmin, currentUserId, clientEmail]
+    [isAdmin, currentUserId, clientEmail, profile?.displayName]
   );
 
   useEffect(() => {
     loadInboxData(false);
     const interval = window.setInterval(() => {
       loadInboxData(true);
-    }, 10000);
-    return () => window.clearInterval(interval);
-  }, [loadInboxData]);
+    }, 3500);
+
+    const handleRealtimeUpdate = () => {
+      setAllMessages(
+        isAdmin
+          ? getCachedMessagesAdmin()
+          : getCachedMessagesAdmin().filter((m) => m.visibility === 'client')
+      );
+      void loadInboxData(true);
+    };
+
+    window.addEventListener('pe-crm-messages-updated', handleRealtimeUpdate);
+    window.addEventListener('storage', handleRealtimeUpdate);
+
+    let bc: BroadcastChannel | null = null;
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      try {
+        bc = new BroadcastChannel('pe_crm_realtime_sync_v1');
+        bc.onmessage = (ev) => {
+          if (!ev?.data?.table || ev.data.table === 'project_messages') {
+            handleRealtimeUpdate();
+          }
+        };
+      } catch {
+        // Ignore BroadcastChannel errors
+      }
+    }
+
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener('pe-crm-messages-updated', handleRealtimeUpdate);
+      window.removeEventListener('storage', handleRealtimeUpdate);
+      if (bc) {
+        try {
+          bc.close();
+        } catch {
+          // Ignore
+        }
+      }
+    };
+  }, [loadInboxData, isAdmin]);
+
+  // Helper to collect all messages matching a set of alias thread IDs (sorted chronologically)
+  const collectMessagesForAliases = useCallback(
+    (
+      aliasIds: string[],
+      extraMatcher?: (msg: ProjectMessage) => boolean
+    ): ProjectMessage[] => {
+      const aliasSet = new Set(aliasIds.filter(Boolean));
+      const seenMsgIds = new Set<string>();
+      const result: ProjectMessage[] = [];
+
+      for (const msg of allMessages) {
+        if (!isAdmin && msg.visibility !== 'client') continue;
+        if (seenMsgIds.has(msg.id)) continue;
+        if (aliasSet.has(msg.projectId) || (extraMatcher && extraMatcher(msg))) {
+          seenMsgIds.add(msg.id);
+          result.push(msg);
+        }
+      }
+
+      return result.sort(
+        (a, b) =>
+          new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()
+      );
+    },
+    [allMessages, isAdmin]
+  );
 
   // Build unified WhatsApp conversation threads
   const threads = useMemo<ChatThreadItem[]>(() => {
-    const messagesByThread = new Map<string, ProjectMessage[]>();
-    for (const msg of allMessages) {
-      if (!isAdmin && msg.visibility !== 'client') continue;
-      const list = messagesByThread.get(msg.projectId) || [];
-      list.push(msg);
-      messagesByThread.set(msg.projectId, list);
-    }
-
     const items: ChatThreadItem[] = [];
-    const seenThreadIds = new Set<string>();
+    const claimedMessageThreadIds = new Set<string>();
 
-    // 1. Project Threads
+    // 1. Project Threads (both Admin & Client modes)
     for (const proj of projects) {
-      seenThreadIds.add(proj.id);
-      const threadMsgs = messagesByThread.get(proj.id) || [];
-      const lastMsg = threadMsgs[threadMsgs.length - 1];
-      const unreadCount = threadMsgs.filter((m) =>
-        isAdmin ? !m.readByAdmin && m.senderRole === 'client' : !m.readByClient && m.senderRole === 'admin'
-      ).length;
-
       const matchedClient = clients.find(
         (c) =>
           c.id === proj.clientId ||
           (proj.clientEmail && c.email.toLowerCase() === proj.clientEmail.toLowerCase())
       );
+
+      const aliasIds = Array.from(
+        new Set([proj.id, `inquiry:${proj.id}`].filter(Boolean))
+      );
+      for (const aId of aliasIds) claimedMessageThreadIds.add(aId);
+
+      const threadMsgs = collectMessagesForAliases(aliasIds);
+      const lastMsg = threadMsgs[threadMsgs.length - 1];
+      const unreadCount = threadMsgs.filter((m) =>
+        isAdmin ? !m.readByAdmin && m.senderRole === 'client' : !m.readByClient && m.senderRole === 'admin'
+      ).length;
 
       const updatedAtMs = lastMsg?.createdAt
         ? new Date(lastMsg.createdAt).getTime()
@@ -386,9 +492,11 @@ export const WhatsAppChatInbox: React.FC<WhatsAppChatInboxProps> = ({
 
       items.push({
         threadId: proj.id,
+        aliasThreadIds: aliasIds,
         kind: 'project',
         title: proj.title,
         subtitle: `${proj.clientName || 'Studio Client'} · ${proj.serviceType}`,
+        clientId: proj.clientId || matchedClient?.id || '',
         clientName: proj.clientName || matchedClient?.fullName || 'Client',
         clientEmail: proj.clientEmail || matchedClient?.email || '',
         clientPhone: matchedClient?.phone || '',
@@ -404,19 +512,33 @@ export const WhatsAppChatInbox: React.FC<WhatsAppChatInboxProps> = ({
     }
 
     if (isAdmin) {
-      // 2. Direct Client Threads (for clients without a project or with direct messages)
+      // 2. Direct Client Threads (unifies client:<id> AND support:<userId/email> for that client)
       for (const cli of clients) {
         const directThreadId = `client:${cli.id}`;
-        seenThreadIds.add(directThreadId);
-        const threadMsgs = messagesByThread.get(directThreadId) || [];
-        const hasProject = projects.some(
-          (p) =>
-            p.clientId === cli.id ||
-            (cli.email && p.clientEmail.toLowerCase() === cli.email.toLowerCase())
+        const cliEmailLower = (cli.email || '').trim().toLowerCase();
+        const cliUid = (cli.userId || '').trim();
+        const aliasIds = Array.from(
+          new Set(
+            [
+              directThreadId,
+              cliUid ? `support:${cliUid}` : '',
+              cliEmailLower ? `support:${cliEmailLower}` : '',
+            ].filter(Boolean)
+          )
         );
-        if (threadMsgs.length === 0 && hasProject) {
-          continue;
-        }
+        for (const aId of aliasIds) claimedMessageThreadIds.add(aId);
+
+        const threadMsgs = collectMessagesForAliases(aliasIds, (m) => {
+          if (!m.projectId.startsWith('support:') && !m.projectId.startsWith('client:')) {
+            return false;
+          }
+          if (cli.id && m.clientId === cli.id) return true;
+          if (cliEmailLower && (m.clientEmail || '').toLowerCase() === cliEmailLower) return true;
+          if (cliUid && m.clientUserId === cliUid) return true;
+          return false;
+        });
+        for (const m of threadMsgs) claimedMessageThreadIds.add(m.projectId);
+
         const lastMsg = threadMsgs[threadMsgs.length - 1];
         const unreadCount = threadMsgs.filter(
           (m) => !m.readByAdmin && m.senderRole === 'client'
@@ -427,9 +549,13 @@ export const WhatsAppChatInbox: React.FC<WhatsAppChatInboxProps> = ({
 
         items.push({
           threadId: directThreadId,
+          aliasThreadIds: Array.from(
+            new Set([...aliasIds, ...threadMsgs.map((m) => m.projectId)])
+          ),
           kind: 'client',
           title: cli.fullName,
           subtitle: `${cli.companyName || 'Direct Client'} · ${cli.preferredContact}`,
+          clientId: cli.id,
           clientName: cli.fullName,
           clientEmail: cli.email,
           clientPhone: cli.phone,
@@ -447,8 +573,10 @@ export const WhatsAppChatInbox: React.FC<WhatsAppChatInboxProps> = ({
       for (const inq of inquiries) {
         if (inq.status === 'Spam') continue;
         const inqThreadId = `inquiry:${inq.id}`;
-        seenThreadIds.add(inqThreadId);
-        const threadMsgs = messagesByThread.get(inqThreadId) || [];
+        const aliasIds = [inqThreadId, inq.id];
+        for (const aId of aliasIds) claimedMessageThreadIds.add(aId);
+
+        const threadMsgs = collectMessagesForAliases(aliasIds);
         const lastMsg = threadMsgs[threadMsgs.length - 1];
         const unreadCount = threadMsgs.filter(
           (m) => !m.readByAdmin && m.senderRole === 'client'
@@ -459,9 +587,11 @@ export const WhatsAppChatInbox: React.FC<WhatsAppChatInboxProps> = ({
 
         items.push({
           threadId: inqThreadId,
+          aliasThreadIds: aliasIds,
           kind: 'inquiry',
           title: `${inq.fullName} — ${inq.serviceRequired}`,
           subtitle: `Lead Inquiry · ${inq.budgetRange || 'Custom Quote'}`,
+          clientId: '',
           clientName: inq.fullName,
           clientEmail: inq.email,
           clientPhone: inq.phone,
@@ -475,10 +605,19 @@ export const WhatsAppChatInbox: React.FC<WhatsAppChatInboxProps> = ({
         });
       }
 
-      // 4. Any Client Studio Support threads initiated by clients (`support:<uid>`)
-      for (const [tId, threadMsgs] of messagesByThread.entries()) {
-        if (seenThreadIds.has(tId) || !tId.startsWith('support:')) continue;
-        seenThreadIds.add(tId);
+      // 4. Any remaining unclaimed Support or custom threads with messages
+      const unclaimedThreadIds = Array.from(
+        new Set(
+          allMessages
+            .map((m) => m.projectId)
+            .filter((tId) => tId && !claimedMessageThreadIds.has(tId))
+        )
+      );
+
+      for (const tId of unclaimedThreadIds) {
+        claimedMessageThreadIds.add(tId);
+        const threadMsgs = collectMessagesForAliases([tId]);
+        if (threadMsgs.length === 0) continue;
         const lastMsg = threadMsgs[threadMsgs.length - 1];
         const unreadCount = threadMsgs.filter(
           (m) => !m.readByAdmin && m.senderRole === 'client'
@@ -488,13 +627,17 @@ export const WhatsAppChatInbox: React.FC<WhatsAppChatInboxProps> = ({
 
         items.push({
           threadId: tId,
+          aliasThreadIds: [tId],
           kind: 'support',
           title: `${clientMsg?.senderName || 'Client'} — Studio Support`,
           subtitle: 'Direct Client Portal Support Chat',
+          clientId: clientMsg?.clientId || '',
           clientName: clientMsg?.senderName || 'Client',
-          clientEmail: '',
+          clientEmail: clientMsg?.clientEmail || '',
           clientPhone: '',
-          clientUserId: tId.slice('support:'.length),
+          clientUserId:
+            clientMsg?.clientUserId ||
+            (tId.startsWith('support:') ? tId.slice('support:'.length) : ''),
           statusLabel: 'Direct Support',
           lastMessage: lastMsg,
           unreadCount,
@@ -503,68 +646,221 @@ export const WhatsAppChatInbox: React.FC<WhatsAppChatInboxProps> = ({
         });
       }
     } else {
-      // Client Mode: Always include a dedicated "Shankar Baluragi · Studio Direct Support" thread at top
-      const supportThreadId = `support:${currentUserId || clientEmail || 'client'}`;
-      seenThreadIds.add(supportThreadId);
-      const supportMsgs = messagesByThread.get(supportThreadId) || [];
-      const lastMsg = supportMsgs[supportMsgs.length - 1];
-      const unreadCount = supportMsgs.filter(
+      // CLIENT MODE:
+      // Find any ClientRecord(s) matching this client
+      const displayNameLower = (profile?.displayName || '').trim().toLowerCase();
+      const matchedClientRecords = clients.filter((c) => {
+        const cEmail = (c.email || '').trim().toLowerCase();
+        const cName = (c.fullName || '').trim().toLowerCase();
+        return (
+          (clientEmail && cEmail === clientEmail) ||
+          (currentUserId && c.userId === currentUserId) ||
+          (displayNameLower && cName && cName === displayNameLower)
+        );
+      });
+
+      const primaryClientRecord = matchedClientRecords[0];
+      const supportThreadId = primaryClientRecord
+        ? `client:${primaryClientRecord.id}`
+        : `support:${currentUserId || clientEmail || 'client'}`;
+
+      const supportAliasIds = Array.from(
+        new Set(
+          [
+            supportThreadId,
+            currentUserId ? `support:${currentUserId}` : '',
+            clientEmail ? `support:${clientEmail}` : '',
+            'support:client',
+            ...matchedClientRecords.map((c) => `client:${c.id}`),
+            ...matchedClientRecords.map((c) => (c.userId ? `support:${c.userId}` : '')),
+            ...matchedClientRecords.map((c) =>
+              c.email ? `support:${c.email.trim().toLowerCase()}` : ''
+            ),
+          ].filter(Boolean)
+        )
+      );
+      for (const aId of supportAliasIds) claimedMessageThreadIds.add(aId);
+
+      const supportMsgs = collectMessagesForAliases(supportAliasIds, (m) => {
+        if (!m.projectId.startsWith('support:') && !m.projectId.startsWith('client:')) {
+          return false;
+        }
+        if (clientEmail && (m.clientEmail || '').toLowerCase() === clientEmail) return true;
+        if (currentUserId && m.clientUserId === currentUserId) return true;
+        if (
+          matchedClientRecords.some(
+            (c) =>
+              (c.id && m.clientId === c.id) ||
+              (c.id && m.projectId === `client:${c.id}`)
+          )
+        ) {
+          return true;
+        }
+        return false;
+      });
+      for (const m of supportMsgs) claimedMessageThreadIds.add(m.projectId);
+
+      const lastSupportMsg = supportMsgs[supportMsgs.length - 1];
+      const supportUnreadCount = supportMsgs.filter(
         (m) => !m.readByClient && m.senderRole === 'admin'
       ).length;
-      const updatedAtMs = lastMsg?.createdAt
-        ? new Date(lastMsg.createdAt).getTime()
+      const supportUpdatedAtMs = lastSupportMsg?.createdAt
+        ? new Date(lastSupportMsg.createdAt).getTime()
         : Date.now() - 3600_000;
 
       items.push({
-        threadId: supportThreadId,
+        threadId: lastSupportMsg?.projectId || supportThreadId,
+        aliasThreadIds: Array.from(
+          new Set([...supportAliasIds, ...supportMsgs.map((m) => m.projectId)])
+        ),
         kind: 'support',
         title: 'Prithvi Editify — Studio Support',
         subtitle: 'Shankar Baluragi · Founder & Creative Director',
-        clientName: profile?.displayName || 'Client',
-        clientEmail: clientEmail,
-        clientPhone: profile?.phone || '',
-        clientUserId: currentUserId,
+        clientId: primaryClientRecord?.id || '',
+        clientName: profile?.displayName || primaryClientRecord?.fullName || 'Client',
+        clientEmail: clientEmail || primaryClientRecord?.email || '',
+        clientPhone: profile?.phone || primaryClientRecord?.phone || '',
+        clientUserId: currentUserId || primaryClientRecord?.userId || '',
         statusLabel: 'Online · Direct Support',
-        lastMessage: lastMsg,
-        unreadCount,
-        updatedAtMs,
+        client: primaryClientRecord,
+        lastMessage: lastSupportMsg,
+        unreadCount: supportUnreadCount,
+        updatedAtMs: supportUpdatedAtMs,
         isPinned: true,
       });
+
+      // Also surface any other threads (`client:...`, `inquiry:...`, or project IDs) that have messages visible to this client
+      const remainingThreadIds = Array.from(
+        new Set(
+          allMessages
+            .filter((m) => m.visibility === 'client')
+            .map((m) => m.projectId)
+            .filter((tId) => tId && !claimedMessageThreadIds.has(tId))
+        )
+      );
+
+      for (const tId of remainingThreadIds) {
+        const threadMsgs = collectMessagesForAliases([tId]);
+        if (threadMsgs.length === 0) continue;
+
+        // Check if this thread belongs to the current client, OR if the current user is previewing the portal
+        const belongsToClient = threadMsgs.some(
+          (m) =>
+            (clientEmail && (m.clientEmail || '').toLowerCase() === clientEmail) ||
+            (currentUserId && m.clientUserId === currentUserId)
+        );
+        const isPortalPreviewOrGeneral =
+          belongsToClient ||
+          matchedClientRecords.length === 0 ||
+          profile?.role === 'admin' ||
+          threadMsgs.some((m) => m.senderRole === 'admin');
+
+        if (!isPortalPreviewOrGeneral) continue;
+
+        claimedMessageThreadIds.add(tId);
+        const lastMsg = threadMsgs[threadMsgs.length - 1];
+        const unreadCount = threadMsgs.filter(
+          (m) => !m.readByClient && m.senderRole === 'admin'
+        ).length;
+        const updatedAtMs = lastMsg?.createdAt ? new Date(lastMsg.createdAt).getTime() : Date.now();
+
+        let threadTitle = 'Shankar Baluragi · Studio Message';
+        let threadSubtitle = 'Prithvi Editify Studio Conversation';
+        let matchedCli: ClientRecord | undefined;
+        let matchedInq: InquiryRecord | undefined;
+
+        if (tId.startsWith('client:')) {
+          const cId = tId.slice('client:'.length);
+          matchedCli = clients.find((c) => c.id === cId);
+          if (matchedCli) {
+            threadTitle = `Prithvi Editify — ${matchedCli.fullName}`;
+            threadSubtitle = 'Direct Studio Conversation · Shankar Baluragi';
+          }
+        } else if (tId.startsWith('inquiry:')) {
+          const iId = tId.slice('inquiry:'.length);
+          matchedInq = inquiries.find((i) => i.id === iId);
+          if (matchedInq) {
+            threadTitle = `${matchedInq.serviceRequired} — Booking Chat`;
+            threadSubtitle = `${matchedInq.fullName} · ${matchedInq.budgetRange || 'Custom Quote'}`;
+          }
+        }
+
+        items.push({
+          threadId: tId,
+          aliasThreadIds: [tId],
+          kind: matchedInq ? 'inquiry' : 'support',
+          title: threadTitle,
+          subtitle: threadSubtitle,
+          clientId: matchedCli?.id || lastMsg?.clientId || '',
+          clientName:
+            matchedCli?.fullName ||
+            matchedInq?.fullName ||
+            profile?.displayName ||
+            'Client',
+          clientEmail:
+            matchedCli?.email || matchedInq?.email || lastMsg?.clientEmail || clientEmail,
+          clientPhone: matchedCli?.phone || matchedInq?.phone || profile?.phone || '',
+          clientUserId: matchedCli?.userId || lastMsg?.clientUserId || currentUserId,
+          statusLabel: 'Studio Direct Chat',
+          client: matchedCli,
+          inquiry: matchedInq,
+          lastMessage: lastMsg,
+          unreadCount,
+          updatedAtMs,
+          isPinned: pinnedIds.includes(tId),
+        });
+      }
     }
 
     return items.sort((a, b) => {
-      if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
       if (a.unreadCount > 0 && b.unreadCount === 0) return -1;
       if (b.unreadCount > 0 && a.unreadCount === 0) return 1;
+      if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
       return b.updatedAtMs - a.updatedAtMs;
     });
-  }, [projects, clients, inquiries, allMessages, isAdmin, pinnedIds, currentUserId, clientEmail, profile]);
+  }, [
+    projects,
+    clients,
+    inquiries,
+    allMessages,
+    isAdmin,
+    pinnedIds,
+    currentUserId,
+    clientEmail,
+    profile,
+    collectMessagesForAliases,
+  ]);
 
-  // Select first thread automatically on desktop if none selected
+  // Select first thread automatically on desktop if none selected or if selectedThreadId matches an alias
   useEffect(() => {
     if (!selectedThreadId && threads.length > 0) {
       setSelectedThreadId(threads[0].threadId);
+    } else if (selectedThreadId && threads.length > 0) {
+      const exactMatch = threads.find((t) => t.threadId === selectedThreadId);
+      if (!exactMatch) {
+        const aliasMatch = threads.find((t) => t.aliasThreadIds.includes(selectedThreadId));
+        if (aliasMatch) {
+          setSelectedThreadId(aliasMatch.threadId);
+        }
+      }
     }
   }, [threads, selectedThreadId]);
 
   const activeThread = useMemo(
-    () => threads.find((t) => t.threadId === selectedThreadId) || null,
+    () =>
+      threads.find(
+        (t) =>
+          t.threadId === selectedThreadId || t.aliasThreadIds.includes(selectedThreadId)
+      ) ||
+      threads[0] ||
+      null,
     [threads, selectedThreadId]
   );
 
   // Active thread messages
   const activeMessages = useMemo(() => {
     if (!activeThread) return [];
-    const list = allMessages
-      .filter((m) => {
-        if (m.projectId !== activeThread.threadId) return false;
-        if (!isAdmin && m.visibility !== 'client') return false;
-        return true;
-      })
-      .sort(
-        (a, b) =>
-          new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()
-      );
+    const list = collectMessagesForAliases(activeThread.aliasThreadIds);
 
     // If it's a Lead Inquiry thread with no messages yet, synthesize the initial inquiry brief as an incoming card
     if (activeThread.kind === 'inquiry' && activeThread.inquiry && list.length === 0) {
@@ -587,16 +883,21 @@ export const WhatsAppChatInbox: React.FC<WhatsAppChatInboxProps> = ({
     }
 
     return list;
-  }, [activeThread, allMessages, isAdmin]);
+  }, [activeThread, collectMessagesForAliases]);
 
   // Mark messages as read when opening a thread
   useEffect(() => {
     if (!activeThread || activeThread.unreadCount === 0) return;
-    markThreadMessagesRead(activeThread.threadId, isAdmin ? 'admin' : 'client')
+    const targetIds = activeThread.aliasThreadIds.length > 0
+      ? activeThread.aliasThreadIds
+      : [activeThread.threadId];
+    const targetSet = new Set(targetIds);
+
+    markThreadMessagesRead(targetIds, isAdmin ? 'admin' : 'client')
       .then(() => {
         setAllMessages((prev) =>
           prev.map((m) => {
-            if (m.projectId !== activeThread.threadId) return m;
+            if (!targetSet.has(m.projectId)) return m;
             return isAdmin ? { ...m, readByAdmin: true } : { ...m, readByClient: true };
           })
         );
@@ -701,6 +1002,8 @@ export const WhatsAppChatInbox: React.FC<WhatsAppChatInboxProps> = ({
       await postProjectMessage({
         projectId: activeThread.threadId,
         clientUserId: activeThread.clientUserId,
+        clientEmail: activeThread.clientEmail,
+        clientId: activeThread.clientId,
         senderName: senderDisplayName,
         senderRole: isAdmin ? 'admin' : 'client',
         content: composedContent,
@@ -713,16 +1016,14 @@ export const WhatsAppChatInbox: React.FC<WhatsAppChatInboxProps> = ({
       setEmojiOpen(false);
       setAttachMenuOpen(false);
 
-      const refreshedThreadMsgs = await fetchProjectMessages(
-        activeThread.threadId,
-        isAdmin,
-        activeThread.clientUserId
-      ).catch(() => []);
-
-      setAllMessages((prev) => {
-        const others = prev.filter((m) => m.projectId !== activeThread.threadId);
-        return [...others, ...refreshedThreadMsgs];
-      });
+      const updatedAllMsgs = await fetchAllMessagesAdmin().catch(() =>
+        getCachedMessagesAdmin()
+      );
+      setAllMessages(
+        isAdmin
+          ? updatedAllMsgs
+          : updatedAllMsgs.filter((m) => m.visibility === 'client')
+      );
     } finally {
       setSending(false);
     }

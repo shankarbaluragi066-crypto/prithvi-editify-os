@@ -324,13 +324,60 @@ function unmarkLocalRowDeleted(table: string, id: string): void {
   }
 }
 
+const CRM_BROADCAST_CHANNEL_NAME = 'pe_crm_realtime_sync_v1';
+const MESSAGES_REGISTRY_FILENAME = '__messages_registry_json__';
+
+export function notifyRealtimeCrmListeners(table: string, row?: Record<string, any>): void {
+  if (typeof window === 'undefined') return;
+  try {
+    if ('BroadcastChannel' in window) {
+      const bc = new BroadcastChannel(CRM_BROADCAST_CHANNEL_NAME);
+      bc.postMessage({ table, row, timestamp: Date.now() });
+      bc.close();
+    }
+  } catch {
+    // Ignore BroadcastChannel errors
+  }
+  try {
+    window.dispatchEvent(
+      new CustomEvent('pe-crm-realtime-updated', { detail: { table, row } })
+    );
+    if (table === 'project_messages') {
+      window.dispatchEvent(
+        new CustomEvent('pe-crm-messages-updated', { detail: { row } })
+      );
+    }
+  } catch {
+    // Ignore event dispatch errors
+  }
+}
+
 function pushSharedRowUpsertToServer(table: string, row: Record<string, any>): void {
   if (typeof window === 'undefined' || !table || !row) return;
+  notifyRealtimeCrmListeners(table, row);
   fetch('/api/crm/upsert', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ table, row }),
   }).catch(() => {});
+  scheduleCloudCrmSnapshotUpload();
+}
+
+async function pushSharedRowUpsertToServerImmediate(
+  table: string,
+  row: Record<string, any>
+): Promise<void> {
+  if (typeof window === 'undefined' || !table || !row) return;
+  notifyRealtimeCrmListeners(table, row);
+  try {
+    await fetch('/api/crm/upsert', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ table, row }),
+    });
+  } catch {
+    // Non-blocking if static host
+  }
   scheduleCloudCrmSnapshotUpload();
 }
 
@@ -1624,16 +1671,18 @@ function mapPaymentRow(row: Record<string, any>): PaymentRecord {
 function mapMessageRow(row: Record<string, any>): ProjectMessage {
   return {
     id: String(row.id),
-    projectId: String(row.project_id || ''),
-    clientUserId: String(row.client_user_id || ''),
-    senderId: String(row.sender_id || ''),
-    senderName: String(row.sender_name || ''),
-    senderRole: (row.sender_role || 'client') as ProjectMessage['senderRole'],
+    projectId: String(row.project_id || row.projectId || ''),
+    clientUserId: String(row.client_user_id || row.clientUserId || ''),
+    clientEmail: String(row.client_email || row.clientEmail || '').trim().toLowerCase(),
+    clientId: String(row.client_id || row.clientId || '').trim(),
+    senderId: String(row.sender_id || row.senderId || ''),
+    senderName: String(row.sender_name || row.senderName || ''),
+    senderRole: (row.sender_role || row.senderRole || 'client') as ProjectMessage['senderRole'],
     content: String(row.content || ''),
     visibility: (row.visibility || 'client') as ProjectMessage['visibility'],
-    readByAdmin: Boolean(row.read_by_admin),
-    readByClient: Boolean(row.read_by_client),
-    createdAt: row.created_at,
+    readByAdmin: Boolean(row.read_by_admin ?? row.readByAdmin),
+    readByClient: Boolean(row.read_by_client ?? row.readByClient),
+    createdAt: row.created_at || row.createdAt,
   };
 }
 
@@ -4611,7 +4660,8 @@ export async function fetchMediaAssetsAdmin(
     .from('media_assets')
     .select('*')
     .neq('original_filename', SITE_CONFIG_FILENAME)
-    .neq('original_filename', '__quotations_registry_json__');
+    .neq('original_filename', '__quotations_registry_json__')
+    .neq('original_filename', MESSAGES_REGISTRY_FILENAME);
 
   // 1. Filter by exact MIME type (.eq('mime_type', ...)) or media category
   if (filters?.mimeType && filters.mimeType !== 'all') {
@@ -5612,6 +5662,85 @@ export async function fetchClientPayments(
 // ============================================================================
 // PROJECT MESSAGES / COMMENTS & WHATSAPP-STYLE INBOX THREADS
 // ============================================================================
+async function syncMessagesRegistryToCloud(rows?: Record<string, any>[]): Promise<void> {
+  if (!isSupabaseConfigured || typeof window === 'undefined') return;
+  try {
+    const allRows = rows || readLocalTableRows('project_messages');
+    const resetAtMs = getLocalResetAtMs();
+    const filtered = allRows
+      .filter((r) => {
+        if (!r || !r.id) return false;
+        if (resetAtMs > 0) {
+          const t = new Date(r.updated_at || r.created_at || 0).getTime();
+          if (!Number.isNaN(t) && t < resetAtMs) return false;
+        }
+        return true;
+      })
+      .slice(-300);
+
+    const serialized = JSON.stringify(filtered);
+    const { data: existingRows } = await supabase
+      .from('media_assets')
+      .select('id')
+      .eq('original_filename', MESSAGES_REGISTRY_FILENAME)
+      .order('updated_at', { ascending: false })
+      .limit(1);
+    const existingRow = Array.isArray(existingRows) ? existingRows[0] : null;
+
+    if (existingRow?.id) {
+      await supabase
+        .from('media_assets')
+        .update({
+          description: serialized,
+          file_size: serialized.length,
+          is_public: true,
+          storage_bucket: 'public-assets',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existingRow.id);
+    } else {
+      await supabase.from('media_assets').insert({
+        title: 'Studio Chat Messages Registry',
+        original_filename: MESSAGES_REGISTRY_FILENAME,
+        storage_bucket: 'public-assets',
+        storage_path: 'config/messages_registry.json',
+        public_url: '',
+        mime_type: 'application/json',
+        file_extension: 'json',
+        media_category: 'document',
+        file_size: serialized.length,
+        description: serialized,
+        tags: ['system-messages-registry'],
+        is_public: true,
+      });
+    }
+  } catch {
+    // Non-blocking fallback
+  }
+}
+
+async function pullMessagesRegistryFromCloud(): Promise<Record<string, any>[]> {
+  if (!isSupabaseConfigured) return [];
+  try {
+    const { data } = await supabase
+      .from('media_assets')
+      .select('description')
+      .eq('original_filename', MESSAGES_REGISTRY_FILENAME)
+      .order('updated_at', { ascending: false })
+      .limit(1);
+    const row = Array.isArray(data) ? data[0] : null;
+    if (row?.description) {
+      const parsed = JSON.parse(row.description);
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+    }
+  } catch {
+    // Ignore fallback parse error
+  }
+  return [];
+}
+
 export function getCachedMessagesAdmin(): ProjectMessage[] {
   return mergeRemoteAndLocalRows('project_messages', [], mapMessageRow).sort(
     (a, b) =>
@@ -5620,29 +5749,50 @@ export function getCachedMessagesAdmin(): ProjectMessage[] {
 }
 
 export async function fetchAllMessagesAdmin(): Promise<ProjectMessage[]> {
-  await syncSharedCrmStoreWithServer();
+  await syncSharedCrmStoreWithServer(true);
   if (!isSupabaseConfigured) {
     return getCachedMessagesAdmin();
   }
-  const remoteRows = await fetchRemoteTableRowsCached('project_messages', () =>
-    supabase.from('project_messages').select('*').order('created_at', { ascending: true })
-  );
-  return mergeRemoteAndLocalRows('project_messages', remoteRows, mapMessageRow).sort(
+  const [remoteRows, registryRows] = await Promise.all([
+    fetchRemoteTableRowsCached(
+      'project_messages',
+      () => supabase.from('project_messages').select('*').order('created_at', { ascending: true }),
+      1200
+    ),
+    pullMessagesRegistryFromCloud(),
+  ]);
+
+  const combinedRemote = [...registryRows, ...remoteRows];
+  return mergeRemoteAndLocalRows('project_messages', combinedRemote, mapMessageRow).sort(
     (a, b) =>
       new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()
   );
 }
 
 export async function markThreadMessagesRead(
-  projectId: string,
+  projectId: string | string[],
   viewerRole: 'admin' | 'client'
 ): Promise<void> {
-  if (!projectId) return;
+  const targetIds = new Set(
+    (Array.isArray(projectId) ? projectId : [projectId]).map((id) => String(id || '').trim()).filter(Boolean)
+  );
+  if (targetIds.size === 0) return;
+
+  // Also include inquiry:<id> and bare <id> equivalents so linked threads stay in sync
+  for (const id of Array.from(targetIds)) {
+    if (id.startsWith('inquiry:')) {
+      targetIds.add(id.slice('inquiry:'.length));
+    } else if (!id.includes(':')) {
+      targetIds.add(`inquiry:${id}`);
+    }
+  }
+
   const rows = readLocalTableRows('project_messages');
   let changed = false;
   const updatedIds: string[] = [];
   const nextRows = rows.map((r) => {
-    if (String(r.project_id) !== projectId) return r;
+    const rProjId = String(r.project_id || r.projectId || '');
+    if (!targetIds.has(rProjId)) return r;
     if (viewerRole === 'admin' && !r.read_by_admin) {
       changed = true;
       updatedIds.push(String(r.id));
@@ -5663,19 +5813,24 @@ export async function markThreadMessagesRead(
   if (changed) {
     writeLocalTableRows('project_messages', nextRows);
     invalidateRemoteTableCache('project_messages');
+    notifyRealtimeCrmListeners('project_messages');
+    void syncMessagesRegistryToCloud(nextRows);
   }
 
-  const validProjId = toNullableUuid(projectId);
-  if (isSupabaseConfigured && validProjId && updatedIds.length > 0) {
-    try {
-      const updateField =
-        viewerRole === 'admin' ? { read_by_admin: true } : { read_by_client: true };
-      await supabase
-        .from('project_messages')
-        .update(updateField)
-        .eq('project_id', validProjId);
-    } catch {
-      // Non-blocking
+  if (isSupabaseConfigured && updatedIds.length > 0) {
+    for (const id of Array.from(targetIds)) {
+      const validProjId = toNullableUuid(id);
+      if (!validProjId) continue;
+      try {
+        const updateField =
+          viewerRole === 'admin' ? { read_by_admin: true } : { read_by_client: true };
+        await supabase
+          .from('project_messages')
+          .update(updateField)
+          .eq('project_id', validProjId);
+      } catch {
+        // Non-blocking
+      }
     }
   }
 }
@@ -5685,16 +5840,27 @@ export async function fetchProjectMessages(
   isAdminUser: boolean,
   clientUserId?: string
 ): Promise<ProjectMessage[]> {
-  await syncSharedCrmStoreWithServer();
+  await syncSharedCrmStoreWithServer(true);
   const validProjId = toNullableUuid(projectId);
+  const bareId = projectId.startsWith('inquiry:')
+    ? projectId.slice('inquiry:'.length)
+    : projectId;
+  const inquiryPrefixedId = `inquiry:${bareId}`;
+
   const matchesMessage = (m: ProjectMessage): boolean => {
-    if (m.projectId !== projectId) return false;
+    const matchesThread =
+      m.projectId === projectId ||
+      m.projectId === bareId ||
+      m.projectId === inquiryPrefixedId;
+    if (!matchesThread) return false;
     if (!isAdminUser && m.visibility !== 'client') return false;
     return true;
   };
 
+  const registryRows = await pullMessagesRegistryFromCloud();
+
   if (!isSupabaseConfigured || !validProjId) {
-    return mergeRemoteAndLocalRows('project_messages', [], mapMessageRow)
+    return mergeRemoteAndLocalRows('project_messages', registryRows, mapMessageRow)
       .filter(matchesMessage)
       .sort(
         (a, b) =>
@@ -5715,7 +5881,7 @@ export async function fetchProjectMessages(
   const { data, error } = await q;
   if (error) {
     if (isMissingSchemaError(error) || isRlsOrPermissionError(error)) {
-      return mergeRemoteAndLocalRows('project_messages', [], mapMessageRow)
+      return mergeRemoteAndLocalRows('project_messages', registryRows, mapMessageRow)
         .filter(matchesMessage)
         .sort(
           (a, b) =>
@@ -5724,7 +5890,11 @@ export async function fetchProjectMessages(
     }
     handleSupabaseError(error, 'fetchProjectMessages');
   }
-  return mergeRemoteAndLocalRows('project_messages', data || [], mapMessageRow)
+  return mergeRemoteAndLocalRows(
+    'project_messages',
+    [...registryRows, ...(data || [])],
+    mapMessageRow
+  )
     .filter(matchesMessage)
     .sort(
       (a, b) =>
@@ -5735,62 +5905,149 @@ export async function fetchProjectMessages(
 export async function postProjectMessage(params: {
   projectId: string;
   clientUserId: string;
+  clientEmail?: string;
+  clientId?: string;
   senderName: string;
   senderRole: 'admin' | 'client';
   content: string;
   visibility: 'client' | 'internal';
 }): Promise<string> {
   const user = await getCurrentUser();
-  if (!user) throw new Error('Authentication required');
+  const senderId = user?.id || (params.senderRole === 'admin' ? 'studio_admin' : 'studio_client');
 
-  let resolvedClientUserId = toNullableUuid(params.clientUserId);
-  let resolvedClientEmail = '';
+  let resolvedClientUserId =
+    toNullableUuid(params.clientUserId) || String(params.clientUserId || '').trim();
+  let resolvedClientEmail = String(params.clientEmail || '').trim().toLowerCase();
+  let resolvedClientId = String(params.clientId || '').trim();
 
-  const allProjects = await fetchAllProjectsAdmin().catch(() => []);
-  const targetProject = allProjects.find((p) => p.id === params.projectId);
+  if (params.senderRole === 'client' && !resolvedClientEmail && user?.email) {
+    resolvedClientEmail = String(user.email).trim().toLowerCase();
+  }
+  if (params.senderRole === 'client' && !resolvedClientUserId && user?.id) {
+    resolvedClientUserId = String(user.id).trim();
+  }
+
+  const [allProjects, allClients, allInquiries] = await Promise.all([
+    fetchAllProjectsAdmin().catch(() => []),
+    fetchAllClientsAdmin().catch(() => []),
+    fetchAllInquiriesAdmin().catch(() => []),
+  ]);
+
+  const bareThreadId = params.projectId.startsWith('inquiry:')
+    ? params.projectId.slice('inquiry:'.length)
+    : params.projectId;
+
+  const targetProject = allProjects.find(
+    (p) => p.id === params.projectId || p.id === bareThreadId
+  );
   if (targetProject) {
-    resolvedClientEmail = (targetProject.clientEmail || '').trim().toLowerCase();
-    if (!resolvedClientUserId && targetProject.clientUserId) {
-      resolvedClientUserId = toNullableUuid(targetProject.clientUserId);
+    if (!resolvedClientEmail && targetProject.clientEmail) {
+      resolvedClientEmail = targetProject.clientEmail.trim().toLowerCase();
     }
-  } else if (params.projectId.startsWith('client:')) {
-    const clientId = params.projectId.slice('client:'.length);
-    const allClients = await fetchAllClientsAdmin().catch(() => []);
-    const targetClient = allClients.find((c) => c.id === clientId);
-    if (targetClient) {
-      resolvedClientEmail = (targetClient.email || '').trim().toLowerCase();
-      if (!resolvedClientUserId && targetClient.userId) {
-        resolvedClientUserId = toNullableUuid(targetClient.userId);
-      }
+    if (!resolvedClientUserId && targetProject.clientUserId) {
+      resolvedClientUserId = targetProject.clientUserId.trim();
+    }
+    if (!resolvedClientId && targetProject.clientId) {
+      resolvedClientId = targetProject.clientId.trim();
     }
   }
 
-  const payload: Record<string, any> = {
+  if (params.projectId.startsWith('client:')) {
+    const clientId = params.projectId.slice('client:'.length);
+    resolvedClientId = resolvedClientId || clientId;
+    const targetClient = allClients.find((c) => c.id === clientId);
+    if (targetClient) {
+      if (!resolvedClientEmail && targetClient.email) {
+        resolvedClientEmail = targetClient.email.trim().toLowerCase();
+      }
+      if (!resolvedClientUserId && targetClient.userId) {
+        resolvedClientUserId = targetClient.userId.trim();
+      }
+    }
+  } else if (params.projectId.startsWith('inquiry:')) {
+    const inqId = params.projectId.slice('inquiry:'.length);
+    const targetInq = allInquiries.find((i) => i.id === inqId);
+    if (targetInq && !resolvedClientEmail && targetInq.email) {
+      resolvedClientEmail = targetInq.email.trim().toLowerCase();
+    }
+  } else if (params.projectId.startsWith('support:')) {
+    const supportKey = params.projectId.slice('support:'.length).trim();
+    if (supportKey.includes('@') && !resolvedClientEmail) {
+      resolvedClientEmail = supportKey.toLowerCase();
+    } else if (supportKey && !resolvedClientUserId) {
+      resolvedClientUserId = supportKey;
+    }
+  }
+
+  // Cross-match with Clients directory by email or userId so all 3 identifiers (clientId, clientUserId, clientEmail) are populated
+  const matchedClientRecord = allClients.find(
+    (c) =>
+      (resolvedClientId && c.id === resolvedClientId) ||
+      (resolvedClientEmail && (c.email || '').trim().toLowerCase() === resolvedClientEmail) ||
+      (resolvedClientUserId && (c.userId || '').trim() === resolvedClientUserId)
+  );
+  if (matchedClientRecord) {
+    if (!resolvedClientId) resolvedClientId = matchedClientRecord.id;
+    if (!resolvedClientEmail && matchedClientRecord.email) {
+      resolvedClientEmail = matchedClientRecord.email.trim().toLowerCase();
+    }
+    if (!resolvedClientUserId && matchedClientRecord.userId) {
+      resolvedClientUserId = matchedClientRecord.userId.trim();
+    }
+  }
+
+  const nowIso = new Date().toISOString();
+  const msgId = crypto.randomUUID();
+
+  const localAndSharedPayload: Record<string, any> = {
+    id: msgId,
     project_id: params.projectId,
-    client_user_id: resolvedClientUserId || params.clientUserId || '',
-    sender_id: toNullableUuid(user.id) || user.id,
+    client_user_id: resolvedClientUserId || '',
+    client_email: resolvedClientEmail || '',
+    client_id: resolvedClientId || '',
+    sender_id: toNullableUuid(senderId) || senderId,
     sender_name: truncate(params.senderName, 120),
     sender_role: params.senderRole,
     content: truncate(params.content, 2000),
     visibility: params.senderRole === 'client' ? 'client' : params.visibility,
     read_by_admin: params.senderRole === 'admin',
     read_by_client: params.senderRole === 'client',
+    created_at: nowIso,
+    updated_at: nowIso,
   };
 
-  let msgId = '';
+  // 1. Save immediately in local table + broadcast to open tabs + push to Express shared store
+  upsertLocalTableRow('project_messages', localAndSharedPayload);
+  await pushSharedRowUpsertToServerImmediate('project_messages', localAndSharedPayload);
+
+  // 2. If project_id is a valid UUID, also insert into Supabase project_messages table
   const validProjUuid = toNullableUuid(params.projectId);
-  if (!validProjUuid) {
-    const localId = crypto.randomUUID();
-    upsertLocalTableRow('project_messages', { ...payload, id: localId });
-    msgId = localId;
-  } else {
-    msgId = await adaptiveInsertRow(
-      'project_messages',
-      payload,
-      { project_id: params.projectId },
-      'postProjectMessage'
-    );
+  if (validProjUuid && isSupabaseConfigured) {
+    const dbPayload: Record<string, any> = {
+      id: msgId,
+      project_id: validProjUuid,
+      client_user_id: toNullableUuid(resolvedClientUserId),
+      sender_id: toNullableUuid(senderId),
+      sender_name: localAndSharedPayload.sender_name,
+      sender_role: localAndSharedPayload.sender_role,
+      content: localAndSharedPayload.content,
+      visibility: localAndSharedPayload.visibility,
+      read_by_admin: localAndSharedPayload.read_by_admin,
+      read_by_client: localAndSharedPayload.read_by_client,
+      created_at: nowIso,
+    };
+    try {
+      await supabase.from('project_messages').insert(dbPayload);
+    } catch {
+      // Non-fatal if FK/RLS blocks; message is already in shared store & cloud registry
+    }
   }
+
+  // 3. Persist in Supabase cloud registry + storage snapshot so all browsers/devices receive it immediately
+  await Promise.all([
+    syncMessagesRegistryToCloud(),
+    uploadCloudCrmSnapshotNow(),
+  ]).catch(() => {});
 
   if (
     params.senderRole === 'admin' &&
@@ -5803,7 +6060,7 @@ export async function postProjectMessage(params: {
       type: 'New project comment',
       title: `New Studio Message from ${params.senderName}`,
       message: truncate(params.content, 160),
-      link: targetProject ? `/portal/projects/${params.projectId}` : '/portal/messages',
+      link: `/portal/messages?thread=${encodeURIComponent(params.projectId)}`,
     });
   }
 
@@ -5982,12 +6239,12 @@ export async function truncateAllCrmDataAdmin(): Promise<{
       }
     }
 
-    // Delete quotations registry rows in media_assets while keeping __site_customization_json__ and portfolio assets
+    // Delete quotations and messages registry rows in media_assets while keeping __site_customization_json__ and portfolio assets
     try {
       await supabase
         .from('media_assets')
         .delete()
-        .eq('original_filename', '__quotations_registry_json__');
+        .in('original_filename', ['__quotations_registry_json__', MESSAGES_REGISTRY_FILENAME]);
     } catch {
       // Ignore
     }

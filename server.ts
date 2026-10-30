@@ -92,7 +92,10 @@ function truncateSharedCrmStoreOperationalTables(): SharedCrmStoreData {
   }
   if (Array.isArray(store.tables.media_assets)) {
     store.tables.media_assets = store.tables.media_assets.filter(
-      (m) => m && m.original_filename !== '__quotations_registry_json__'
+      (m) =>
+        m &&
+        m.original_filename !== '__quotations_registry_json__' &&
+        m.original_filename !== '__messages_registry_json__'
     );
   }
   persistSharedCrmStore(store);
@@ -154,7 +157,10 @@ function mergeIncomingTablesIntoSharedStore(
       }
       if (Array.isArray(store.tables.media_assets)) {
         store.tables.media_assets = store.tables.media_assets.filter(
-          (m) => m && m.original_filename !== '__quotations_registry_json__'
+          (m) =>
+            m &&
+            m.original_filename !== '__quotations_registry_json__' &&
+            m.original_filename !== '__messages_registry_json__'
         );
       }
       modified = true;
