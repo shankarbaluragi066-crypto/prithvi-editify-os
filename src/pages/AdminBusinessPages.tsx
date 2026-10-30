@@ -76,6 +76,7 @@ import {
   RecordActionBar,
 } from '../components/CrudManagementModals';
 import { MediaLibraryManager } from '../components/MediaLibraryManager';
+import { LazyImage } from '../components/LazyImage';
 import { MediaPreviewModal, PreviewableMediaItem } from '../components/MediaPreviewModal';
 import { MediaSearchFilterState } from '../components/MediaSearchFilterBar';
 import {
@@ -845,13 +846,12 @@ export const AdminServicesPage: React.FC = () => {
                   <td className="py-3.5 px-4 font-mono">{srv.sortOrder}</td>
                   <td className="py-3.5 px-4">
                     <div className="flex items-center gap-3">
-                      <img
+                      <LazyImage
                         src={
                           srv.imageUrl ||
                           createStudioArtworkDataUri(srv.title, srv.category, '#10B981')
                         }
                         alt={srv.title}
-                        referrerPolicy="no-referrer"
                         className="w-12 h-9 rounded object-cover bg-[#040D1A] border border-[#1E3A5F] shrink-0"
                       />
                       <div>
@@ -1500,13 +1500,12 @@ export const AdminPortfolioPage: React.FC = () => {
                 }
                 className="cursor-pointer relative aspect-[4/3] bg-[#040D1A] overflow-hidden border-b border-[#1E3A5F] group"
               >
-                <img
+                <LazyImage
                   src={
                     item.coverImage ||
                     createStudioArtworkDataUri(item.title, item.category, '#10B981')
                   }
                   alt={item.title}
-                  referrerPolicy="no-referrer"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                 />
                 {item.videoUrl && (

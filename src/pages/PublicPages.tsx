@@ -42,6 +42,7 @@ import {
 } from '../utils/seedData';
 import { ServiceItem, PortfolioItem, PublicSettings } from '../types/crm';
 import { InquiryForm } from '../components/InquiryForm';
+import { LazyImage } from '../components/LazyImage';
 import { MediaPreviewModal, PreviewableMediaItem } from '../components/MediaPreviewModal';
 import {
   BeforeAfterComparisonShowcase,
@@ -317,18 +318,16 @@ const MarketplaceServiceCard: React.FC<MarketplaceServiceCardProps> = ({
             className="relative flex items-center justify-center w-full h-full overflow-hidden"
           >
             {hasCustomImage && (
-              <img
+              <LazyImage
                 src={coverSrc}
                 alt=""
                 aria-hidden="true"
-                referrerPolicy="no-referrer"
                 className="absolute inset-0 w-full h-full object-cover blur-md opacity-35 scale-110 pointer-events-none"
               />
             )}
-            <img
+            <LazyImage
               src={coverSrc}
               alt={srv.title}
-              referrerPolicy="no-referrer"
               className={`relative z-10 transition-transform duration-300 ease-out group-hover:scale-[1.03] ${
                 hasCustomImage
                   ? 'max-h-full max-w-full w-auto h-auto object-contain p-2.5 drop-shadow-[0_6px_16px_rgba(0,0,0,0.35)]'
@@ -538,18 +537,16 @@ const MarketplacePortfolioCard: React.FC<MarketplacePortfolioCardProps> = ({
             className="relative flex items-center justify-center w-full h-full overflow-hidden"
           >
             {hasCustomCover && (
-              <img
+              <LazyImage
                 src={coverSrc}
                 alt=""
                 aria-hidden="true"
-                referrerPolicy="no-referrer"
                 className="absolute inset-0 w-full h-full object-cover blur-md opacity-35 scale-110 pointer-events-none"
               />
             )}
-            <img
+            <LazyImage
               src={coverSrc}
               alt={item.title}
-              referrerPolicy="no-referrer"
               className={`relative z-10 transition-transform duration-300 ease-out group-hover:scale-[1.03] ${
                 hasCustomCover
                   ? 'max-h-full max-w-full w-auto h-auto object-contain p-2.5 drop-shadow-[0_6px_16px_rgba(0,0,0,0.35)]'
@@ -825,10 +822,10 @@ export const HomePage: React.FC = () => {
                   className="relative overflow-hidden rounded-lg border border-white/10"
                   style={{ backgroundColor: primaryBg }}
                 >
-                  <img
+                  <LazyImage
                     src={heroPreviewSrc}
                     alt={`${settings.businessName || 'Prithvi Editify'} studio showcase`}
-                    referrerPolicy="no-referrer"
+                    eager
                     className="w-full h-56 object-cover"
                   />
                 </div>
@@ -1965,18 +1962,16 @@ export const ServiceDetailPage: React.FC = () => {
           <div className="pe-card-interactive bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-3 sm:p-4 space-y-3 shadow-[0_1px_3px_rgba(0,0,0,0.35)]">
             <div className="relative h-[340px] sm:h-[460px] w-full bg-[#040D1A] rounded-lg overflow-hidden border border-[#1E3A5F]">
               {hasCustomImage && (
-                <img
+                <LazyImage
                   src={currentPreviewUrl}
                   alt=""
                   aria-hidden="true"
-                  referrerPolicy="no-referrer"
                   className="absolute inset-0 w-full h-full object-cover blur-xl opacity-30 scale-110 pointer-events-none"
                 />
               )}
-              <img
+              <LazyImage
                 src={currentPreviewUrl}
                 alt={service.title}
-                referrerPolicy="no-referrer"
                 className={`relative z-10 w-full h-full ${
                   hasCustomImage ? 'object-contain p-2 sm:p-4' : 'object-cover'
                 }`}
@@ -2046,10 +2041,9 @@ export const ServiceDetailPage: React.FC = () => {
                         : 'border-[#1E3A5F] opacity-70 hover:opacity-100'
                     }`}
                   >
-                    <img
+                    <LazyImage
                       src={imgUrl}
                       alt={`${service.title} thumbnail ${idx + 1}`}
-                      referrerPolicy="no-referrer"
                       className="w-full h-full object-contain"
                     />
                   </button>
@@ -2595,10 +2589,9 @@ export const ServiceBookingPage: React.FC = () => {
             <div className="pe-card-interactive bg-[#0D1F38] border border-[#1E3A5F] rounded-xl overflow-hidden shadow-[0_6px_24px_rgba(0,0,0,0.25)]">
               {coverSrc && (
                 <div className="relative aspect-[16/10] w-full bg-[#040D1A] border-b border-[#1E3A5F] overflow-hidden flex items-center justify-center">
-                  <img
+                  <LazyImage
                     src={coverSrc}
                     alt={matchedService.title}
-                    referrerPolicy="no-referrer"
                     className="w-full h-full object-contain p-2"
                   />
                   <span className="absolute top-3 left-3 px-2.5 py-1 text-[11px] font-semibold text-white bg-[#040D1A]/90 border border-white/15 rounded-md">
@@ -3374,18 +3367,16 @@ export const PortfolioDetailPage: React.FC = () => {
             ) : (
               <div className="relative h-[340px] sm:h-[460px] w-full bg-[#040D1A] border border-[#1E3A5F] rounded-lg overflow-hidden">
                 {hasCustomCover && (
-                  <img
+                  <LazyImage
                     src={activeImageUrl}
                     alt=""
                     aria-hidden="true"
-                    referrerPolicy="no-referrer"
                     className="absolute inset-0 w-full h-full object-cover blur-xl opacity-30 scale-110 pointer-events-none"
                   />
                 )}
-                <img
+                <LazyImage
                   src={activeImageUrl}
                   alt={project.title}
-                  referrerPolicy="no-referrer"
                   className={`relative z-10 w-full h-full ${
                     hasCustomCover ? 'object-contain p-3 sm:p-4' : 'object-cover'
                   }`}
@@ -3428,10 +3419,9 @@ export const PortfolioDetailPage: React.FC = () => {
                         : 'border-[#1E3A5F] opacity-75 hover:opacity-100'
                     }`}
                   >
-                    <img
+                    <LazyImage
                       src={imgUrl}
                       alt={`${project.title} frame ${idx + 1}`}
-                      referrerPolicy="no-referrer"
                       className="w-full h-full object-contain"
                     />
                   </button>
@@ -3656,10 +3646,9 @@ export const AboutPage: React.FC = () => {
 
         <div className="lg:col-span-5">
           <div className="pe-card-interactive bg-[#0D1F38] border border-[#1E3A5F] rounded-lg overflow-hidden shadow-[0_1px_2px_rgba(0,0,0,0.35)]">
-            <img
+            <LazyImage
               src={founderSrc}
               alt={custom.founderName || settings.ownerName || 'Shankar Baluragi'}
-              referrerPolicy="no-referrer"
               className="w-full aspect-[4/3] object-cover"
             />
             <div className="p-6 space-y-2">

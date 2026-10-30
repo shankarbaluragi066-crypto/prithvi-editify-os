@@ -22,6 +22,7 @@ import { MediaBucket, MediaCategory } from '../types/crm';
 import { detectMediaCategory, getFileExtension } from '../utils/mediaValidation';
 import { formatFileSize, formatDate } from '../utils/formatters';
 import { resolveStoragePreviewUrl } from '../services/crmService';
+import { LazyImage } from './LazyImage';
 
 import {
   ProofingPinAnnotation,
@@ -388,10 +389,9 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                   proofingContext && pinModeActive ? 'cursor-crosshair' : ''
                 }`}
               >
-                <img
+                <LazyImage
                   src={activeUrl}
                   alt={item.title}
-                  referrerPolicy="no-referrer"
                   style={{
                     transform: `scale(${zoom}) rotate(${rotation}deg)`,
                     transition: 'transform 160ms ease-out',

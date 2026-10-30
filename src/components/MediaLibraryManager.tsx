@@ -54,6 +54,7 @@ import { formatFileSize, formatDate } from '../utils/formatters';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
 import { MediaPreviewModal, PreviewableMediaItem } from './MediaPreviewModal';
+import { LazyImage } from './LazyImage';
 import {
   MediaSearchFilterBar,
   MediaSearchFilterState,
@@ -986,10 +987,9 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
                     className="cursor-pointer relative aspect-[16/10] bg-[#040D1A] overflow-hidden border-b border-[#1E3A5F] flex items-center justify-center group"
                   >
                     {asset.mediaCategory === 'image' && asset.publicUrl ? (
-                      <img
+                      <LazyImage
                         src={asset.publicUrl}
                         alt={asset.title}
-                        referrerPolicy="no-referrer"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                       />
                     ) : asset.mediaCategory === 'video' && asset.publicUrl ? (

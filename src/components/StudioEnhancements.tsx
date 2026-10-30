@@ -52,6 +52,7 @@ import {
 import { DEFAULT_STUDIO_LOGO_URL } from '../utils/seedData';
 import { formatINR } from '../utils/formatters';
 import { useToast } from '../contexts/ToastContext';
+import { LazyImage } from './LazyImage';
 
 // ============================================================================
 // 1. DETERMINISTIC SCANNABLE-STYLE SVG QR MATRIX + UPI DEEP LINK CARD
@@ -481,7 +482,7 @@ export const BeforeAfterComparisonShowcase: React.FC<{
         className="relative aspect-[16/9] max-h-[440px] w-full rounded-xl overflow-hidden border border-[#1E3A5F] select-none cursor-ew-resize bg-[#040D1A]"
       >
         {/* Base Layer: AFTER (Full width) */}
-        <img
+        <LazyImage
           src={activePreset.afterSvgDataUrl}
           alt={activePreset.afterLabel}
           className="absolute inset-0 w-full h-full object-cover pointer-events-none"
@@ -492,7 +493,7 @@ export const BeforeAfterComparisonShowcase: React.FC<{
           className="absolute inset-0 overflow-hidden pointer-events-none"
           style={{ clipPath: `inset(0 ${100 - sliderPos}% 0 0)` }}
         >
-          <img
+          <LazyImage
             src={activePreset.beforeSvgDataUrl}
             alt={activePreset.beforeLabel}
             className="absolute inset-0 w-full h-full object-cover"
