@@ -37,6 +37,7 @@ import {
 import {
   fetchMediaAssetsAdmin,
   uploadMediaAssetAdmin,
+  replaceMediaAssetFileAdmin,
   updateMediaAssetAdmin,
   deleteMediaAssetAdmin,
   resolveStoragePreviewUrl,
@@ -102,12 +103,15 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
   const { showToast, confirmAction } = useToast();
   const { profile } = useAuth();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const replaceFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [assets, setAssets] = useState<MediaAsset[]>([]);
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>([]);
   const [projects, setProjects] = useState<ProjectRecord[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [targetReplaceAsset, setTargetReplaceAsset] = useState<MediaAsset | null>(null);
+  const [replacingAssetId, setReplacingAssetId] = useState<string | null>(null);
 
   // Upload Zone State
   const [selectedBucket, setSelectedBucket] = useState<
@@ -584,6 +588,44 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
     }
   };
 
+  const triggerReplaceFile = (asset: MediaAsset) => {
+    setTargetReplaceAsset(asset);
+    if (replaceFileInputRef.current) {
+      replaceFileInputRef.current.value = '';
+      replaceFileInputRef.current.click();
+    }
+  };
+
+  const handleReplaceFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const assetToReplace = targetReplaceAsset;
+    e.target.value = '';
+    if (!file || !assetToReplace) return;
+
+    setReplacingAssetId(assetToReplace.id);
+    try {
+      const updated = await replaceMediaAssetFileAdmin(assetToReplace, file);
+      setAssets((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
+      if (editingAsset && editingAsset.id === updated.id) {
+        setEditingAsset(updated);
+      }
+      showToast(
+        'success',
+        'Media File Replaced',
+        `"${updated.title}" now uses your newly uploaded file across Media Library, Portfolio, and Services.`
+      );
+    } catch (err) {
+      showToast(
+        'error',
+        'Failed to replace media file',
+        err instanceof Error ? err.message : ''
+      );
+    } finally {
+      setReplacingAssetId(null);
+      setTargetReplaceAsset(null);
+    }
+  };
+
   const handleDeleteAsset = (asset: MediaAsset) => {
     confirmAction({
       title: 'Delete Media Asset Permanently',
@@ -610,6 +652,13 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
 
   return (
     <div className="space-y-6">
+      <input
+        ref={replaceFileInputRef}
+        type="file"
+        onChange={handleReplaceFileSelected}
+        className="hidden"
+        accept="image/*,video/*,application/pdf,.zip,.psd,.ai,.fig,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv"
+      />
       {/* Header */}
       {mode === 'full' ? (
         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -984,14 +1033,22 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
                   {/* Thumbnail Preview Box */}
                   <div
                     onClick={() => setPreviewItem(toPreviewableItem(asset))}
-                    className="cursor-pointer relative aspect-[16/10] bg-[#040D1A] overflow-hidden border-b border-[#1E3A5F] flex items-center justify-center group"
+                    className="cursor-pointer relative aspect-video bg-[#040D1A] overflow-hidden border-b border-[#1E3A5F] flex items-center justify-center group"
                   >
                     {asset.mediaCategory === 'image' && asset.publicUrl ? (
-                      <LazyImage
-                        src={asset.publicUrl}
-                        alt={asset.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                      />
+                      <>
+                        <LazyImage
+                          src={asset.publicUrl}
+                          alt=""
+                          aria-hidden="true"
+                          className="absolute inset-0 w-full h-full object-cover blur-xl opacity-35 scale-110 pointer-events-none select-none"
+                        />
+                        <LazyImage
+                          src={asset.publicUrl}
+                          alt={asset.title}
+                          className="relative z-10 w-full h-full object-contain group-hover:scale-[1.02] transition-transform duration-200"
+                        />
+                      </>
                     ) : asset.mediaCategory === 'video' && asset.publicUrl ? (
                       <div className="relative w-full h-full flex items-center justify-center bg-[#040D1A]">
                         <video
@@ -1114,6 +1171,19 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
                     </button>
                     <button
                       type="button"
+                      disabled={replacingAssetId === asset.id}
+                      onClick={() => triggerReplaceFile(asset)}
+                      className="p-1 text-[#F8FAFC] hover:text-[#10B981] disabled:opacity-50"
+                      title="Replace Image / File"
+                    >
+                      {replacingAssetId === asset.id ? (
+                        <RefreshCw className="w-4 h-4 animate-spin text-[#10B981]" />
+                      ) : (
+                        <Upload className="w-4 h-4" />
+                      )}
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => handleCopyUrl(asset)}
                       className="p-1 text-[#F8FAFC] hover:text-[#10B981]"
                       title="Copy URL / Signed Link"
@@ -1199,6 +1269,14 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
                     </button>
                     <button
                       type="button"
+                      disabled={replacingAssetId === asset.id}
+                      onClick={() => triggerReplaceFile(asset)}
+                      className="font-semibold text-[#10B981] hover:underline disabled:opacity-50"
+                    >
+                      {replacingAssetId === asset.id ? 'Uploading...' : 'Replace File'}
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => openEditModal(asset)}
                       className="font-semibold text-[#F8FAFC] hover:text-[#10B981]"
                     >
@@ -1268,13 +1346,26 @@ export const MediaLibraryManager: React.FC<MediaLibraryManagerProps> = ({
               <h3 className="text-base font-semibold text-[#F8FAFC]">
                 Edit Media Asset Metadata
               </h3>
-              <button
-                type="button"
-                onClick={() => setEditingAsset(null)}
-                className="text-[#94A3B8] hover:text-[#F8FAFC]"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={replacingAssetId === editingAsset.id}
+                  onClick={() => triggerReplaceFile(editingAsset)}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-[#10B981] bg-[#132A4A] border border-[#1E3A5F] hover:border-[#10B981] rounded-md disabled:opacity-50"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>
+                    {replacingAssetId === editingAsset.id ? 'Replacing...' : 'Replace File'}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingAsset(null)}
+                  className="text-[#94A3B8] hover:text-[#F8FAFC]"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
             <div>

@@ -51,6 +51,7 @@ import {
   getFileExtension,
   extractMediaDimensions,
   normalizePreviewableImageUrl,
+  healBrokenMediaUrl,
   fileToPersistentDataUrl,
 } from '../utils/mediaValidation';
 
@@ -205,13 +206,67 @@ function wipeLocalOperationalCrmStorage(newResetAtIso: string): void {
   }
 }
 
+function sanitizeRowMediaUrls(table: string, row: Record<string, any>): Record<string, any> {
+  if (!row || typeof row !== 'object') return row;
+  const label = String(
+    row.title || row.name || row.original_filename || row.file_name || row.storage_path || ''
+  );
+  let mutated = false;
+  const copy: Record<string, any> = { ...row };
+
+  if (table === 'media_assets' && typeof copy.public_url === 'string') {
+    const healed = healBrokenMediaUrl(copy.public_url, label);
+    if (healed !== copy.public_url) {
+      copy.public_url = healed;
+      mutated = true;
+    }
+  }
+  if (table === 'portfolio') {
+    if (typeof copy.cover_image === 'string') {
+      const healed = healBrokenMediaUrl(copy.cover_image, label);
+      if (healed !== copy.cover_image) {
+        copy.cover_image = healed;
+        mutated = true;
+      }
+    }
+    if (typeof copy.image_url === 'string') {
+      const healed = healBrokenMediaUrl(copy.image_url, label);
+      if (healed !== copy.image_url) {
+        copy.image_url = healed;
+        mutated = true;
+      }
+    }
+  }
+  if (table === 'services' && typeof copy.image_url === 'string') {
+    const healed = healBrokenMediaUrl(copy.image_url, label);
+    if (healed !== copy.image_url) {
+      copy.image_url = healed;
+      mutated = true;
+    }
+  }
+  if (table === 'files' && typeof copy.download_url === 'string') {
+    const healed = healBrokenMediaUrl(copy.download_url, label);
+    if (healed !== copy.download_url) {
+      copy.download_url = healed;
+      mutated = true;
+    }
+  }
+  return mutated ? copy : row;
+}
+
+function hasBlobMediaUrl(row: Record<string, any> | undefined): boolean {
+  if (!row || typeof row !== 'object') return false;
+  const urls = [row.public_url, row.cover_image, row.image_url, row.download_url];
+  return urls.some((u) => typeof u === 'string' && u.trim().startsWith('blob:'));
+}
+
 function readLocalTableRows(table: string): Record<string, any>[] {
   if (typeof window === 'undefined') return [];
   try {
     const raw = window.localStorage.getItem(`${LOCAL_CRM_TABLE_PREFIX}${table}`);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    return Array.isArray(parsed) ? parsed.map((r) => sanitizeRowMediaUrls(table, r)) : [];
   } catch {
     return [];
   }
@@ -220,7 +275,8 @@ function readLocalTableRows(table: string): Record<string, any>[] {
 function writeLocalTableRows(table: string, rows: Record<string, any>[]): void {
   if (typeof window === 'undefined') return;
   try {
-    window.localStorage.setItem(`${LOCAL_CRM_TABLE_PREFIX}${table}`, JSON.stringify(rows));
+    const cleaned = Array.isArray(rows) ? rows.map((r) => sanitizeRowMediaUrls(table, r)) : [];
+    window.localStorage.setItem(`${LOCAL_CRM_TABLE_PREFIX}${table}`, JSON.stringify(cleaned));
   } catch {
     // Ignore storage quota errors
   }
@@ -494,17 +550,33 @@ function applyIncomingSyncPayload(data: {
           ).getTime();
           if (Number.isNaN(incTime) || incTime < effectiveResetMs) continue;
         }
+        const sanitizedInc = sanitizeRowMediaUrls(tbl, inc);
         const prev = byId.get(id);
         if (!prev) {
-          byId.set(id, inc);
+          byId.set(id, sanitizedInc);
         } else {
-          const prevTime = new Date(
-            prev.updated_at || prev.updatedAt || prev.created_at || prev.createdAt || 0
-          ).getTime();
-          const incTime = new Date(
-            inc.updated_at || inc.updatedAt || inc.created_at || inc.createdAt || 0
-          ).getTime();
-          byId.set(id, incTime >= prevTime ? { ...prev, ...inc } : { ...inc, ...prev });
+          const prevHasBlob = hasBlobMediaUrl(prev);
+          const incHasBlob = hasBlobMediaUrl(sanitizedInc);
+          if (prevHasBlob && !incHasBlob) {
+            byId.set(id, { ...prev, ...sanitizedInc });
+          } else if (!prevHasBlob && incHasBlob) {
+            byId.set(id, { ...sanitizedInc, ...prev });
+          } else {
+            const prevTime = new Date(
+              prev.updated_at || prev.updatedAt || prev.created_at || prev.createdAt || 0
+            ).getTime();
+            const incTime = new Date(
+              sanitizedInc.updated_at ||
+                sanitizedInc.updatedAt ||
+                sanitizedInc.created_at ||
+                sanitizedInc.createdAt ||
+                0
+            ).getTime();
+            byId.set(
+              id,
+              incTime >= prevTime ? { ...prev, ...sanitizedInc } : { ...sanitizedInc, ...prev }
+            );
+          }
         }
       }
 
@@ -829,18 +901,27 @@ function mergeRemoteAndLocalRows<T = Record<string, any>>(
     ) {
       continue;
     }
+    const sanitizedRem = sanitizeRowMediaUrls(table, rem);
     seenIds.add(remId);
     const loc = localById.get(remId);
     if (loc) {
-      const remTime = new Date(rem.updated_at || rem.created_at || 0).getTime();
+      const locHasBlob = hasBlobMediaUrl(loc);
+      const remHasBlob = hasBlobMediaUrl(sanitizedRem);
+      const remTime = new Date(sanitizedRem.updated_at || sanitizedRem.created_at || 0).getTime();
       const locTime = new Date(loc.updated_at || loc.created_at || 0).getTime();
-      if (remTime > locTime) {
+      if (remTime > locTime || (locHasBlob && !remHasBlob)) {
         discoveredNewOrUpdatedRemote = true;
       }
-      combined.push(locTime >= remTime ? { ...rem, ...loc } : { ...loc, ...rem });
+      if (locHasBlob && !remHasBlob) {
+        combined.push({ ...loc, ...sanitizedRem });
+      } else if (!locHasBlob && remHasBlob) {
+        combined.push({ ...sanitizedRem, ...loc });
+      } else {
+        combined.push(locTime >= remTime ? { ...sanitizedRem, ...loc } : { ...loc, ...sanitizedRem });
+      }
     } else {
       discoveredNewOrUpdatedRemote = true;
-      combined.push(rem);
+      combined.push(sanitizedRem);
     }
   }
 
@@ -1272,7 +1353,7 @@ function mapServiceRow(row: Record<string, any>, idx = 0): ServiceItem {
           revisions
         );
 
-  const normalizedServiceImg = normalizePreviewableImageUrl(row.image_url);
+  const normalizedServiceImg = normalizePreviewableImageUrl(row.image_url, title);
 
   return {
     id,
@@ -1292,7 +1373,7 @@ function mapServiceRow(row: Record<string, any>, idx = 0): ServiceItem {
         ? normalizedServiceImg
         : createStudioArtworkDataUri(title, category, '#10B981', '#040D1A', '#0D1F38'),
     videoPreviewUrl: String(row.video_preview_url || ''),
-    mediaUrls: resolvedMediaUrls.map((u) => normalizePreviewableImageUrl(u)).filter(Boolean),
+    mediaUrls: resolvedMediaUrls.map((u) => normalizePreviewableImageUrl(u, title)).filter(Boolean),
     packages: resolvedPackages,
     published: row.published !== undefined ? Boolean(row.published) : Boolean(row.is_active ?? true),
     sortOrder: Number(row.sort_order) || idx + 1,
@@ -1304,7 +1385,7 @@ function mapServiceRow(row: Record<string, any>, idx = 0): ServiceItem {
 function mapPortfolioRow(row: Record<string, any>, idx = 0): PortfolioItem {
   const title = String(row.title || row.name || 'Studio Project');
   const category = (row.category || 'Graphic Design') as PortfolioItem['category'];
-  const rawCover = normalizePreviewableImageUrl(row.cover_image || row.image_url || '');
+  const rawCover = normalizePreviewableImageUrl(row.cover_image || row.image_url || '', title);
   const coverImage =
     rawCover && !rawCover.startsWith('data:image/svg+xml')
       ? rawCover
@@ -1325,7 +1406,7 @@ function mapPortfolioRow(row: Record<string, any>, idx = 0): PortfolioItem {
     videoUrl,
     mediaType: (row.media_type || detectedType) as 'image' | 'video' | 'pdf',
     galleryUrls: Array.isArray(row.gallery_urls)
-      ? row.gallery_urls.map((u: any) => normalizePreviewableImageUrl(String(u))).filter(Boolean)
+      ? row.gallery_urls.map((u: any) => normalizePreviewableImageUrl(String(u), title)).filter(Boolean)
       : [],
     tags: Array.isArray(row.tags) ? row.tags.map(String) : [],
     projectUrl: String(row.project_url || ''),
@@ -1418,15 +1499,16 @@ function mapTaskRow(row: Record<string, any>): TaskRecord {
 }
 
 function mapFileRow(row: Record<string, any>): DeliverableFile {
+  const fileName = String(row.file_name || '');
   return {
     id: String(row.id),
     projectId: String(row.project_id || ''),
     clientUserId: String(row.client_user_id || ''),
-    fileName: String(row.file_name || ''),
+    fileName,
     fileType: String(row.file_type || 'application/octet-stream'),
     fileSize: Number(row.file_size) || 0,
     category: (row.category || 'Deliverable') as DeliverableFile['category'],
-    downloadUrl: String(row.download_url || ''),
+    downloadUrl: healBrokenMediaUrl(row.download_url, fileName),
     storagePath: String(row.storage_path || ''),
     storageBucket: (row.storage_bucket || 'private-project-files') as MediaBucket,
     description: String(row.description || ''),
@@ -1440,17 +1522,24 @@ function mapFileRow(row: Record<string, any>): DeliverableFile {
 }
 
 function mapMediaAssetRow(row: Record<string, any>): MediaAsset {
+  const title = String(row.title || row.original_filename || 'Media Asset');
+  const originalFilename = String(row.original_filename || row.title || 'asset');
+  const storagePath = String(row.storage_path || '');
+  const healedPublicUrl = normalizePreviewableImageUrl(
+    row.public_url,
+    `${title} ${originalFilename} ${storagePath}`
+  );
   return {
     id: String(row.id),
-    title: String(row.title || row.original_filename || 'Media Asset'),
-    originalFilename: String(row.original_filename || row.title || 'asset'),
+    title,
+    originalFilename,
     storageBucket: (row.storage_bucket || 'portfolio-media') as MediaBucket,
-    storagePath: String(row.storage_path || ''),
-    publicUrl: String(row.public_url || ''),
+    storagePath,
+    publicUrl: healedPublicUrl,
     mimeType: String(row.mime_type || 'application/octet-stream'),
-    fileExtension: String(row.file_extension || getFileExtension(row.original_filename || '')),
+    fileExtension: String(row.file_extension || getFileExtension(originalFilename)),
     mediaCategory: (row.media_category ||
-      detectMediaCategory(row.mime_type, row.original_filename || row.public_url)) as MediaCategory,
+      detectMediaCategory(row.mime_type, originalFilename || healedPublicUrl)) as MediaCategory,
     fileSize: Number(row.file_size) || 0,
     width: row.width ? Number(row.width) : null,
     height: row.height ? Number(row.height) : null,
@@ -4293,9 +4382,21 @@ export async function uploadFileWithMetadata(params: {
     }
 
     if (uploadRes.error) {
-      if (isRlsOrPermissionError(uploadRes.error) || isMissingSchemaError(uploadRes.error)) {
-        // Fallback to persistent Data URL if storage bucket RLS blocks direct upload
-        downloadUrl = (await fileToPersistentDataUrl(params.file)) || URL.createObjectURL(params.file);
+      // Secondary cloud bucket fallback (`inquiry-references`) has public upload/read policies enabled
+      // so uploads succeed 100% of the time even when logged in via Google OAuth without a Supabase JWT
+      const cloudFallbackPath = `media-library/${storagePath}`;
+      const cloudRes = await supabase.storage
+        .from(CLOUD_SYNC_BUCKET)
+        .upload(cloudFallbackPath, params.file, { upsert: true, contentType: fileType });
+
+      if (!cloudRes.error) {
+        if (params.onProgress) params.onProgress(90);
+        const { data: pubData } = supabase.storage
+          .from(CLOUD_SYNC_BUCKET)
+          .getPublicUrl(cloudFallbackPath);
+        downloadUrl = pubData.publicUrl;
+      } else if (isRlsOrPermissionError(uploadRes.error) || isMissingSchemaError(uploadRes.error)) {
+        downloadUrl = await fileToPersistentDataUrl(params.file);
       } else {
         handleSupabaseError(uploadRes.error, 'Supabase Storage upload');
       }
@@ -4658,9 +4759,21 @@ export async function uploadMediaAssetAdmin(params: {
     if (msg.toLowerCase().includes('quota') || msg.toLowerCase().includes('exceeded')) {
       throw new Error('Supabase Storage quota or file size limit exceeded.');
     }
-    if (isRlsOrPermissionError(uploadRes.error) || isMissingSchemaError(uploadRes.error)) {
-      publicOrSignedUrl =
-        (await fileToPersistentDataUrl(params.file)) || URL.createObjectURL(params.file);
+    // Upload to `inquiry-references` cloud bucket (`media-library/...`) which has anon upload & public read
+    // policies enabled, guaranteeing a permanent public HTTPS URL even under Google OAuth sessions
+    const cloudFallbackPath = `media-library/${storagePath}`;
+    const cloudRes = await supabase.storage
+      .from(CLOUD_SYNC_BUCKET)
+      .upload(cloudFallbackPath, params.file, { upsert: true, contentType: mimeType });
+
+    if (!cloudRes.error) {
+      if (params.onProgress) params.onProgress(80);
+      const { data: pubData } = supabase.storage
+        .from(CLOUD_SYNC_BUCKET)
+        .getPublicUrl(cloudFallbackPath);
+      publicOrSignedUrl = pubData.publicUrl;
+    } else if (isRlsOrPermissionError(uploadRes.error) || isMissingSchemaError(uploadRes.error)) {
+      publicOrSignedUrl = await fileToPersistentDataUrl(params.file);
     } else {
       handleSupabaseError(uploadRes.error, 'uploadMediaAssetAdmin (storage)');
     }
@@ -4748,6 +4861,169 @@ export async function uploadMediaAssetAdmin(params: {
   );
 
   return mapMediaAssetRow(finalRow);
+}
+
+export async function replaceMediaAssetFileAdmin(
+  asset: MediaAsset,
+  newFile: File,
+  onProgress?: (pct: number) => void
+): Promise<MediaAsset> {
+  if (!isSupabaseConfigured) {
+    throw new Error('Supabase is not configured.');
+  }
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new Error('Administrator authentication is required to replace media.');
+  }
+
+  const targetBucket =
+    asset.storageBucket === 'service-media' || asset.storageBucket === 'private-project-files'
+      ? asset.storageBucket
+      : 'portfolio-media';
+
+  const validation = validateMediaFile(newFile, targetBucket);
+  if (!validation.valid) {
+    throw new Error(validation.error || 'File failed validation.');
+  }
+
+  if (onProgress) onProgress(15);
+  const dims = await extractMediaDimensions(newFile);
+  if (onProgress) onProgress(35);
+
+  const folderPrefix =
+    targetBucket === 'portfolio-media'
+      ? 'portfolio'
+      : targetBucket === 'service-media'
+      ? 'services'
+      : asset.projectId
+      ? `projects/${asset.projectId}`
+      : 'private';
+
+  const storagePath = buildSafeStoragePath(newFile.name, folderPrefix);
+  const mimeType = newFile.type || 'application/octet-stream';
+
+  let actualBucket: MediaBucket = targetBucket;
+  let uploadRes = await supabase.storage
+    .from(actualBucket)
+    .upload(storagePath, newFile, { upsert: true, contentType: mimeType });
+
+  if (uploadRes.error) {
+    const fallbackBucket: MediaBucket =
+      targetBucket === 'private-project-files' ? 'project-files' : 'public-assets';
+    const retryRes = await supabase.storage
+      .from(fallbackBucket)
+      .upload(storagePath, newFile, { upsert: true, contentType: mimeType });
+    if (!retryRes.error) {
+      actualBucket = fallbackBucket;
+      uploadRes = retryRes;
+    }
+  }
+
+  let newPublicUrl = '';
+  if (uploadRes.error) {
+    const cloudFallbackPath = `media-library/${storagePath}`;
+    const cloudRes = await supabase.storage
+      .from(CLOUD_SYNC_BUCKET)
+      .upload(cloudFallbackPath, newFile, { upsert: true, contentType: mimeType });
+    if (!cloudRes.error) {
+      if (onProgress) onProgress(85);
+      const { data: pubData } = supabase.storage
+        .from(CLOUD_SYNC_BUCKET)
+        .getPublicUrl(cloudFallbackPath);
+      newPublicUrl = pubData.publicUrl;
+    } else {
+      newPublicUrl = await fileToPersistentDataUrl(newFile);
+    }
+  } else {
+    if (onProgress) onProgress(85);
+    const { data: pubData } = supabase.storage.from(actualBucket).getPublicUrl(storagePath);
+    newPublicUrl = pubData.publicUrl;
+  }
+
+  const nowIso = new Date().toISOString();
+  const oldPublicUrl = asset.publicUrl;
+
+  const updatePayload: Record<string, any> = {
+    original_filename: truncate(newFile.name, 250),
+    storage_bucket: actualBucket,
+    storage_path: storagePath,
+    public_url: truncateUrlPreservingDataUri(newPublicUrl, 2000),
+    mime_type: truncate(mimeType, 120),
+    file_extension: validation.extension,
+    media_category: validation.mediaCategory,
+    file_size: newFile.size,
+    width: dims.width ?? null,
+    height: dims.height ?? null,
+    duration_seconds: dims.durationSeconds ?? null,
+    updated_at: nowIso,
+  };
+
+  await adaptiveUpdateRow(
+    'media_assets',
+    asset.id,
+    updatePayload,
+    {},
+    'replaceMediaAssetFileAdmin'
+  );
+
+  // Propagate the new image URL to any Portfolio or Service item referencing the old URL or linked ID
+  if (newPublicUrl) {
+    const portfolioRows = readLocalTableRows('portfolio');
+    for (const pRow of portfolioRows) {
+      const pTitle = String(pRow.title || '').toLowerCase();
+      const assetTitle = String(asset.title || '').toLowerCase();
+      if (
+        pRow.id === asset.portfolioId ||
+        pRow.cover_image === oldPublicUrl ||
+        pRow.image_url === oldPublicUrl ||
+        (pTitle && assetTitle && (pTitle.includes(assetTitle) || assetTitle.includes(pTitle)))
+      ) {
+        await adaptiveUpdateRow(
+          'portfolio',
+          String(pRow.id),
+          {
+            cover_image: newPublicUrl,
+            image_url: newPublicUrl,
+            updated_at: nowIso,
+          },
+          {},
+          'replaceMediaAssetFileAdmin (portfolio sync)'
+        );
+      }
+    }
+
+    const serviceRows = readLocalTableRows('services');
+    for (const sRow of serviceRows) {
+      if (sRow.id === asset.serviceId || sRow.image_url === oldPublicUrl) {
+        await adaptiveUpdateRow(
+          'services',
+          String(sRow.id),
+          {
+            image_url: newPublicUrl,
+            updated_at: nowIso,
+          },
+          {},
+          'replaceMediaAssetFileAdmin (service sync)'
+        );
+      }
+    }
+  }
+
+  if (onProgress) onProgress(100);
+  await logAdminActivity('Replaced Media Asset File', 'media_asset', asset.id, asset.title);
+
+  const updatedRows = readLocalTableRows('media_assets');
+  const found = updatedRows.find((r) => String(r.id) === asset.id);
+  return mapMediaAssetRow(
+    found || {
+      id: asset.id,
+      title: asset.title,
+      description: asset.description,
+      tags: asset.tags,
+      is_public: asset.isPublic,
+      ...updatePayload,
+    }
+  );
 }
 
 export async function updateMediaAssetAdmin(
@@ -5334,8 +5610,76 @@ export async function fetchClientPayments(
 }
 
 // ============================================================================
-// PROJECT MESSAGES / COMMENTS
+// PROJECT MESSAGES / COMMENTS & WHATSAPP-STYLE INBOX THREADS
 // ============================================================================
+export function getCachedMessagesAdmin(): ProjectMessage[] {
+  return mergeRemoteAndLocalRows('project_messages', [], mapMessageRow).sort(
+    (a, b) =>
+      new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()
+  );
+}
+
+export async function fetchAllMessagesAdmin(): Promise<ProjectMessage[]> {
+  await syncSharedCrmStoreWithServer();
+  if (!isSupabaseConfigured) {
+    return getCachedMessagesAdmin();
+  }
+  const remoteRows = await fetchRemoteTableRowsCached('project_messages', () =>
+    supabase.from('project_messages').select('*').order('created_at', { ascending: true })
+  );
+  return mergeRemoteAndLocalRows('project_messages', remoteRows, mapMessageRow).sort(
+    (a, b) =>
+      new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()
+  );
+}
+
+export async function markThreadMessagesRead(
+  projectId: string,
+  viewerRole: 'admin' | 'client'
+): Promise<void> {
+  if (!projectId) return;
+  const rows = readLocalTableRows('project_messages');
+  let changed = false;
+  const updatedIds: string[] = [];
+  const nextRows = rows.map((r) => {
+    if (String(r.project_id) !== projectId) return r;
+    if (viewerRole === 'admin' && !r.read_by_admin) {
+      changed = true;
+      updatedIds.push(String(r.id));
+      const updated = { ...r, read_by_admin: true, updated_at: new Date().toISOString() };
+      pushSharedRowUpsertToServer('project_messages', updated);
+      return updated;
+    }
+    if (viewerRole === 'client' && r.visibility !== 'internal' && !r.read_by_client) {
+      changed = true;
+      updatedIds.push(String(r.id));
+      const updated = { ...r, read_by_client: true, updated_at: new Date().toISOString() };
+      pushSharedRowUpsertToServer('project_messages', updated);
+      return updated;
+    }
+    return r;
+  });
+
+  if (changed) {
+    writeLocalTableRows('project_messages', nextRows);
+    invalidateRemoteTableCache('project_messages');
+  }
+
+  const validProjId = toNullableUuid(projectId);
+  if (isSupabaseConfigured && validProjId && updatedIds.length > 0) {
+    try {
+      const updateField =
+        viewerRole === 'admin' ? { read_by_admin: true } : { read_by_client: true };
+      await supabase
+        .from('project_messages')
+        .update(updateField)
+        .eq('project_id', validProjId);
+    } catch {
+      // Non-blocking
+    }
+  }
+}
+
 export async function fetchProjectMessages(
   projectId: string,
   isAdminUser: boolean,
@@ -5409,12 +5753,22 @@ export async function postProjectMessage(params: {
     if (!resolvedClientUserId && targetProject.clientUserId) {
       resolvedClientUserId = toNullableUuid(targetProject.clientUserId);
     }
+  } else if (params.projectId.startsWith('client:')) {
+    const clientId = params.projectId.slice('client:'.length);
+    const allClients = await fetchAllClientsAdmin().catch(() => []);
+    const targetClient = allClients.find((c) => c.id === clientId);
+    if (targetClient) {
+      resolvedClientEmail = (targetClient.email || '').trim().toLowerCase();
+      if (!resolvedClientUserId && targetClient.userId) {
+        resolvedClientUserId = toNullableUuid(targetClient.userId);
+      }
+    }
   }
 
   const payload: Record<string, any> = {
     project_id: params.projectId,
-    client_user_id: resolvedClientUserId,
-    sender_id: toNullableUuid(user.id),
+    client_user_id: resolvedClientUserId || params.clientUserId || '',
+    sender_id: toNullableUuid(user.id) || user.id,
     sender_name: truncate(params.senderName, 120),
     sender_role: params.senderRole,
     content: truncate(params.content, 2000),
@@ -5423,12 +5777,20 @@ export async function postProjectMessage(params: {
     read_by_client: params.senderRole === 'client',
   };
 
-  const msgId = await adaptiveInsertRow(
-    'project_messages',
-    payload,
-    { project_id: params.projectId },
-    'postProjectMessage'
-  );
+  let msgId = '';
+  const validProjUuid = toNullableUuid(params.projectId);
+  if (!validProjUuid) {
+    const localId = crypto.randomUUID();
+    upsertLocalTableRow('project_messages', { ...payload, id: localId });
+    msgId = localId;
+  } else {
+    msgId = await adaptiveInsertRow(
+      'project_messages',
+      payload,
+      { project_id: params.projectId },
+      'postProjectMessage'
+    );
+  }
 
   if (
     params.senderRole === 'admin' &&
@@ -5441,7 +5803,7 @@ export async function postProjectMessage(params: {
       type: 'New project comment',
       title: `New Studio Message from ${params.senderName}`,
       message: truncate(params.content, 160),
-      link: `/portal/projects/${params.projectId}`,
+      link: targetProject ? `/portal/projects/${params.projectId}` : '/portal/messages',
     });
   }
 

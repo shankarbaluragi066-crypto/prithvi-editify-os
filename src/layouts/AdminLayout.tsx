@@ -52,6 +52,7 @@ const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true, group: 'Workspace & AI' },
   { to: '/admin/ai-assistant', label: 'AI Creative Assistant', icon: Sparkles, group: 'Workspace & AI' },
   { to: '/admin/website-customizer', label: 'Website Customizer (A–Z)', icon: Palette, group: 'Workspace & AI' },
+  { to: '/admin/messages', label: 'Chat Inbox (WhatsApp)', icon: MessageSquare, group: 'CRM & Pipeline' },
   { to: '/admin/inquiries', label: 'Leads & Inquiries', icon: MessageSquare, group: 'CRM & Pipeline' },
   { to: '/admin/clients', label: 'Clients', icon: Users, group: 'CRM & Pipeline' },
   { to: '/admin/quotations', label: 'Quotations (PE-QTN)', icon: FileCheck, group: 'CRM & Pipeline' },
@@ -649,6 +650,14 @@ export const AdminLayout: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2.5 shrink-0">
+            <Link
+              to="/admin/messages"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#040D1A] bg-[#10B981] hover:bg-[#059669] rounded-lg transition-colors whitespace-nowrap shrink-0"
+              title="Open WhatsApp-Style Chat Inbox"
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Chat Inbox</span>
+            </Link>
             <Link
               to="/admin/projects"
               className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-all whitespace-nowrap shrink-0"

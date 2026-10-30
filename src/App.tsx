@@ -76,6 +76,7 @@ import {
   ClientInvoicesPage,
   ClientPaymentInstructionsPage,
   ClientMessagesPage,
+  AdminMessagesInboxPage,
   ClientNewInquiryPage,
 } from './pages/ClientPortalPages';
 
@@ -260,6 +261,8 @@ export default function App() {
                 <Route index element={<AdminDashboardPage />} />
                 <Route path="ai-assistant" element={<AdminAICreativeAssistantPage />} />
                 <Route path="website-customizer" element={<AdminSiteCustomizerPage />} />
+                <Route path="messages" element={<AdminMessagesInboxPage />} />
+                <Route path="inbox" element={<AdminMessagesInboxPage />} />
                 <Route path="inquiries" element={<AdminInquiriesPage />} />
                 <Route path="quotations" element={<AdminQuotationsPage />} />
                 <Route path="estimates" element={<AdminQuotationsPage defaultDocType="Estimate" />} />

@@ -28,7 +28,7 @@ const CLIENT_NAV_ITEMS = [
   { to: '/portal/files', label: 'Deliverable Files', icon: FolderOpen, group: 'Workspace' },
   { to: '/portal/invoices', label: 'Invoices & Quotes', icon: FileText, group: 'Billing & Support' },
   { to: '/portal/payment-instructions', label: 'Payment Guide', icon: CreditCard, group: 'Billing & Support' },
-  { to: '/portal/messages', label: 'Project Messages', icon: MessageSquare, group: 'Billing & Support' },
+  { to: '/portal/messages', label: 'Chat Inbox (WhatsApp)', icon: MessageSquare, group: 'Billing & Support' },
   { to: '/portal/notifications', label: 'Notifications', icon: Bell, group: 'Account' },
   { to: '/portal/profile', label: 'Profile & Settings', icon: UserCircle, group: 'Account' },
 ];
@@ -245,6 +245,14 @@ export const ClientLayout: React.FC = () => {
               </span>
               <span className="max-w-[140px] truncate">{profile?.email || 'Switch Account'}</span>
             </button>
+            <Link
+              to="/portal/messages"
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-[#040D1A] bg-[#10B981] hover:bg-[#059669] rounded-lg transition-all whitespace-nowrap shrink-0"
+              title="Open WhatsApp-Style Studio Chat Inbox"
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Chat Inbox</span>
+            </Link>
             <Link
               to="/portal/book"
               className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0EA5E9] to-[#10B981] hover:opacity-95 rounded-lg transition-all whitespace-nowrap shrink-0"

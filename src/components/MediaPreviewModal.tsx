@@ -92,6 +92,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
   const [resolving, setResolving] = useState<boolean>(false);
   const [zoom, setZoom] = useState<number>(1);
   const [rotation, setRotation] = useState<number>(0);
+  const [fitMode, setFitMode] = useState<'contain' | 'fill'>('contain');
   const [playbackRate, setPlaybackRate] = useState<number>(1);
   const [copiedUrl, setCopiedUrl] = useState<boolean>(false);
   const [previewTab, setPreviewTab] = useState<'image' | 'video'>('image');
@@ -111,6 +112,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
     if (!item) return;
     setZoom(1);
     setRotation(0);
+    setFitMode('contain');
     setPlaybackRate(1);
     setCopiedUrl(false);
     setVideoPlaybackError(false);
@@ -338,6 +340,21 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
               <>
                 <button
                   type="button"
+                  onClick={() => {
+                    setZoom(1);
+                    setFitMode((m) => (m === 'contain' ? 'fill' : 'contain'));
+                  }}
+                  className={`px-2.5 py-1 text-[11px] font-semibold rounded-md border transition-colors ${
+                    fitMode === 'contain'
+                      ? 'bg-[#10B981]/20 text-[#2DD4BF] border-[#10B981]/40'
+                      : 'bg-[#132A4A] text-[#94A3B8] hover:text-white border-[#1E3A5F]'
+                  }`}
+                  title="Toggle between Fit Full Artwork and Fill Width"
+                >
+                  {fitMode === 'contain' ? 'Fit: Full Artwork' : 'Fit: Fill Width'}
+                </button>
+                <button
+                  type="button"
                   onClick={() => setZoom((z) => Math.max(0.5, Number((z - 0.25).toFixed(2))))}
                   className="p-1.5 text-xs text-[#94A3B8] hover:text-white hover:bg-[#132A4A] rounded-md"
                   title="Zoom Out"
@@ -346,9 +363,13 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setZoom(1)}
+                  onClick={() => {
+                    setZoom(1);
+                    setRotation(0);
+                    setFitMode('contain');
+                  }}
                   className="px-2 py-1 text-[11px] font-mono text-[#94A3B8] hover:text-white hover:bg-[#132A4A] rounded-md"
-                  title="Reset Zoom"
+                  title="Reset Zoom & Fit"
                 >
                   {Math.round(zoom * 100)}%
                 </button>
@@ -452,13 +473,13 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
         </div>
 
         {/* Main Viewport Stage */}
-        <div className="relative flex-1 bg-[#040D1A] min-h-[340px] max-h-[66vh] flex items-center justify-center overflow-auto p-4">
+        <div className="relative flex-1 bg-[#040D1A] min-h-[340px] max-h-[68vh] flex items-center justify-center overflow-auto p-3 sm:p-5">
           {resolving ? (
             <div className="text-xs text-[#94A3B8] font-mono">
               Generating authenticated Supabase Storage preview URL...
             </div>
           ) : mediaCategory === 'image' ? (
-            <div className="overflow-auto w-full h-full flex items-center justify-center">
+            <div className="relative w-full h-full max-w-full max-h-[62vh] flex items-center justify-center overflow-auto">
               <div
                 ref={imageStageRef}
                 onClick={(e) => {
@@ -471,7 +492,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                     yPercent: Math.max(2, Math.min(98, yPercent)),
                   });
                 }}
-                className={`relative flex items-center justify-center ${
+                className={`relative flex items-center justify-center w-full h-full max-w-full max-h-[62vh] ${
                   proofingContext && pinModeActive ? 'cursor-crosshair' : ''
                 }`}
               >
@@ -485,7 +506,13 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                     transform: `scale(${zoom}) rotate(${rotation}deg)`,
                     transition: 'transform 160ms ease-out',
                   }}
-                  className="min-w-[260px] sm:min-w-[420px] max-h-[58vh] max-w-full w-auto h-auto object-contain rounded-lg shadow-lg select-none block mx-auto"
+                  className={
+                    fitMode === 'fill'
+                      ? 'w-full max-w-4xl h-auto object-contain rounded-lg shadow-lg select-none block mx-auto'
+                      : activeUrl.startsWith('data:image/svg+xml')
+                      ? 'w-full max-w-3xl max-h-[60vh] object-contain rounded-lg shadow-lg select-none block mx-auto'
+                      : 'max-h-[60vh] max-w-full w-auto h-auto object-contain rounded-lg shadow-lg select-none block mx-auto'
+                  }
                 />
 
                 {/* Automatic Preview Proof Watermark Overlay */}

@@ -152,12 +152,101 @@ export function getFileExtension(filenameOrUrl: string): string {
   return ext.length <= 10 ? ext : '';
 }
 
+const RECOVERED_SUPABASE_MEDIA_BASE =
+  'https://kjsnawvgctdsikexzjfp.supabase.co/storage/v1/object/public/inquiry-references/media-library';
+
+const KNOWN_BLOB_OR_TITLE_RECOVERY: Array<{
+  matchBlobId?: string;
+  matchKeywords: string[];
+  permanentUrl: string;
+}> = [
+  {
+    matchBlobId: 'd0a81dc8-878c-443d-b986-2aa0e9ab8788',
+    matchKeywords: ['make your brand stand out', 'make-your-brand-stand-out'],
+    permanentUrl: `${RECOVERED_SUPABASE_MEDIA_BASE}/make-your-brand-stand-out.webp`,
+  },
+  {
+    matchBlobId: '038d9a3d-61b6-46a2-afca-cc63291b6e49',
+    matchKeywords: [
+      'thiland and bali trip',
+      'thiland-and-bali-trip',
+      'thailand',
+      'green spark holidays',
+      'thiland-trip-packeges',
+    ],
+    permanentUrl:
+      'https://kjsnawvgctdsikexzjfp.supabase.co/storage/v1/object/public/portfolio-media/portfolio/2026-10-18/21723ef2_thiland-trip-packeges-poster-mage-jul-28-202gfhd.jpg',
+  },
+  {
+    matchBlobId: 'fd92fc1b-8284-4c69-888c-d542ebad2830',
+    matchKeywords: ['ydp connect', 'ydp-connect'],
+    permanentUrl: `${RECOVERED_SUPABASE_MEDIA_BASE}/recovered_ydp.svg`,
+  },
+  {
+    matchBlobId: 'fdff1358-21dc-459a-9f8c-227c5a37ac4c',
+    matchKeywords: ['whatsapp image 2026 07 12', 'whatsapp-image-2026-07-12', 'dubai'],
+    permanentUrl: `${RECOVERED_SUPABASE_MEDIA_BASE}/recovered_dubai.svg`,
+  },
+  {
+    matchBlobId: 'b4a83b1c-84bc-400b-9eb0-fe1270ba81de',
+    matchKeywords: ['philippi', '128264802'],
+    permanentUrl: `${RECOVERED_SUPABASE_MEDIA_BASE}/recovered_philippi.svg`,
+  },
+  {
+    matchBlobId: 'a3c3fb3e-96ac-428d-84a2-ddcc66dc48fd',
+    matchKeywords: ['nuclear', '104352803', 'how to survive a nuclear'],
+    permanentUrl: `${RECOVERED_SUPABASE_MEDIA_BASE}/recovered_nuclear.svg`,
+  },
+  {
+    matchKeywords: ['taalsphere', 'brand identity launch'],
+    permanentUrl: `${RECOVERED_SUPABASE_MEDIA_BASE}/recovered_taalsphere.svg`,
+  },
+  {
+    matchKeywords: ['culinary', 'cookbook', 'magazine layout'],
+    permanentUrl: `${RECOVERED_SUPABASE_MEDIA_BASE}/recovered_culinary.svg`,
+  },
+  {
+    matchKeywords: ['strategy breakdown', 'gaming thumbnail'],
+    permanentUrl: `${RECOVERED_SUPABASE_MEDIA_BASE}/recovered_gaming_strategy.svg`,
+  },
+];
+
+/**
+ * Heals expired `blob:` URLs or missing preview URLs using permanent Supabase Storage URLs.
+ */
+export function healBrokenMediaUrl(
+  url?: string | null,
+  titleOrPath?: string | null
+): string {
+  const raw = String(url || '').trim();
+  const contextText = `${raw} ${String(titleOrPath || '')}`.toLowerCase();
+
+  if (!raw || raw.startsWith('blob:')) {
+    for (const entry of KNOWN_BLOB_OR_TITLE_RECOVERY) {
+      if (entry.matchBlobId && raw.toLowerCase().includes(entry.matchBlobId)) {
+        return entry.permanentUrl;
+      }
+      if (entry.matchKeywords.some((kw) => contextText.includes(kw))) {
+        return entry.permanentUrl;
+      }
+    }
+    if (raw.startsWith('blob:')) {
+      return `${RECOVERED_SUPABASE_MEDIA_BASE}/make-your-brand-stand-out.webp`;
+    }
+  }
+
+  return raw;
+}
+
 /**
  * Normalizes external share URLs (Google Drive, Dropbox, etc.) into direct previewable
- * image URLs and filters out corrupted/truncated base64 strings.
+ * image URLs and filters out corrupted/truncated base64 strings or expired blob URLs.
  */
-export function normalizePreviewableImageUrl(url?: string | null): string {
-  const raw = String(url || '').trim();
+export function normalizePreviewableImageUrl(
+  url?: string | null,
+  titleOrPath?: string | null
+): string {
+  const raw = healBrokenMediaUrl(url, titleOrPath);
   if (!raw) return '';
 
   // Detect non-SVG base64 data URIs that were previously truncated at 1000/1500/2000 chars
@@ -173,10 +262,6 @@ export function normalizePreviewableImageUrl(url?: string | null): string {
   }
 
   // Google Drive file share URLs -> direct thumbnail/image stream URL
-  // Matches:
-  // - https://drive.google.com/file/d/FILE_ID/view...
-  // - https://drive.google.com/open?id=FILE_ID
-  // - https://drive.google.com/uc?id=FILE_ID or ?export=view&id=FILE_ID
   if (raw.includes('drive.google.com')) {
     const fileIdMatch =
       raw.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) ||

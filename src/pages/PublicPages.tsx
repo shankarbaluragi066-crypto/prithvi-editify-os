@@ -318,8 +318,8 @@ const MarketplaceServiceCard: React.FC<MarketplaceServiceCardProps> = ({
   return (
     <article className="pe-card-interactive group bg-[#0D1F38] border border-[#1E3A5F] rounded-xl overflow-hidden flex flex-col justify-between shadow-[0_1px_3px_rgba(0,0,0,0.35)]">
       <div>
-        {/* 1. Consistent 16:10 Media Stage */}
-        <div className="relative aspect-[16/10] w-full bg-[#040D1A] overflow-hidden border-b border-[#1E3A5F]">
+        {/* 1. Consistent 16:9 Full-Fit Media Stage (Zero Cropping) */}
+        <div className="relative aspect-video w-full bg-[#040D1A] overflow-hidden border-b border-[#1E3A5F]">
           <Link
             to={detailPath}
             className="relative flex items-center justify-center w-full h-full overflow-hidden"
@@ -327,14 +327,21 @@ const MarketplaceServiceCard: React.FC<MarketplaceServiceCardProps> = ({
             <LazyImage
               src={coverSrc}
               fallbackSrc={fallbackArtwork}
+              alt=""
+              aria-hidden="true"
+              className="absolute inset-0 w-full h-full object-cover blur-xl opacity-35 scale-110 pointer-events-none select-none"
+            />
+            <LazyImage
+              src={coverSrc}
+              fallbackSrc={fallbackArtwork}
               fallbackSubtitle={displayCategory}
               alt={srv.title}
-              className="relative z-10 w-full h-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.03]"
+              className="relative z-10 w-full h-full object-contain transition-transform duration-300 ease-out group-hover:scale-[1.02]"
             />
           </Link>
 
           {/* Category Tag Overlay */}
-          <span className="absolute top-3 left-3 z-20 px-2.5 py-1 text-[11px] font-semibold tracking-wide text-white bg-[#040D1A]/90 backdrop-blur-xs border border-white/15 rounded-md">
+          <span className="absolute top-2.5 left-2.5 z-20 px-2.5 py-0.5 text-[10px] font-semibold tracking-wide text-white bg-[#040D1A]/85 backdrop-blur-xs border border-white/15 rounded-md shadow-xs">
             {displayCategory}
           </span>
 
@@ -356,7 +363,7 @@ const MarketplaceServiceCard: React.FC<MarketplaceServiceCardProps> = ({
                 })
               }
               title="Quick preview sample"
-              className="absolute bottom-3 right-3 z-20 inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold text-white bg-[#040D1A]/90 hover:bg-[#040D1A] rounded-md border border-white/15 shadow-xs transition-all duration-150 cursor-pointer"
+              className="absolute bottom-2.5 right-2.5 z-20 inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold text-white bg-[#040D1A]/85 hover:bg-[#040D1A] backdrop-blur-xs rounded-md border border-white/15 shadow-xs transition-all duration-150 cursor-pointer"
             >
               <Eye className="w-3.5 h-3.5 text-[#10B981]" />
               <span>Preview</span>
@@ -533,8 +540,8 @@ const MarketplacePortfolioCard: React.FC<MarketplacePortfolioCardProps> = ({
   return (
     <article className="pe-card-interactive group bg-[#0D1F38] border border-[#1E3A5F] rounded-xl overflow-hidden flex flex-col justify-between shadow-[0_1px_3px_rgba(0,0,0,0.35)]">
       <div>
-        {/* 1. Consistent 16:10 Media Stage */}
-        <div className="relative aspect-[16/10] w-full bg-[#040D1A] overflow-hidden border-b border-[#1E3A5F]">
+        {/* 1. Consistent 16:9 Full-Fit Media Stage (Zero Cropping) */}
+        <div className="relative aspect-video w-full bg-[#040D1A] overflow-hidden border-b border-[#1E3A5F]">
           <Link
             to={detailPath}
             className="relative flex items-center justify-center w-full h-full overflow-hidden"
@@ -542,14 +549,21 @@ const MarketplacePortfolioCard: React.FC<MarketplacePortfolioCardProps> = ({
             <LazyImage
               src={coverSrc}
               fallbackSrc={fallbackArtwork}
+              alt=""
+              aria-hidden="true"
+              className="absolute inset-0 w-full h-full object-cover blur-xl opacity-35 scale-110 pointer-events-none select-none"
+            />
+            <LazyImage
+              src={coverSrc}
+              fallbackSrc={fallbackArtwork}
               fallbackSubtitle={displayCat}
               alt={item.title}
-              className="relative z-10 w-full h-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.03]"
+              className="relative z-10 w-full h-full object-contain transition-transform duration-300 ease-out group-hover:scale-[1.02]"
             />
           </Link>
 
           {/* Category Tag Overlay */}
-          <span className="absolute top-3 left-3 z-20 px-2.5 py-1 text-[11px] font-semibold tracking-wide text-white bg-[#040D1A]/90 backdrop-blur-xs border border-white/15 rounded-md">
+          <span className="absolute top-2.5 left-2.5 z-20 px-2.5 py-0.5 text-[10px] font-semibold tracking-wide text-white bg-[#040D1A]/85 backdrop-blur-xs border border-white/15 rounded-md shadow-xs">
             {displayCat}
           </span>
 
@@ -559,7 +573,7 @@ const MarketplacePortfolioCard: React.FC<MarketplacePortfolioCardProps> = ({
               type="button"
               onClick={() => onQuickPreview(item)}
               title="Quick preview project"
-              className="absolute bottom-3 right-3 z-20 inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold text-white bg-[#040D1A]/90 hover:bg-[#040D1A] rounded-md border border-white/15 shadow-xs transition-all duration-150 cursor-pointer"
+              className="absolute bottom-2.5 right-2.5 z-20 inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold text-white bg-[#040D1A]/85 hover:bg-[#040D1A] backdrop-blur-xs rounded-md border border-white/15 shadow-xs transition-all duration-150 cursor-pointer"
             >
               {item.videoUrl ? (
                 <Film className="w-3.5 h-3.5 text-[#10B981]" />
@@ -812,14 +826,20 @@ export const HomePage: React.FC = () => {
 
                 {/* Custom Image or Architectural SVG Composition */}
                 <div
-                  className="relative overflow-hidden rounded-lg border border-white/10"
+                  className="relative aspect-video overflow-hidden rounded-lg border border-white/10 flex items-center justify-center"
                   style={{ backgroundColor: primaryBg }}
                 >
                   <LazyImage
                     src={heroPreviewSrc}
+                    alt=""
+                    aria-hidden="true"
+                    className="absolute inset-0 w-full h-full object-cover blur-xl opacity-35 scale-110 pointer-events-none select-none"
+                  />
+                  <LazyImage
+                    src={heroPreviewSrc}
                     alt={`${settings.businessName || 'Prithvi Editify'} studio showcase`}
                     eager
-                    className="w-full h-56 object-cover"
+                    className="relative z-10 w-full h-full object-contain"
                   />
                 </div>
 
@@ -1972,26 +1992,22 @@ export const ServiceDetailPage: React.FC = () => {
                   storageBucket: 'service-media',
                 })
               }
-              className="relative h-[340px] sm:h-[460px] w-full bg-[#040D1A] rounded-lg overflow-hidden border border-[#1E3A5F] cursor-zoom-in group"
+              className="relative aspect-video max-h-[480px] w-full bg-[#040D1A] rounded-lg overflow-hidden border border-[#1E3A5F] cursor-zoom-in group flex items-center justify-center"
             >
-              {hasCustomImage && (
-                <LazyImage
-                  src={currentPreviewUrl}
-                  fallbackSrc={fallbackArtwork}
-                  alt=""
-                  aria-hidden="true"
-                  className="absolute inset-0 w-full h-full object-cover blur-xl opacity-30 scale-110 pointer-events-none"
-                />
-              )}
+              <LazyImage
+                src={currentPreviewUrl}
+                fallbackSrc={fallbackArtwork}
+                alt=""
+                aria-hidden="true"
+                className="absolute inset-0 w-full h-full object-cover blur-xl opacity-35 scale-110 pointer-events-none select-none"
+              />
               <LazyImage
                 src={currentPreviewUrl}
                 fallbackSrc={fallbackArtwork}
                 fallbackSubtitle={displayCategory}
                 alt={service.title}
                 eager
-                className={`relative z-10 w-full h-full ${
-                  hasCustomImage ? 'object-contain p-2 sm:p-4' : 'object-cover'
-                }`}
+                className="relative z-10 w-full h-full object-contain"
               />
 
               {/* Prev / Next Gallery Arrows when multiple images exist */}
@@ -3469,26 +3485,22 @@ export const PortfolioDetailPage: React.FC = () => {
                     storageBucket: 'portfolio-media',
                   })
                 }
-                className="relative h-[340px] sm:h-[460px] w-full bg-[#040D1A] border border-[#1E3A5F] rounded-lg overflow-hidden cursor-zoom-in"
+                className="relative aspect-video max-h-[480px] w-full bg-[#040D1A] border border-[#1E3A5F] rounded-lg overflow-hidden cursor-zoom-in flex items-center justify-center"
               >
-                {hasCustomCover && (
-                  <LazyImage
-                    src={activeImageUrl}
-                    fallbackSrc={fallbackArtwork}
-                    alt=""
-                    aria-hidden="true"
-                    className="absolute inset-0 w-full h-full object-cover blur-xl opacity-30 scale-110 pointer-events-none"
-                  />
-                )}
+                <LazyImage
+                  src={activeImageUrl}
+                  fallbackSrc={fallbackArtwork}
+                  alt=""
+                  aria-hidden="true"
+                  className="absolute inset-0 w-full h-full object-cover blur-xl opacity-35 scale-110 pointer-events-none select-none"
+                />
                 <LazyImage
                   src={activeImageUrl}
                   fallbackSrc={fallbackArtwork}
                   fallbackSubtitle={displayCategory}
                   alt={project.title}
                   eager
-                  className={`relative z-10 w-full h-full ${
-                    hasCustomCover ? 'object-contain p-3 sm:p-4' : 'object-cover'
-                  }`}
+                  className="relative z-10 w-full h-full object-contain"
                 />
                 <button
                   type="button"
@@ -3760,11 +3772,19 @@ export const AboutPage: React.FC = () => {
 
         <div className="lg:col-span-5">
           <div className="pe-card-interactive bg-[#0D1F38] border border-[#1E3A5F] rounded-lg overflow-hidden shadow-[0_1px_2px_rgba(0,0,0,0.35)]">
-            <LazyImage
-              src={founderSrc}
-              alt={custom.founderName || settings.ownerName || 'Shankar Baluragi'}
-              className="w-full aspect-[4/3] object-cover"
-            />
+            <div className="relative w-full aspect-[4/3] bg-[#040D1A] overflow-hidden flex items-center justify-center">
+              <LazyImage
+                src={founderSrc}
+                alt=""
+                aria-hidden="true"
+                className="absolute inset-0 w-full h-full object-cover blur-xl opacity-35 scale-110 pointer-events-none select-none"
+              />
+              <LazyImage
+                src={founderSrc}
+                alt={custom.founderName || settings.ownerName || 'Shankar Baluragi'}
+                className="relative z-10 w-full h-full object-contain"
+              />
+            </div>
             <div className="p-6 space-y-2">
               <p className="text-sm font-semibold text-[#F8FAFC]">
                 {custom.founderName || settings.ownerName || 'Shankar Baluragi'}

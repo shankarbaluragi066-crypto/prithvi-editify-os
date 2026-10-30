@@ -1556,18 +1556,27 @@ export const AdminPortfolioPage: React.FC = () => {
                     storageBucket: 'portfolio-media',
                   })
                 }
-                className="cursor-pointer relative aspect-[4/3] bg-[#040D1A] overflow-hidden border-b border-[#1E3A5F] group"
+                className="cursor-pointer relative aspect-video bg-[#040D1A] overflow-hidden border-b border-[#1E3A5F] flex items-center justify-center group"
               >
                 <LazyImage
                   src={
                     item.coverImage ||
                     createStudioArtworkDataUri(item.title, item.category, '#10B981')
                   }
+                  alt=""
+                  aria-hidden="true"
+                  className="absolute inset-0 w-full h-full object-cover blur-xl opacity-35 scale-110 pointer-events-none select-none"
+                />
+                <LazyImage
+                  src={
+                    item.coverImage ||
+                    createStudioArtworkDataUri(item.title, item.category, '#10B981')
+                  }
                   alt={item.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                  className="relative z-10 w-full h-full object-contain group-hover:scale-[1.02] transition-transform duration-200"
                 />
                 {item.videoUrl && (
-                  <span className="absolute top-2.5 right-2.5 inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#040D1A]/90 text-[10px] font-mono text-[#10B981] border border-white/10">
+                  <span className="absolute top-2.5 right-2.5 z-20 inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#040D1A]/90 text-[10px] font-mono text-[#10B981] border border-white/10">
                     <Film className="w-3 h-3" />
                     VIDEO
                   </span>

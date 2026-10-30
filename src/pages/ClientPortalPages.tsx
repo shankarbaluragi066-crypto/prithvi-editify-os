@@ -30,6 +30,7 @@ import {
 } from '../services/crmService';
 import { MediaPreviewModal, PreviewableMediaItem } from '../components/MediaPreviewModal';
 import { InquiryForm } from '../components/InquiryForm';
+import { WhatsAppChatInbox } from '../components/WhatsAppChatInbox';
 import { ProjectStatusBadge, getProjectStatusBadgeConfig } from './AdminCorePages';
 import {
   ProjectRecord,
@@ -1834,40 +1835,37 @@ export const ClientPaymentInstructionsPage: React.FC = () => (
 );
 
 export const ClientMessagesPage: React.FC = () => {
-  const { user, profile } = useAuth();
-  const [projects, setProjects] = useState<ProjectRecord[]>([]);
-  const clientEmail = profile?.email || user?.email || undefined;
-
-  useEffect(() => {
-    if (!user) return;
-    fetchClientProjects(user.uid, clientEmail).then(setProjects).catch(() => {});
-  }, [user, clientEmail]);
-
   return (
-    <div className="space-y-6">
-      <h1 className="font-editorial text-2xl font-semibold text-[#F8FAFC]">Project Messages</h1>
-      <div className="bg-[#0D1F38] border border-[#1E3A5F] rounded-lg divide-y divide-[#1E3A5F] text-xs">
-        {projects.length === 0 ? (
-          <div className="p-8 text-center text-[#94A3B8]">
-            Open any assigned project to view and post project comments.
-          </div>
-        ) : (
-          projects.map((p) => (
-            <div key={p.id} className="p-4 flex items-center justify-between">
-              <div>
-                <p className="font-semibold text-[#F8FAFC]">{p.title}</p>
-                <p className="text-[#94A3B8]">{p.latestUpdate}</p>
-              </div>
-              <Link
-                to={`/portal/projects/${p.id}`}
-                className="font-semibold text-[#F8FAFC] hover:text-[#10B981]"
-              >
-                Open Thread →
-              </Link>
-            </div>
-          ))
-        )}
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold text-[#10B981] uppercase tracking-wider">
+            Client Portal · Real-Time Studio Chat
+          </p>
+          <h1 className="font-editorial text-2xl font-semibold text-[#F8FAFC]">
+            Project & Studio Messages Inbox
+          </h1>
+        </div>
       </div>
+      <WhatsAppChatInbox mode="client" />
+    </div>
+  );
+};
+
+export const AdminMessagesInboxPage: React.FC = () => {
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold text-[#10B981] uppercase tracking-wider">
+            Studio CRM · Unified Messaging Hub
+          </p>
+          <h1 className="font-editorial text-2xl font-semibold text-[#F8FAFC]">
+            WhatsApp-Style Client & Project Inbox
+          </h1>
+        </div>
+      </div>
+      <WhatsAppChatInbox mode="admin" />
     </div>
   );
 };
