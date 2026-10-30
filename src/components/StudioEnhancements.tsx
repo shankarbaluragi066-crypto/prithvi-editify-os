@@ -269,7 +269,7 @@ function buildComparisonSvg(
   if (presetId === 'thumbnail') {
     const svg =
       mode === 'before'
-        ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675">
+        ? `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
             <rect width="1200" height="675" fill="#2B3038"/>
             <rect x="60" y="60" width="1080" height="555" rx="12" fill="#383E48" stroke="#525A68" stroke-dasharray="8 8" stroke-width="2"/>
             <circle cx="820" cy="340" r="170" fill="#4A525F"/>
@@ -278,7 +278,7 @@ function buildComparisonSvg(
             <text x="110" y="420" fill="#94A3B8" font-family="Inter, sans-serif" font-size="26" font-weight="600">RAW UNEDITED CAMERA FRAME</text>
             <text x="110" y="460" fill="#7D8694" font-family="monospace" font-size="20">Flat Lighting · No Subject Separation · Low CTR</text>
           </svg>`
-        : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675">
+        : `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
             <defs>
               <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
                 <stop offset="0%" stop-color="#040D1A"/>
@@ -307,14 +307,14 @@ function buildComparisonSvg(
   if (presetId === 'colorgrade') {
     const svg =
       mode === 'before'
-        ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675">
+        ? `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
             <rect width="1200" height="675" fill="#3A3D3B"/>
             <rect x="80" y="80" width="1040" height="515" rx="14" fill="#4B4F4C"/>
             <text x="130" y="260" fill="#B5B9B6" font-family="Inter, sans-serif" font-size="48" font-weight="700">S-LOG3 FLAT CAMERA FOOTAGE</text>
             <text x="130" y="320" fill="#8E9490" font-family="monospace" font-size="22">Desaturated Shadows · No Captions · Raw Room Audio</text>
             <rect x="130" y="410" width="940" height="36" rx="6" fill="#323533"/>
           </svg>`
-        : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675">
+        : `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
             <defs>
               <linearGradient id="cine" x1="0" y1="0" x2="1" y2="1">
                 <stop offset="0%" stop-color="#0B1926"/>
@@ -335,12 +335,12 @@ function buildComparisonSvg(
 
   const svg =
     mode === 'before'
-      ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675">
+      ? `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
           <rect width="1200" height="675" fill="#423E3B"/>
           <circle cx="600" cy="337" r="210" fill="#5C5652"/>
           <text x="120" y="590" fill="#C2BDB8" font-family="Inter, sans-serif" font-size="30" font-weight="700">RAW PRODUCT PHOTO · UNEVEN STUDIO SHADOWS</text>
         </svg>`
-      : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675">
+      : `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
           <rect width="1200" height="675" fill="#040D1A"/>
           <circle cx="600" cy="315" r="220" fill="#132A4A" stroke="#10B981" stroke-width="4"/>
           <text x="120" y="130" fill="#10B981" font-family="monospace" font-size="20" font-weight="700">COMMERCIAL AD CREATIVE &amp; RETOUCH</text>
@@ -458,7 +458,7 @@ export const BeforeAfterComparisonShowcase: React.FC<{
               onClick={() => setActivePresetId(preset.id)}
               className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${
                 activePresetId === preset.id
-                  ? 'bg-[#132A4A] text-[#F8FAFC] shadow-2xs'
+                  ? 'bg-gradient-to-r from-[#0EA5E9] to-[#10B981] text-white shadow-2xs'
                   : 'text-[#94A3B8] hover:text-[#F8FAFC]'
               }`}
             >

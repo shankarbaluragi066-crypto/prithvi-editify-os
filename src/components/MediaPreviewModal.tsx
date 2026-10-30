@@ -19,8 +19,14 @@ import {
   HardDrive,
 } from 'lucide-react';
 import { MediaBucket, MediaCategory } from '../types/crm';
-import { detectMediaCategory, getFileExtension } from '../utils/mediaValidation';
+import {
+  detectMediaCategory,
+  getFileExtension,
+  normalizePreviewableImageUrl,
+  normalizeVideoEmbedUrl,
+} from '../utils/mediaValidation';
 import { formatFileSize, formatDate } from '../utils/formatters';
+import { createStudioArtworkDataUri } from '../utils/seedData';
 import { resolveStoragePreviewUrl } from '../services/crmService';
 import { LazyImage } from './LazyImage';
 
@@ -88,6 +94,8 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
   const [rotation, setRotation] = useState<number>(0);
   const [playbackRate, setPlaybackRate] = useState<number>(1);
   const [copiedUrl, setCopiedUrl] = useState<boolean>(false);
+  const [previewTab, setPreviewTab] = useState<'image' | 'video'>('image');
+  const [videoPlaybackError, setVideoPlaybackError] = useState<boolean>(false);
   const [pins, setPins] = useState<ProofingPinAnnotation[]>([]);
   const [pinModeActive, setPinModeActive] = useState<boolean>(Boolean(proofingContext));
   const [draftPinCoords, setDraftPinCoords] = useState<{
@@ -105,8 +113,18 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
     setRotation(0);
     setPlaybackRate(1);
     setCopiedUrl(false);
+    setVideoPlaybackError(false);
     setDraftPinCoords(null);
     setDraftPinComment('');
+
+    const preferVideo =
+      Boolean(item.videoUrl) &&
+      (item.id.endsWith('_video') ||
+        item.id === 'studio-showreel-hero' ||
+        !item.url ||
+        detectMediaCategory(item.mimeType, item.url, item.storageBucket) === 'video');
+    setPreviewTab(preferVideo ? 'video' : 'image');
+
     if (proofingContext) {
       setPins(getProofingPins(proofingContext.projectId, item.id));
       setPinModeActive(true);
@@ -116,7 +134,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
     }
 
     let active = true;
-    const primaryUrl = item.videoUrl || item.url;
+    const primaryUrl = item.url || item.videoUrl || '';
 
     if (item.storageBucket === 'private-project-files' && item.storagePath) {
       setResolving(true);
@@ -143,7 +161,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
     return () => {
       active = false;
     };
-  }, [item]);
+  }, [item, proofingContext]);
 
   useEffect(() => {
     if (!item) return;
@@ -164,11 +182,47 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
 
   if (!item) return null;
 
-  const activeUrl = resolvedUrl || item.videoUrl || item.url;
-  const mediaCategory: MediaCategory = item.videoUrl
-    ? 'video'
-    : detectMediaCategory(item.mimeType, activeUrl || item.title);
-  const extension = getFileExtension(item.title || activeUrl).toUpperCase() || mediaCategory.toUpperCase();
+  const fallbackArtwork = createStudioArtworkDataUri(
+    item.title || 'Studio Deliverable',
+    item.categoryLabel || 'Prithvi Editify',
+    '#10B981',
+    '#040D1A',
+    '#0D1F38'
+  );
+
+  const normalizedImageCandidate = normalizePreviewableImageUrl(resolvedUrl || item.url);
+  const hasBothImageAndVideo = Boolean(item.videoUrl && (normalizedImageCandidate || item.url));
+
+  const detectedNonVideoCategory = detectMediaCategory(
+    item.mimeType,
+    normalizedImageCandidate || resolvedUrl || item.url || item.title,
+    item.storageBucket
+  );
+
+  const mediaCategory: MediaCategory =
+    item.videoUrl && previewTab === 'video' && !videoPlaybackError
+      ? 'video'
+      : detectedNonVideoCategory === 'document' &&
+        (!item.mimeType || item.mimeType.startsWith('image/')) &&
+        (item.storageBucket === 'service-media' ||
+          item.storageBucket === 'portfolio-media' ||
+          item.storageBucket === 'public-assets' ||
+          !getFileExtension(item.title))
+      ? 'image'
+      : detectedNonVideoCategory;
+
+  const activeUrl =
+    mediaCategory === 'video'
+      ? item.videoUrl || resolvedUrl || item.url
+      : mediaCategory === 'image'
+      ? normalizedImageCandidate || fallbackArtwork
+      : resolvedUrl || item.url || item.videoUrl || '';
+
+  const videoEmbedInfo =
+    mediaCategory === 'video' ? normalizeVideoEmbedUrl(activeUrl) : null;
+
+  const extension =
+    getFileExtension(item.title || activeUrl).toUpperCase() || mediaCategory.toUpperCase();
 
   const currentIndex = items.findIndex((i) => i.id === item.id);
   const hasPrev = items.length > 1 && currentIndex > 0;
@@ -247,7 +301,39 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
           </div>
 
           {/* Interactive Controls */}
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+            {hasBothImageAndVideo && (
+              <div className="flex items-center bg-[#132A4A] p-0.5 rounded-md border border-[#1E3A5F] mr-1">
+                <button
+                  type="button"
+                  onClick={() => setPreviewTab('image')}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded transition-colors ${
+                    mediaCategory === 'image'
+                      ? 'bg-[#10B981] text-white'
+                      : 'text-[#94A3B8] hover:text-white'
+                  }`}
+                >
+                  <ImageIcon className="w-3 h-3" />
+                  <span>Artwork</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setVideoPlaybackError(false);
+                    setPreviewTab('video');
+                  }}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded transition-colors ${
+                    mediaCategory === 'video'
+                      ? 'bg-[#10B981] text-white'
+                      : 'text-[#94A3B8] hover:text-white'
+                  }`}
+                >
+                  <Film className="w-3 h-3" />
+                  <span>Video</span>
+                </button>
+              </div>
+            )}
+
             {mediaCategory === 'image' && (
               <>
                 <button
@@ -285,7 +371,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
               </>
             )}
 
-            {mediaCategory === 'video' && (
+            {mediaCategory === 'video' && videoEmbedInfo?.type === 'native' && (
               <div className="flex items-center gap-1 bg-[#132A4A] px-2 py-1 rounded-md text-[11px]">
                 <span className="text-[#94A3B8]">Speed:</span>
                 {[0.75, 1, 1.25, 1.5, 2].map((rate) => (
@@ -372,7 +458,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
               Generating authenticated Supabase Storage preview URL...
             </div>
           ) : mediaCategory === 'image' ? (
-            <div className="overflow-auto max-w-full max-h-full flex items-center justify-center">
+            <div className="overflow-auto w-full h-full flex items-center justify-center">
               <div
                 ref={imageStageRef}
                 onClick={(e) => {
@@ -385,18 +471,21 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                     yPercent: Math.max(2, Math.min(98, yPercent)),
                   });
                 }}
-                className={`relative inline-block ${
+                className={`relative flex items-center justify-center ${
                   proofingContext && pinModeActive ? 'cursor-crosshair' : ''
                 }`}
               >
                 <LazyImage
                   src={activeUrl}
+                  fallbackSrc={fallbackArtwork}
+                  fallbackSubtitle={item.categoryLabel || 'Studio Visual Preview'}
                   alt={item.title}
+                  eager
                   style={{
                     transform: `scale(${zoom}) rotate(${rotation}deg)`,
                     transition: 'transform 160ms ease-out',
                   }}
-                  className="max-h-[56vh] max-w-full object-contain rounded select-none block"
+                  className="min-w-[260px] sm:min-w-[420px] max-h-[58vh] max-w-full w-auto h-auto object-contain rounded-lg shadow-lg select-none block mx-auto"
                 />
 
                 {/* Automatic Preview Proof Watermark Overlay */}
@@ -452,20 +541,33 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
               </div>
             </div>
           ) : mediaCategory === 'video' ? (
-            <div className="relative flex flex-col items-center justify-center max-w-full">
-              <div className="relative">
-                <video
-                  ref={videoRef}
-                  src={activeUrl}
-                  poster={item.videoUrl && item.url ? item.url : undefined}
-                  controls
-                  controlsList={item.masterDownloadLocked ? 'nodownload' : undefined}
-                  playsInline
-                  preload="metadata"
-                  className="max-h-[54vh] max-w-full rounded bg-black shadow-lg"
-                >
-                  Your browser does not support HTML5 video playback.
-                </video>
+            <div className="relative flex flex-col items-center justify-center w-full max-w-4xl">
+              <div className="relative w-full flex items-center justify-center">
+                {videoEmbedInfo?.type === 'iframe' ? (
+                  <div className="w-full aspect-video max-h-[56vh] rounded-lg overflow-hidden bg-black border border-[#1E3A5F] shadow-lg">
+                    <iframe
+                      src={videoEmbedInfo.src}
+                      title={item.title}
+                      className="w-full h-full border-0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  </div>
+                ) : (
+                  <video
+                    ref={videoRef}
+                    src={videoEmbedInfo?.src || activeUrl}
+                    poster={normalizedImageCandidate || fallbackArtwork}
+                    controls
+                    controlsList={item.masterDownloadLocked ? 'nodownload' : undefined}
+                    playsInline
+                    preload="metadata"
+                    onError={() => setVideoPlaybackError(true)}
+                    className="max-h-[54vh] max-w-full rounded-lg bg-black shadow-lg"
+                  >
+                    Your browser does not support HTML5 video playback.
+                  </video>
+                )}
 
                 {/* Automatic Preview Proof Watermark Overlay on Video */}
                 {item.watermarkText && (
@@ -480,7 +582,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                 )}
               </div>
 
-              {proofingContext && pinModeActive && (
+              {proofingContext && pinModeActive && videoEmbedInfo?.type === 'native' && (
                 <div className="mt-2.5 flex items-center gap-3">
                   <button
                     type="button"

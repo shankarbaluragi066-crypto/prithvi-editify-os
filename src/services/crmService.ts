@@ -50,6 +50,8 @@ import {
   detectMediaCategory,
   getFileExtension,
   extractMediaDimensions,
+  normalizePreviewableImageUrl,
+  fileToPersistentDataUrl,
 } from '../utils/mediaValidation';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -61,6 +63,15 @@ function toNullableUuid(value: string | undefined | null): string | null {
 
 function truncate(str: string | undefined | null, max: number): string {
   return String(str || '').trim().slice(0, max);
+}
+
+function truncateUrlPreservingDataUri(url: string | undefined | null, max = 2000): string {
+  const raw = String(url || '').trim();
+  if (!raw) return '';
+  if (raw.startsWith('data:')) {
+    return normalizePreviewableImageUrl(raw);
+  }
+  return normalizePreviewableImageUrl(raw).slice(0, max);
 }
 
 async function getCurrentUser(): Promise<{ id: string; email?: string | null } | null> {
@@ -1261,6 +1272,8 @@ function mapServiceRow(row: Record<string, any>, idx = 0): ServiceItem {
           revisions
         );
 
+  const normalizedServiceImg = normalizePreviewableImageUrl(row.image_url);
+
   return {
     id,
     title,
@@ -1275,11 +1288,11 @@ function mapServiceRow(row: Record<string, any>, idx = 0): ServiceItem {
     turnaroundTime,
     revisions,
     imageUrl:
-      row.image_url && !String(row.image_url).startsWith('data:image/svg+xml')
-        ? String(row.image_url)
+      normalizedServiceImg && !normalizedServiceImg.startsWith('data:image/svg+xml')
+        ? normalizedServiceImg
         : createStudioArtworkDataUri(title, category, '#10B981', '#040D1A', '#0D1F38'),
     videoPreviewUrl: String(row.video_preview_url || ''),
-    mediaUrls: resolvedMediaUrls,
+    mediaUrls: resolvedMediaUrls.map((u) => normalizePreviewableImageUrl(u)).filter(Boolean),
     packages: resolvedPackages,
     published: row.published !== undefined ? Boolean(row.published) : Boolean(row.is_active ?? true),
     sortOrder: Number(row.sort_order) || idx + 1,
@@ -1291,7 +1304,7 @@ function mapServiceRow(row: Record<string, any>, idx = 0): ServiceItem {
 function mapPortfolioRow(row: Record<string, any>, idx = 0): PortfolioItem {
   const title = String(row.title || row.name || 'Studio Project');
   const category = (row.category || 'Graphic Design') as PortfolioItem['category'];
-  const rawCover = String(row.cover_image || row.image_url || '').trim();
+  const rawCover = normalizePreviewableImageUrl(row.cover_image || row.image_url || '');
   const coverImage =
     rawCover && !rawCover.startsWith('data:image/svg+xml')
       ? rawCover
@@ -1299,7 +1312,7 @@ function mapPortfolioRow(row: Record<string, any>, idx = 0): PortfolioItem {
   const videoUrl = String(row.video_url || '');
   const detectedType = videoUrl
     ? 'video'
-    : detectMediaCategory('', coverImage) === 'pdf'
+    : detectMediaCategory('', coverImage, 'portfolio-media') === 'pdf'
     ? 'pdf'
     : 'image';
   return {
@@ -1311,7 +1324,9 @@ function mapPortfolioRow(row: Record<string, any>, idx = 0): PortfolioItem {
     coverImage,
     videoUrl,
     mediaType: (row.media_type || detectedType) as 'image' | 'video' | 'pdf',
-    galleryUrls: Array.isArray(row.gallery_urls) ? row.gallery_urls.map(String) : [],
+    galleryUrls: Array.isArray(row.gallery_urls)
+      ? row.gallery_urls.map((u: any) => normalizePreviewableImageUrl(String(u))).filter(Boolean)
+      : [],
     tags: Array.isArray(row.tags) ? row.tags.map(String) : [],
     projectUrl: String(row.project_url || ''),
     featured: Boolean(row.featured),
@@ -2210,7 +2225,7 @@ export async function saveServiceItem(
 
   const cleanImageUrl =
     data.imageUrl && !data.imageUrl.startsWith('data:image/svg+xml;utf8,')
-      ? truncate(data.imageUrl, 2000)
+      ? truncateUrlPreservingDataUri(data.imageUrl, 2000)
       : '';
 
   const payload: Record<string, any> = {
@@ -2348,7 +2363,7 @@ export async function savePortfolioItem(
   const cleanTitle = truncate(data.title, 150) || 'Studio Project';
   const cleanCoverImage =
     data.coverImage && !data.coverImage.startsWith('data:image/svg+xml;utf8,')
-      ? truncate(data.coverImage, 2000)
+      ? truncateUrlPreservingDataUri(data.coverImage, 2000)
       : '';
   const payload: Record<string, any> = {
     title: cleanTitle,
@@ -2371,8 +2386,8 @@ export async function savePortfolioItem(
 
   const legacyFallbacks: Record<string, any> = {
     name: cleanTitle,
-    image_url: truncate(data.coverImage, 1000),
-    image: truncate(data.coverImage, 1000),
+    image_url: cleanCoverImage,
+    image: cleanCoverImage,
   };
 
   if (existingItem?.id) {
@@ -4279,8 +4294,8 @@ export async function uploadFileWithMetadata(params: {
 
     if (uploadRes.error) {
       if (isRlsOrPermissionError(uploadRes.error) || isMissingSchemaError(uploadRes.error)) {
-        // Fallback to object URL if storage bucket RLS blocks direct upload
-        downloadUrl = URL.createObjectURL(params.file);
+        // Fallback to persistent Data URL if storage bucket RLS blocks direct upload
+        downloadUrl = (await fileToPersistentDataUrl(params.file)) || URL.createObjectURL(params.file);
       } else {
         handleSupabaseError(uploadRes.error, 'Supabase Storage upload');
       }
@@ -4309,7 +4324,7 @@ export async function uploadFileWithMetadata(params: {
     file_type: truncate(fileType, 100),
     file_size: fileSize,
     category: params.category,
-    download_url: truncate(downloadUrl, 1500),
+    download_url: truncateUrlPreservingDataUri(downloadUrl, 2000),
     storage_path: truncate(storagePath, 500),
     version_label: truncate(params.versionLabel || 'v1.0', 40),
     uploaded_by: toNullableUuid(user.id),
@@ -4644,7 +4659,8 @@ export async function uploadMediaAssetAdmin(params: {
       throw new Error('Supabase Storage quota or file size limit exceeded.');
     }
     if (isRlsOrPermissionError(uploadRes.error) || isMissingSchemaError(uploadRes.error)) {
-      publicOrSignedUrl = URL.createObjectURL(params.file);
+      publicOrSignedUrl =
+        (await fileToPersistentDataUrl(params.file)) || URL.createObjectURL(params.file);
     } else {
       handleSupabaseError(uploadRes.error, 'uploadMediaAssetAdmin (storage)');
     }
@@ -4674,7 +4690,7 @@ export async function uploadMediaAssetAdmin(params: {
     original_filename: truncate(params.file.name, 250),
     storage_bucket: actualBucket,
     storage_path: storagePath,
-    public_url: truncate(publicOrSignedUrl, 1500),
+    public_url: truncateUrlPreservingDataUri(publicOrSignedUrl, 2000),
     mime_type: truncate(mimeType, 120),
     file_extension: validation.extension,
     media_category: validation.mediaCategory,

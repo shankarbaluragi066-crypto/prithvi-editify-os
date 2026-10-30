@@ -723,6 +723,34 @@ export const AdminServicesPage: React.FC = () => {
                 placeholder="https://... or select from service-media bucket"
                 className="w-full px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
+              <div className="mt-2 flex items-center gap-3 p-2 rounded-lg bg-[#040D1A] border border-[#1E3A5F]">
+                <LazyImage
+                  src={
+                    form.imageUrl ||
+                    createStudioArtworkDataUri(
+                      form.title || 'Service Preview',
+                      form.category,
+                      '#10B981'
+                    )
+                  }
+                  fallbackSrc={createStudioArtworkDataUri(
+                    form.title || 'Service Preview',
+                    form.category,
+                    '#10B981'
+                  )}
+                  alt={form.title || 'Service Cover Preview'}
+                  loading="eager"
+                  className="w-16 h-11 rounded object-cover border border-[#1E3A5F] shrink-0"
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] font-semibold text-[#F8FAFC] truncate">
+                    {form.imageUrl ? 'Live Cover Image Preview' : 'Auto Studio Artwork Fallback'}
+                  </p>
+                  <p className="text-[10px] text-[#94A3B8] truncate">
+                    Supports direct image URLs, Google Drive share links, or uploaded media
+                  </p>
+                </div>
+              </div>
             </div>
 
             <div>
@@ -888,7 +916,9 @@ export const AdminServicesPage: React.FC = () => {
                         setPreviewMedia({
                           id: srv.id,
                           title: srv.title,
-                          url: srv.imageUrl,
+                          url:
+                            srv.imageUrl ||
+                            createStudioArtworkDataUri(srv.title, srv.category, '#10B981'),
                           videoUrl: srv.videoPreviewUrl || undefined,
                           description: srv.description,
                           categoryLabel: `${srv.category} · ${srv.priceDisplay}`,
@@ -1071,8 +1101,8 @@ export const AdminPortfolioPage: React.FC = () => {
         Array.isArray(aiPort.tags) && aiPort.tags.length > 0
           ? aiPort.tags.join(', ')
           : matchedExisting?.tags?.join(', ') || prev.tagsInput,
-      coverImage: matchedExisting?.coverImage || prev.coverImage,
-      videoUrl: matchedExisting?.videoUrl || prev.videoUrl,
+      coverImage: aiPort.coverImage || matchedExisting?.coverImage || prev.coverImage,
+      videoUrl: aiPort.videoUrl || matchedExisting?.videoUrl || prev.videoUrl,
       projectUrl: matchedExisting?.projectUrl || prev.projectUrl,
       featured: matchedExisting ? matchedExisting.featured : prev.featured,
       published: matchedExisting ? matchedExisting.published : true,
@@ -1395,6 +1425,34 @@ export const AdminPortfolioPage: React.FC = () => {
                 placeholder="https://... (from portfolio-media)"
                 className="w-full px-3 py-2 text-xs font-mono bg-[#132A4A] border border-[#1E3A5F] rounded-lg"
               />
+              <div className="mt-2 flex items-center gap-3 p-2 rounded-lg bg-[#040D1A] border border-[#1E3A5F]">
+                <LazyImage
+                  src={
+                    form.coverImage ||
+                    createStudioArtworkDataUri(
+                      form.title || 'Portfolio Preview',
+                      form.category,
+                      '#10B981'
+                    )
+                  }
+                  fallbackSrc={createStudioArtworkDataUri(
+                    form.title || 'Portfolio Preview',
+                    form.category,
+                    '#10B981'
+                  )}
+                  alt={form.title || 'Portfolio Cover Preview'}
+                  loading="eager"
+                  className="w-16 h-11 rounded object-cover border border-[#1E3A5F] shrink-0"
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] font-semibold text-[#F8FAFC] truncate">
+                    {form.coverImage ? 'Live Cover Artwork Preview' : 'Auto Studio Artwork Fallback'}
+                  </p>
+                  <p className="text-[10px] text-[#94A3B8] truncate">
+                    Supports direct URLs, Google Drive share links, or uploaded media
+                  </p>
+                </div>
+              </div>
             </div>
 
             <div>

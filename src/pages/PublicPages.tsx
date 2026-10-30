@@ -50,6 +50,7 @@ import {
   StudioFaqSection,
 } from '../components/StudioEnhancements';
 import { buildWhatsAppLink } from '../utils/formatters';
+import { normalizePreviewableImageUrl, normalizeVideoEmbedUrl } from '../utils/mediaValidation';
 
 interface OutletCtx {
   settings: PublicSettings;
@@ -298,41 +299,37 @@ const MarketplaceServiceCard: React.FC<MarketplaceServiceCardProps> = ({
   const [referenceLink, setReferenceLink] = useState('');
 
   const detailPath = `/services/${encodeURIComponent(srv.slug || srv.id)}`;
-  const hasCustomImage = Boolean(
-    srv.imageUrl && !srv.imageUrl.startsWith('data:image/svg+xml')
-  );
-  const coverSrc = hasCustomImage
-    ? srv.imageUrl!
-    : createStudioArtworkDataUri(srv.title, srv.category, accentColor, primaryBg, secondaryBg);
   const displayCategory = formatServiceCategoryLabel(srv.category, srv.title);
+  const fallbackArtwork = createStudioArtworkDataUri(
+    srv.title,
+    displayCategory,
+    accentColor,
+    primaryBg,
+    secondaryBg
+  );
+  const normalizedImg = normalizePreviewableImageUrl(srv.imageUrl);
+  const hasCustomImage = Boolean(
+    normalizedImg && !normalizedImg.startsWith('data:image/svg+xml')
+  );
+  const coverSrc = hasCustomImage ? normalizedImg : fallbackArtwork;
   const creatorName = settings.ownerName || 'Shankar Baluragi';
   const studioName = settings.businessName || 'Prithvi Editify';
 
   return (
     <article className="pe-card-interactive group bg-[#0D1F38] border border-[#1E3A5F] rounded-xl overflow-hidden flex flex-col justify-between shadow-[0_1px_3px_rgba(0,0,0,0.35)]">
       <div>
-        {/* 1. Consistent 16:10 Media Stage — Preserves full artwork without cropping */}
+        {/* 1. Consistent 16:10 Media Stage */}
         <div className="relative aspect-[16/10] w-full bg-[#040D1A] overflow-hidden border-b border-[#1E3A5F]">
           <Link
             to={detailPath}
             className="relative flex items-center justify-center w-full h-full overflow-hidden"
           >
-            {hasCustomImage && (
-              <LazyImage
-                src={coverSrc}
-                alt=""
-                aria-hidden="true"
-                className="absolute inset-0 w-full h-full object-cover blur-md opacity-35 scale-110 pointer-events-none"
-              />
-            )}
             <LazyImage
               src={coverSrc}
+              fallbackSrc={fallbackArtwork}
+              fallbackSubtitle={displayCategory}
               alt={srv.title}
-              className={`relative z-10 transition-transform duration-300 ease-out group-hover:scale-[1.03] ${
-                hasCustomImage
-                  ? 'max-h-full max-w-full w-auto h-auto object-contain p-2.5 drop-shadow-[0_6px_16px_rgba(0,0,0,0.35)]'
-                  : 'w-full h-full object-cover'
-              }`}
+              className="relative z-10 w-full h-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.03]"
             />
           </Link>
 
@@ -359,7 +356,7 @@ const MarketplaceServiceCard: React.FC<MarketplaceServiceCardProps> = ({
                 })
               }
               title="Quick preview sample"
-              className="absolute bottom-3 right-3 z-20 inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold text-white bg-[#040D1A]/90 hover:bg-[#040D1A] rounded-md border border-white/15 shadow-xs transition-all duration-150"
+              className="absolute bottom-3 right-3 z-20 inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold text-white bg-[#040D1A]/90 hover:bg-[#040D1A] rounded-md border border-white/15 shadow-xs transition-all duration-150 cursor-pointer"
             >
               <Eye className="w-3.5 h-3.5 text-[#10B981]" />
               <span>Preview</span>
@@ -516,13 +513,19 @@ const MarketplacePortfolioCard: React.FC<MarketplacePortfolioCardProps> = ({
   onQuickPreview,
 }) => {
   const detailPath = `/portfolio/${encodeURIComponent(item.slug || item.id)}`;
-  const hasCustomCover = Boolean(
-    item.coverImage && !item.coverImage.startsWith('data:image/svg+xml')
-  );
-  const coverSrc = hasCustomCover
-    ? item.coverImage!
-    : createStudioArtworkDataUri(item.title, item.category, accentColor, primaryBg, secondaryBg);
   const displayCat = formatPortfolioCategoryLabel(item.category);
+  const fallbackArtwork = createStudioArtworkDataUri(
+    item.title,
+    displayCat,
+    accentColor,
+    primaryBg,
+    secondaryBg
+  );
+  const normalizedCover = normalizePreviewableImageUrl(item.coverImage);
+  const hasCustomCover = Boolean(
+    normalizedCover && !normalizedCover.startsWith('data:image/svg+xml')
+  );
+  const coverSrc = hasCustomCover ? normalizedCover : fallbackArtwork;
   const creatorName = settings?.ownerName || 'Shankar Baluragi';
   const studioName = settings?.businessName || 'Prithvi Editify';
   const galleryCount = 1 + (Array.isArray(item.galleryUrls) ? item.galleryUrls.filter(Boolean).length : 0);
@@ -530,28 +533,18 @@ const MarketplacePortfolioCard: React.FC<MarketplacePortfolioCardProps> = ({
   return (
     <article className="pe-card-interactive group bg-[#0D1F38] border border-[#1E3A5F] rounded-xl overflow-hidden flex flex-col justify-between shadow-[0_1px_3px_rgba(0,0,0,0.35)]">
       <div>
-        {/* 1. Consistent 16:10 Media Stage — Preserves full artwork without cropping */}
+        {/* 1. Consistent 16:10 Media Stage */}
         <div className="relative aspect-[16/10] w-full bg-[#040D1A] overflow-hidden border-b border-[#1E3A5F]">
           <Link
             to={detailPath}
             className="relative flex items-center justify-center w-full h-full overflow-hidden"
           >
-            {hasCustomCover && (
-              <LazyImage
-                src={coverSrc}
-                alt=""
-                aria-hidden="true"
-                className="absolute inset-0 w-full h-full object-cover blur-md opacity-35 scale-110 pointer-events-none"
-              />
-            )}
             <LazyImage
               src={coverSrc}
+              fallbackSrc={fallbackArtwork}
+              fallbackSubtitle={displayCat}
               alt={item.title}
-              className={`relative z-10 transition-transform duration-300 ease-out group-hover:scale-[1.03] ${
-                hasCustomCover
-                  ? 'max-h-full max-w-full w-auto h-auto object-contain p-2.5 drop-shadow-[0_6px_16px_rgba(0,0,0,0.35)]'
-                  : 'w-full h-full object-cover'
-              }`}
+              className="relative z-10 w-full h-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.03]"
             />
           </Link>
 
@@ -566,7 +559,7 @@ const MarketplacePortfolioCard: React.FC<MarketplacePortfolioCardProps> = ({
               type="button"
               onClick={() => onQuickPreview(item)}
               title="Quick preview project"
-              className="absolute bottom-3 right-3 z-20 inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold text-white bg-[#040D1A]/90 hover:bg-[#040D1A] rounded-md border border-white/15 shadow-xs transition-all duration-150"
+              className="absolute bottom-3 right-3 z-20 inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold text-white bg-[#040D1A]/90 hover:bg-[#040D1A] rounded-md border border-white/15 shadow-xs transition-all duration-150 cursor-pointer"
             >
               {item.videoUrl ? (
                 <Film className="w-3.5 h-3.5 text-[#10B981]" />
@@ -1734,21 +1727,25 @@ export const ServiceDetailPage: React.FC = () => {
   }
 
   const displayCategory = formatServiceCategoryLabel(service.category, service.title);
-  const hasCustomImage = Boolean(service.imageUrl);
-  const primaryCover =
-    service.imageUrl ||
-    createStudioArtworkDataUri(
-      service.title,
-      service.category,
-      accentColor,
-      primaryBg,
-      secondaryBg
-    );
+  const fallbackArtwork = createStudioArtworkDataUri(
+    service.title,
+    displayCategory,
+    accentColor,
+    primaryBg,
+    secondaryBg
+  );
+  const normalizedImg = normalizePreviewableImageUrl(service.imageUrl);
+  const hasCustomImage = Boolean(
+    normalizedImg && !normalizedImg.startsWith('data:image/svg+xml')
+  );
+  const primaryCover = hasCustomImage ? normalizedImg : fallbackArtwork;
 
   // Build gallery list from cover image + any additional configured mediaUrls
   const galleryImages = [
     primaryCover,
-    ...(Array.isArray(service.mediaUrls) ? service.mediaUrls.filter(Boolean) : []),
+    ...(Array.isArray(service.mediaUrls)
+      ? service.mediaUrls.map((u) => normalizePreviewableImageUrl(u)).filter(Boolean)
+      : []),
   ];
   const currentPreviewUrl = galleryImages[activeMediaIndex] || primaryCover;
 
@@ -1958,12 +1955,29 @@ export const ServiceDetailPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* LEFT COLUMN: Gallery Stage, Service Details, Requirements & Inquiry */}
         <div className="lg:col-span-7 xl:col-span-8 space-y-8">
-          {/* Interactive Gallery Stage — Fixed height + w-full h-full object-contain so posters NEVER crop */}
+          {/* Interactive Gallery Stage */}
           <div className="pe-card-interactive bg-[#0D1F38] border border-[#1E3A5F] rounded-lg p-3 sm:p-4 space-y-3 shadow-[0_1px_3px_rgba(0,0,0,0.35)]">
-            <div className="relative h-[340px] sm:h-[460px] w-full bg-[#040D1A] rounded-lg overflow-hidden border border-[#1E3A5F]">
+            <div
+              onClick={() =>
+                setPreviewMedia({
+                  id: `${service.id}_${activeMediaIndex}`,
+                  title:
+                    galleryImages.length > 1
+                      ? `${service.title} (Preview ${activeMediaIndex + 1} of ${galleryImages.length})`
+                      : service.title,
+                  url: currentPreviewUrl,
+                  videoUrl: service.videoPreviewUrl || undefined,
+                  description: service.description,
+                  categoryLabel: `${displayCategory} · ${service.priceDisplay}`,
+                  storageBucket: 'service-media',
+                })
+              }
+              className="relative h-[340px] sm:h-[460px] w-full bg-[#040D1A] rounded-lg overflow-hidden border border-[#1E3A5F] cursor-zoom-in group"
+            >
               {hasCustomImage && (
                 <LazyImage
                   src={currentPreviewUrl}
+                  fallbackSrc={fallbackArtwork}
                   alt=""
                   aria-hidden="true"
                   className="absolute inset-0 w-full h-full object-cover blur-xl opacity-30 scale-110 pointer-events-none"
@@ -1971,7 +1985,10 @@ export const ServiceDetailPage: React.FC = () => {
               )}
               <LazyImage
                 src={currentPreviewUrl}
+                fallbackSrc={fallbackArtwork}
+                fallbackSubtitle={displayCategory}
                 alt={service.title}
+                eager
                 className={`relative z-10 w-full h-full ${
                   hasCustomImage ? 'object-contain p-2 sm:p-4' : 'object-cover'
                 }`}
@@ -1982,11 +1999,12 @@ export const ServiceDetailPage: React.FC = () => {
                 <>
                   <button
                     type="button"
-                    onClick={() =>
+                    onClick={(e) => {
+                      e.stopPropagation();
                       setActiveMediaIndex((prev) =>
                         prev === 0 ? galleryImages.length - 1 : prev - 1
-                      )
-                    }
+                      );
+                    }}
                     aria-label="Previous image"
                     className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-[#0D1F38]/90 hover:bg-[#132A4A] text-[#F8FAFC] flex items-center justify-center shadow-md transition-colors"
                   >
@@ -1994,11 +2012,12 @@ export const ServiceDetailPage: React.FC = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={() =>
+                    onClick={(e) => {
+                      e.stopPropagation();
                       setActiveMediaIndex((prev) =>
                         prev === galleryImages.length - 1 ? 0 : prev + 1
-                      )
-                    }
+                      );
+                    }}
                     aria-label="Next image"
                     className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-[#0D1F38]/90 hover:bg-[#132A4A] text-[#F8FAFC] flex items-center justify-center shadow-md transition-colors"
                   >
@@ -2009,18 +2028,22 @@ export const ServiceDetailPage: React.FC = () => {
 
               <button
                 type="button"
-                onClick={() =>
+                onClick={(e) => {
+                  e.stopPropagation();
                   setPreviewMedia({
-                    id: service.id,
-                    title: service.title,
+                    id: `${service.id}_${activeMediaIndex}`,
+                    title:
+                      galleryImages.length > 1
+                        ? `${service.title} (Preview ${activeMediaIndex + 1} of ${galleryImages.length})`
+                        : service.title,
                     url: currentPreviewUrl,
                     videoUrl: service.videoPreviewUrl || undefined,
                     description: service.description,
                     categoryLabel: `${displayCategory} · ${service.priceDisplay}`,
                     storageBucket: 'service-media',
-                  })
-                }
-                className="absolute bottom-3 right-3 z-20 inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-[#040D1A]/90 hover:bg-[#040D1A] border border-white/15 rounded-lg shadow-sm transition-colors"
+                  });
+                }}
+                className="absolute bottom-3 right-3 z-20 inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-[#040D1A]/90 hover:bg-[#040D1A] border border-white/15 rounded-lg shadow-sm transition-colors cursor-pointer"
               >
                 <Eye className="w-4 h-4 text-[#10B981]" />
                 <span>Open Full Preview</span>
@@ -2035,7 +2058,7 @@ export const ServiceDetailPage: React.FC = () => {
                     key={`${imgUrl}_${idx}`}
                     type="button"
                     onClick={() => setActiveMediaIndex(idx)}
-                    className={`w-20 h-14 rounded-md overflow-hidden border bg-[#040D1A] transition-all ${
+                    className={`w-20 h-14 rounded-md overflow-hidden border bg-[#040D1A] transition-all cursor-pointer ${
                       activeMediaIndex === idx
                         ? 'border-[#10B981] ring-2 ring-[#10B981]/20'
                         : 'border-[#1E3A5F] opacity-70 hover:opacity-100'
@@ -2043,8 +2066,9 @@ export const ServiceDetailPage: React.FC = () => {
                   >
                     <LazyImage
                       src={imgUrl}
+                      fallbackSrc={fallbackArtwork}
                       alt={`${service.title} thumbnail ${idx + 1}`}
-                      className="w-full h-full object-contain"
+                      className="w-full h-full object-cover"
                     />
                   </button>
                 ))}
@@ -2063,7 +2087,7 @@ export const ServiceDetailPage: React.FC = () => {
                         storageBucket: 'service-media',
                       })
                     }
-                    className="inline-flex items-center gap-2 px-3.5 py-2.5 text-xs font-semibold text-[#F8FAFC] bg-[#132A4A] border border-[#1E3A5F] hover:border-[#10B981] rounded-lg transition-colors"
+                    className="inline-flex items-center gap-2 px-3.5 py-2.5 text-xs font-semibold text-[#F8FAFC] bg-[#132A4A] border border-[#1E3A5F] hover:border-[#10B981] rounded-lg transition-colors cursor-pointer"
                   >
                     <Film className="w-4 h-4 text-[#10B981]" />
                     <span>Watch Video Sample</span>
@@ -2398,7 +2422,27 @@ export const ServiceDetailPage: React.FC = () => {
         </section>
       )}
 
-      <MediaPreviewModal item={previewMedia} onClose={() => setPreviewMedia(null)} />
+      <MediaPreviewModal
+        item={previewMedia}
+        items={galleryImages.map((imgUrl, idx) => ({
+          id: `${service.id}_${idx}`,
+          title:
+            galleryImages.length > 1
+              ? `${service.title} (Preview ${idx + 1} of ${galleryImages.length})`
+              : service.title,
+          url: imgUrl,
+          videoUrl: service.videoPreviewUrl || undefined,
+          description: service.description,
+          categoryLabel: `${displayCategory} · ${service.priceDisplay}`,
+          storageBucket: 'service-media',
+        }))}
+        onClose={() => setPreviewMedia(null)}
+        onSelectItem={(next) => {
+          setPreviewMedia(next);
+          const idx = galleryImages.findIndex((u) => u === next.url);
+          if (idx >= 0) setActiveMediaIndex(idx);
+        }}
+      />
     </div>
   );
 };
@@ -3222,22 +3266,27 @@ export const PortfolioDetailPage: React.FC = () => {
   }
 
   const displayCategory = formatPortfolioCategoryLabel(project.category);
-  const hasCustomCover = Boolean(project.coverImage);
-  const primaryCover =
-    project.coverImage ||
-    createStudioArtworkDataUri(
-      project.title,
-      project.category,
-      accentColor,
-      primaryBg,
-      secondaryBg
-    );
+  const fallbackArtwork = createStudioArtworkDataUri(
+    project.title,
+    displayCategory,
+    accentColor,
+    primaryBg,
+    secondaryBg
+  );
+  const normalizedCover = normalizePreviewableImageUrl(project.coverImage);
+  const hasCustomCover = Boolean(
+    normalizedCover && !normalizedCover.startsWith('data:image/svg+xml')
+  );
+  const primaryCover = hasCustomCover ? normalizedCover : fallbackArtwork;
 
   const galleryImages = [
     primaryCover,
-    ...(Array.isArray(project.galleryUrls) ? project.galleryUrls.filter(Boolean) : []),
+    ...(Array.isArray(project.galleryUrls)
+      ? project.galleryUrls.map((u) => normalizePreviewableImageUrl(u)).filter(Boolean)
+      : []),
   ];
   const activeImageUrl = galleryImages[activeImageIndex] || primaryCover;
+  const videoEmbedInfo = project.videoUrl ? normalizeVideoEmbedUrl(project.videoUrl) : null;
 
   const whatsappMessage = `Hello ${
     settings.businessName || 'Prithvi Editify'
@@ -3354,21 +3403,78 @@ export const PortfolioDetailPage: React.FC = () => {
         <div className="lg:col-span-8 space-y-8">
           {/* Primary Showcase Media Viewer */}
           <div className="space-y-3">
-            {project.videoUrl ? (
-              <div className="bg-[#040D1A] border border-[#1E3A5F] rounded-lg overflow-hidden">
-                <video
-                  src={project.videoUrl}
-                  poster={primaryCover}
-                  controls
-                  playsInline
-                  className="w-full max-h-[540px] object-contain bg-black"
-                />
+            {videoEmbedInfo ? (
+              <div className="space-y-3">
+                <div className="bg-[#040D1A] border border-[#1E3A5F] rounded-lg overflow-hidden">
+                  {videoEmbedInfo.type === 'iframe' ? (
+                    <div className="w-full aspect-video max-h-[540px] bg-black">
+                      <iframe
+                        src={videoEmbedInfo.src}
+                        title={project.title}
+                        className="w-full h-full border-0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    </div>
+                  ) : (
+                    <video
+                      src={videoEmbedInfo.src}
+                      poster={primaryCover}
+                      controls
+                      playsInline
+                      className="w-full max-h-[540px] object-contain bg-black"
+                    />
+                  )}
+                </div>
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPreviewMedia({
+                        id: `${project.id}_${activeImageIndex}`,
+                        title: project.title,
+                        url: activeImageUrl,
+                        videoUrl: project.videoUrl || undefined,
+                        description: project.description,
+                        tags: project.tags,
+                        categoryLabel: `${displayCategory} · ${
+                          project.metricsSummary || 'Studio Deliverable'
+                        }`,
+                        storageBucket: 'portfolio-media',
+                      })
+                    }
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-[#132A4A] hover:bg-[#1E3A5F] border border-[#1E3A5F] rounded-lg transition-colors cursor-pointer"
+                  >
+                    <Eye className="w-4 h-4 text-[#10B981]" />
+                    <span>Inspect Cover Artwork & Video in Lightbox</span>
+                  </button>
+                </div>
               </div>
             ) : (
-              <div className="relative h-[340px] sm:h-[460px] w-full bg-[#040D1A] border border-[#1E3A5F] rounded-lg overflow-hidden">
+              <div
+                onClick={() =>
+                  setPreviewMedia({
+                    id: `${project.id}_${activeImageIndex}`,
+                    title:
+                      galleryImages.length > 1
+                        ? `${project.title} (Frame ${activeImageIndex + 1} of ${galleryImages.length})`
+                        : project.title,
+                    url: activeImageUrl,
+                    videoUrl: project.videoUrl || undefined,
+                    description: project.description,
+                    tags: project.tags,
+                    categoryLabel: `${displayCategory} · ${
+                      project.metricsSummary || 'Studio Deliverable'
+                    }`,
+                    storageBucket: 'portfolio-media',
+                  })
+                }
+                className="relative h-[340px] sm:h-[460px] w-full bg-[#040D1A] border border-[#1E3A5F] rounded-lg overflow-hidden cursor-zoom-in"
+              >
                 {hasCustomCover && (
                   <LazyImage
                     src={activeImageUrl}
+                    fallbackSrc={fallbackArtwork}
                     alt=""
                     aria-hidden="true"
                     className="absolute inset-0 w-full h-full object-cover blur-xl opacity-30 scale-110 pointer-events-none"
@@ -3376,17 +3482,24 @@ export const PortfolioDetailPage: React.FC = () => {
                 )}
                 <LazyImage
                   src={activeImageUrl}
+                  fallbackSrc={fallbackArtwork}
+                  fallbackSubtitle={displayCategory}
                   alt={project.title}
+                  eager
                   className={`relative z-10 w-full h-full ${
                     hasCustomCover ? 'object-contain p-3 sm:p-4' : 'object-cover'
                   }`}
                 />
                 <button
                   type="button"
-                  onClick={() =>
+                  onClick={(e) => {
+                    e.stopPropagation();
                     setPreviewMedia({
-                      id: project.id,
-                      title: project.title,
+                      id: `${project.id}_${activeImageIndex}`,
+                      title:
+                        galleryImages.length > 1
+                          ? `${project.title} (Frame ${activeImageIndex + 1} of ${galleryImages.length})`
+                          : project.title,
                       url: activeImageUrl,
                       videoUrl: project.videoUrl || undefined,
                       description: project.description,
@@ -3395,9 +3508,9 @@ export const PortfolioDetailPage: React.FC = () => {
                         project.metricsSummary || 'Studio Deliverable'
                       }`,
                       storageBucket: 'portfolio-media',
-                    })
-                  }
-                  className="absolute bottom-4 right-4 z-20 inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-[#040D1A]/90 hover:bg-[#040D1A] border border-white/15 rounded-lg shadow-sm transition-colors"
+                    });
+                  }}
+                  className="absolute bottom-4 right-4 z-20 inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-[#040D1A]/90 hover:bg-[#040D1A] border border-white/15 rounded-lg shadow-sm transition-colors cursor-pointer"
                 >
                   <Eye className="w-4 h-4 text-[#10B981]" />
                   <span>Inspect Full Resolution</span>
@@ -3413,7 +3526,7 @@ export const PortfolioDetailPage: React.FC = () => {
                     key={`${imgUrl}_${idx}`}
                     type="button"
                     onClick={() => setActiveImageIndex(idx)}
-                    className={`w-20 h-16 rounded-md overflow-hidden border bg-[#040D1A] transition-all ${
+                    className={`w-20 h-16 rounded-md overflow-hidden border bg-[#040D1A] transition-all cursor-pointer ${
                       activeImageIndex === idx
                         ? 'border-[#10B981] ring-2 ring-[#10B981]/20'
                         : 'border-[#1E3A5F] opacity-75 hover:opacity-100'
@@ -3421,8 +3534,9 @@ export const PortfolioDetailPage: React.FC = () => {
                   >
                     <LazyImage
                       src={imgUrl}
+                      fallbackSrc={fallbackArtwork}
                       alt={`${project.title} frame ${idx + 1}`}
-                      className="w-full h-full object-contain"
+                      className="w-full h-full object-cover"
                     />
                   </button>
                 ))}

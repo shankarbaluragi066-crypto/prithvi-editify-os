@@ -122,28 +122,267 @@ const ALLOWED_MIME_PREFIXES = [
   'application/octet-stream',
 ];
 
-export function getFileExtension(filename: string): string {
-  const parts = String(filename || '')
-    .trim()
-    .split('.');
+export function getFileExtension(filenameOrUrl: string): string {
+  const raw = String(filenameOrUrl || '').trim();
+  if (!raw) return '';
+
+  // Handle data URIs directly (e.g. data:image/svg+xml;utf8,... or data:image/png;base64,...)
+  if (raw.startsWith('data:')) {
+    const mimeMatch = raw.match(/^data:([^;,]+)/i);
+    const mime = mimeMatch ? mimeMatch[1].toLowerCase() : '';
+    if (mime.includes('svg')) return 'svg';
+    if (mime.includes('png')) return 'png';
+    if (mime.includes('jpeg') || mime.includes('jpg')) return 'jpg';
+    if (mime.includes('webp')) return 'webp';
+    if (mime.includes('gif')) return 'gif';
+    if (mime.includes('avif')) return 'avif';
+    if (mime.includes('mp4')) return 'mp4';
+    if (mime.includes('webm')) return 'webm';
+    if (mime.includes('quicktime') || mime.includes('mov')) return 'mov';
+    if (mime.includes('pdf')) return 'pdf';
+    return '';
+  }
+
+  // Strip query parameters (?token=...) and hash fragments (#...) before extracting extension
+  const withoutQueryOrHash = raw.split(/[?#]/)[0] || '';
+  const lastSegment = withoutQueryOrHash.split('/').pop() || withoutQueryOrHash;
+  const parts = lastSegment.trim().split('.');
   if (parts.length < 2) return '';
-  return (parts.pop() || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const ext = (parts.pop() || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  return ext.length <= 10 ? ext : '';
 }
 
-export function detectMediaCategory(mimeType?: string, filenameOrUrl?: string): MediaCategory {
-  const mime = String(mimeType || '').toLowerCase();
-  const ext = getFileExtension(filenameOrUrl || '');
+/**
+ * Normalizes external share URLs (Google Drive, Dropbox, etc.) into direct previewable
+ * image URLs and filters out corrupted/truncated base64 strings.
+ */
+export function normalizePreviewableImageUrl(url?: string | null): string {
+  const raw = String(url || '').trim();
+  if (!raw) return '';
 
-  if (mime.startsWith('image/') || IMAGE_EXTENSIONS.has(ext) || String(filenameOrUrl || '').startsWith('data:image/')) {
+  // Detect non-SVG base64 data URIs that were previously truncated at 1000/1500/2000 chars
+  if (raw.startsWith('data:image/') && !raw.startsWith('data:image/svg+xml')) {
+    if (raw.length === 1000 || raw.length === 1500 || raw.length === 2000 || raw.length < 120) {
+      return '';
+    }
+    return raw;
+  }
+
+  if (raw.startsWith('data:')) {
+    return raw;
+  }
+
+  // Google Drive file share URLs -> direct thumbnail/image stream URL
+  // Matches:
+  // - https://drive.google.com/file/d/FILE_ID/view...
+  // - https://drive.google.com/open?id=FILE_ID
+  // - https://drive.google.com/uc?id=FILE_ID or ?export=view&id=FILE_ID
+  if (raw.includes('drive.google.com')) {
+    const fileIdMatch =
+      raw.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) ||
+      raw.match(/\/d\/([a-zA-Z0-9_-]+)/) ||
+      raw.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    if (fileIdMatch && fileIdMatch[1]) {
+      return `https://lh3.googleusercontent.com/d/${fileIdMatch[1]}=w1600`;
+    }
+  }
+
+  // Dropbox share links -> direct raw asset render
+  if (raw.includes('dropbox.com') && raw.includes('dl=0')) {
+    return raw.replace('dl=0', 'raw=1');
+  }
+
+  return raw;
+}
+
+/**
+ * Normalizes video URLs so YouTube, Vimeo, and Google Drive video links can be embedded
+ * cleanly via iframe while direct MP4/WebM/MOV streams use native HTML5 video.
+ */
+export function normalizeVideoEmbedUrl(
+  url?: string | null
+): { type: 'native' | 'iframe'; src: string } | null {
+  const raw = String(url || '').trim();
+  if (!raw) return null;
+
+  // YouTube watch / short / youtu.be links
+  if (raw.includes('youtube.com') || raw.includes('youtu.be')) {
+    const ytMatch =
+      raw.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{6,})/) ||
+      raw.match(/[?&]v=([a-zA-Z0-9_-]{6,})/);
+    if (ytMatch && ytMatch[1]) {
+      return {
+        type: 'iframe',
+        src: `https://www.youtube.com/embed/${ytMatch[1]}?rel=0&modestbranding=1`,
+      };
+    }
+  }
+
+  // Vimeo links
+  if (raw.includes('vimeo.com')) {
+    const vimeoMatch = raw.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+    if (vimeoMatch && vimeoMatch[1]) {
+      return {
+        type: 'iframe',
+        src: `https://player.vimeo.com/video/${vimeoMatch[1]}`,
+      };
+    }
+  }
+
+  // Google Drive video preview
+  if (raw.includes('drive.google.com')) {
+    const driveMatch =
+      raw.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || raw.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    if (driveMatch && driveMatch[1]) {
+      return {
+        type: 'iframe',
+        src: `https://drive.google.com/file/d/${driveMatch[1]}/preview`,
+      };
+    }
+  }
+
+  return { type: 'native', src: raw };
+}
+
+export function detectMediaCategory(
+  mimeType?: string,
+  filenameOrUrl?: string,
+  storageBucket?: string
+): MediaCategory {
+  const mime = String(mimeType || '').toLowerCase().trim();
+  const rawUrl = String(filenameOrUrl || '').trim();
+  const ext = getFileExtension(rawUrl);
+
+  if (
+    mime.startsWith('image/') ||
+    IMAGE_EXTENSIONS.has(ext) ||
+    rawUrl.startsWith('data:image/')
+  ) {
     return 'image';
   }
-  if (mime.startsWith('video/') || VIDEO_EXTENSIONS.has(ext)) {
+  if (
+    mime.startsWith('video/') ||
+    VIDEO_EXTENSIONS.has(ext) ||
+    rawUrl.startsWith('data:video/')
+  ) {
     return 'video';
   }
-  if (mime === 'application/pdf' || PDF_EXTENSIONS.has(ext)) {
+  if (
+    mime === 'application/pdf' ||
+    PDF_EXTENSIONS.has(ext) ||
+    rawUrl.startsWith('data:application/pdf')
+  ) {
     return 'pdf';
   }
+  if (DOCUMENT_EXTENSIONS.has(ext)) {
+    return 'document';
+  }
+
+  // Check if URL is from a known image host, local asset path, or public visual bucket without explicit extension
+  const lowerUrl = rawUrl.toLowerCase();
+  const isKnownImageHost =
+    lowerUrl.includes('images.unsplash.com') ||
+    lowerUrl.includes('unsplash.com/photo') ||
+    lowerUrl.includes('lh3.googleusercontent.com') ||
+    lowerUrl.includes('drive.google.com/thumbnail') ||
+    lowerUrl.includes('picsum.photos') ||
+    lowerUrl.includes('imgur.com') ||
+    lowerUrl.includes('cloudinary.com') ||
+    lowerUrl.includes('pexels.com') ||
+    lowerUrl.includes('pixabay.com') ||
+    lowerUrl.startsWith('/assets/') ||
+    lowerUrl.startsWith('blob:') ||
+    lowerUrl.includes('/service-media/') ||
+    lowerUrl.includes('/portfolio-media/') ||
+    lowerUrl.includes('/public-assets/');
+
+  if (
+    isKnownImageHost ||
+    storageBucket === 'portfolio-media' ||
+    storageBucket === 'service-media' ||
+    storageBucket === 'public-assets'
+  ) {
+    return 'image';
+  }
+
+  // If it's an HTTP(S) URL with no recognized document extension and no explicit non-image mimeType, treat as image for preview
+  if (
+    (lowerUrl.startsWith('http://') || lowerUrl.startsWith('https://')) &&
+    (!mime || mime === 'application/octet-stream')
+  ) {
+    return 'image';
+  }
+
   return 'document';
+}
+
+/**
+ * Converts an uploaded File into a persistent Data URL (compressing raster images via Canvas
+ * so they remain lightweight in localStorage / shared CRM sync when Supabase Storage RLS is not yet active).
+ */
+export async function fileToPersistentDataUrl(file: File): Promise<string> {
+  if (typeof window === 'undefined') return '';
+  const category = detectMediaCategory(file.type, file.name);
+
+  if (category === 'image' && !file.type.includes('svg') && !file.type.includes('gif')) {
+    return new Promise((resolve) => {
+      const objectUrl = URL.createObjectURL(file);
+      const img = new Image();
+      const cleanup = () => URL.revokeObjectURL(objectUrl);
+
+      img.onload = () => {
+        try {
+          const maxDim = 1440;
+          let width = img.naturalWidth || 1200;
+          let height = img.naturalHeight || 800;
+          if (width > maxDim || height > maxDim) {
+            if (width >= height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            const dataUrl = canvas.toDataURL('image/webp', 0.85);
+            cleanup();
+            resolve(dataUrl.startsWith('data:image/') ? dataUrl : canvas.toDataURL('image/jpeg', 0.85));
+            return;
+          }
+        } catch {
+          // Fall back to FileReader below
+        }
+        cleanup();
+        const reader = new FileReader();
+        reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+        reader.onerror = () => resolve('');
+        reader.readAsDataURL(file);
+      };
+
+      img.onerror = () => {
+        cleanup();
+        const reader = new FileReader();
+        reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+        reader.onerror = () => resolve('');
+        reader.readAsDataURL(file);
+      };
+
+      img.src = objectUrl;
+    });
+  }
+
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+    reader.onerror = () => resolve('');
+    reader.readAsDataURL(file);
+  });
 }
 
 export function buildSafeStoragePath(originalName: string, folderPrefix = 'uploads'): string {
